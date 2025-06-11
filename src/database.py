@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, ForeignKey, Text
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, ForeignKey, Text, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from typing import Optional, List

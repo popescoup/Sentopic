@@ -8,7 +8,7 @@ class RedditClient:
     def __init__(self):
         self.reddit = None
         self._initialize_client()
-        self.rate_limit_delay = 1  # Seconds between requests
+        self.rate_limit_delay = 0.5  # Seconds between requests
     
     def _initialize_client(self):
         """Initialize the PRAW Reddit client."""
@@ -55,7 +55,7 @@ class RedditClient:
         try:
             sub = self.reddit.subreddit(subreddit)
             
-            # Get submissions based on sort method
+            # Get submissions based on sort method (single API call for all posts)
             if sort_method == 'hot':
                 submissions = sub.hot(limit=limit)
             elif sort_method == 'new':
@@ -69,9 +69,8 @@ class RedditClient:
             else:
                 raise ValueError(f"Invalid sort method: {sort_method}")
             
+            # Process all fetched posts (no additional API calls needed)
             for submission in submissions:
-                self._rate_limit_sleep()
-                
                 post_data = {
                     'id': submission.id,
                     'subreddit': submission.subreddit.display_name,
@@ -79,10 +78,15 @@ class RedditClient:
                     'content': getattr(submission, 'selftext', '') or '',  # Text posts only
                     'author': str(submission.author) if submission.author else '[deleted]',
                     'score': submission.score,
+                    'upvote_ratio': submission.upvote_ratio,  # Reddit's upvote ratio metric
                     'created_utc': int(submission.created_utc),
-                    'url': submission.url
+                    'url': submission.url,
+                    'is_self': submission.is_self  # True for text posts, False for links
                 }
                 posts.append(post_data)
+            
+            # Rate limit after fetching all posts
+            self._rate_limit_sleep()
         
         except Exception as e:
             print(f"Error fetching posts from r/{subreddit}: {e}")
@@ -93,7 +97,7 @@ class RedditClient:
     def get_comments(self, post_id: str, root_comments_limit: int, 
                     replies_per_root: int, min_upvotes: int) -> List[Dict[str, Any]]:
         """
-        Get comments for a specific post.
+        Get comments for a specific post with hierarchical tracking.
         
         Args:
             post_id: Reddit post ID
@@ -102,19 +106,22 @@ class RedditClient:
             min_upvotes: Minimum upvotes required for comments
         
         Returns:
-            List of comment dictionaries
+            List of comment dictionaries with depth and position tracking
         """
         comments = []
         
         try:
+            # Single API call to get the entire comment tree for this post
             submission = self.reddit.submission(id=post_id)
             submission.comments.replace_more(limit=0)  # Remove "load more comments"
             
+            # Rate limit only after the API call, not during processing
+            self._rate_limit_sleep()
+            
             root_comments_collected = 0
             
-            for comment in submission.comments:
-                self._rate_limit_sleep()
-                
+            # Process root comments (depth=0)
+            for root_position, comment in enumerate(submission.comments, 1):
                 # Check if this root comment meets criteria
                 if (comment.score >= min_upvotes and 
                     root_comments_collected < root_comments_limit):
@@ -128,37 +135,76 @@ class RedditClient:
                         'author': str(comment.author) if comment.author else '[deleted]',
                         'score': comment.score,
                         'created_utc': int(comment.created_utc),
-                        'is_root': True
+                        'is_root': True,
+                        'depth': 0,
+                        'position': root_position
                     }
                     comments.append(comment_data)
                     root_comments_collected += 1
                     
-                    # Get replies to this root comment
-                    replies_collected = 0
-                    for reply in comment.replies:
-                        self._rate_limit_sleep()
-                        
-                        if (reply.score >= min_upvotes and 
-                            replies_collected < replies_per_root):
-                            
-                            reply_data = {
-                                'id': reply.id,
-                                'post_id': post_id,
-                                'parent_id': comment.id,  # Points to root comment
-                                'content': reply.body,
-                                'author': str(reply.author) if reply.author else '[deleted]',
-                                'score': reply.score,
-                                'created_utc': int(reply.created_utc),
-                                'is_root': False
-                            }
-                            comments.append(reply_data)
-                            replies_collected += 1
+                    # Process replies to this root comment with depth tracking
+                    self._process_replies(
+                        comment.replies, 
+                        post_id, 
+                        comment.id, 
+                        depth=1, 
+                        max_replies=replies_per_root, 
+                        min_upvotes=min_upvotes,
+                        comments=comments
+                    )
         
         except Exception as e:
             print(f"Error fetching comments for post {post_id}: {e}")
             # Don't raise here - we want to continue with other posts
         
         return comments
+    
+    def _process_replies(self, replies, post_id: str, parent_id: str, depth: int, 
+                        max_replies: int, min_upvotes: int, comments: List[Dict[str, Any]]):
+        """
+        Recursively process comment replies with depth and position tracking.
+        
+        Args:
+            replies: PRAW CommentForest or list of replies
+            post_id: Reddit post ID
+            parent_id: Parent comment ID
+            depth: Current nesting depth
+            max_replies: Maximum number of replies to collect at this level
+            min_upvotes: Minimum upvotes required
+            comments: List to append processed comments to
+        """
+        replies_collected = 0
+        
+        for reply_position, reply in enumerate(replies, 1):
+            if (reply.score >= min_upvotes and 
+                replies_collected < max_replies):
+                
+                reply_data = {
+                    'id': reply.id,
+                    'post_id': post_id,
+                    'parent_id': parent_id,
+                    'content': reply.body,
+                    'author': str(reply.author) if reply.author else '[deleted]',
+                    'score': reply.score,
+                    'created_utc': int(reply.created_utc),
+                    'is_root': False,
+                    'depth': depth,
+                    'position': reply_position
+                }
+                comments.append(reply_data)
+                replies_collected += 1
+                
+                # Recursively process replies to this reply (limited depth to avoid infinite recursion)
+                if depth < 5 and hasattr(reply, 'replies') and len(reply.replies) > 0:
+                    self._process_replies(
+                        reply.replies,
+                        post_id,
+                        reply.id,
+                        depth + 1,
+                        max_replies,  # Same limit applies to all levels
+                        min_upvotes,
+                        comments
+                    )
 
 
 # Global Reddit client instance
