@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 import sys
+from datetime import datetime
 from src.collector import collector, CollectionParameters
-from src.database import db
+from src.database import db, Post
 
 
 def get_user_input():
@@ -87,15 +88,27 @@ def show_collections():
         return
     
     print("\n=== Collection History ===")
-    print(f"{'ID':<36} {'Subreddit':<15} {'Sort':<12} {'Posts':<6} {'Status':<10}")
-    print("-" * 85)
+    print(f"{'ID':<12} {'Subreddit':<15} {'Sort':<12} {'Posts':<8} {'Status':<12} {'Created':<20}")
+    print("="*80)
     
-    for collection in collections:
-        print(f"{collection.id:<36} "
-              f"r/{collection.subreddit:<14} "
-              f"{collection.sort_method:<12} "
-              f"{collection.posts_requested:<6} "
-              f"{collection.status:<10}")
+    session = db.get_session()
+    try:
+        for collection in collections:
+            # Count actual posts collected using new schema
+            post_count = session.query(Post).filter_by(collection_id=collection.id).count()
+            
+            # Format creation time
+            created_time = datetime.fromtimestamp(collection.created_at).strftime("%Y-%m-%d %H:%M")
+            
+            # Truncate long IDs for display
+            display_id = collection.id[:10] + ".." if len(collection.id) > 12 else collection.id
+            
+            print(f"{display_id:<12} r/{collection.subreddit:<14} {collection.sort_method:<12} "
+                  f"{post_count:<8} {collection.status:<12} {created_time:<20}")
+    finally:
+        session.close()
+    
+    print("="*80)
 
 
 def main():

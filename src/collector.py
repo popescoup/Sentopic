@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from tqdm import tqdm
-from .database import db
+from .database import db, Post, Comment
 from .reddit_client import reddit_client
 
 
@@ -115,13 +115,8 @@ class RedditCollector:
         if not posts:
             return []
         
-        # Save posts to database with progress bar
-        with tqdm(total=len(posts), desc="Saving posts", unit="post") as pbar:
-            for post in posts:
-                db.save_post(post, self.current_collection_id)
-                pbar.update(1)
-        
-        print(f"Collected {len(posts)} posts")
+        # Save posts to database using bulk method
+        self._save_posts(posts, self.current_collection_id)
         return posts
     
     def _collect_comments_for_posts(self, posts: list, params: CollectionParameters):
@@ -131,7 +126,7 @@ class RedditCollector:
             return
         
         print("\nFetching comments...")
-        total_comments_collected = 0
+        all_comments = []
         
         with tqdm(total=len(posts), desc="Processing posts", unit="post") as pbar:
             for post in posts:
@@ -143,14 +138,69 @@ class RedditCollector:
                     min_upvotes=params.min_upvotes
                 )
                 
-                # Save comments to database
-                for comment in comments:
-                    db.save_comment(comment, self.current_collection_id)
-                    total_comments_collected += 1
-                
+                all_comments.extend(comments)
                 pbar.update(1)
         
-        print(f"Collected {total_comments_collected} comments total")
+        # Save all comments using bulk method
+        self._save_comments(all_comments, self.current_collection_id)
+    
+    def _save_posts(self, posts: List[Dict[str, Any]], collection_id: str):
+        """Save posts to database."""
+        print(f"Saving {len(posts)} posts...")
+        
+        session = db.get_session()
+        try:
+            for post_data in tqdm(posts, desc="Saving posts", unit="post"):
+                post = Post(
+                    collection_id=collection_id,
+                    reddit_id=post_data['id'],
+                    subreddit=post_data['subreddit'],
+                    title=post_data['title'],
+                    content=post_data['content'],
+                    author=post_data['author'],
+                    score=post_data['score'],
+                    upvote_ratio=post_data['upvote_ratio'],
+                    created_utc=post_data['created_utc'],
+                    url=post_data['url'],
+                    is_self=post_data['is_self']
+                )
+                session.add(post)
+            
+            session.commit()
+            print(f"Collected {len(posts)} posts")
+        finally:
+            session.close()
+
+    def _save_comments(self, comments: List[Dict[str, Any]], collection_id: str):
+        """Save comments to database."""
+        if not comments:
+            print("No comments to save")
+            return
+            
+        print(f"Saving {len(comments)} comments...")
+        
+        session = db.get_session()
+        try:
+            for comment_data in tqdm(comments, desc="Saving comments", unit="comment"):
+                comment = Comment(
+                    collection_id=collection_id,
+                    reddit_id=comment_data['id'],
+                    post_reddit_id=comment_data['post_id'],
+                    parent_reddit_id=comment_data['parent_id'],
+                    content=comment_data['content'],
+                    author=comment_data['author'],
+                    score=comment_data['score'],
+                    created_utc=comment_data['created_utc'],
+                    is_root=comment_data['is_root'],
+                    depth=comment_data['depth'],
+                    position=comment_data['position']
+                )
+                session.add(comment)
+            
+            session.commit()
+            print(f"Collected {len(comments)} comments")
+        finally:
+            session.close()
 
 
 # Global collector instance

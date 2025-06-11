@@ -19,22 +19,30 @@ pip install -r requirements.txt
 
 ### 3. Configure API Credentials
 
-Create a `config.json` file in the project root:
+**⚠️ Important: Never commit your actual API credentials to version control!**
 
-```json
-{
-    "reddit": {
-        "client_id": "YOUR_CLIENT_ID_HERE",
-        "client_secret": "YOUR_CLIENT_SECRET_HERE",
-        "user_agent": "Sentopic:v1.0 (by u/yourusername)"
-    }
-}
-```
+1. Copy the example configuration file:
+   ```bash
+   cp config.example.json config.json
+   ```
+
+2. Edit `config.json` with your actual Reddit API credentials:
+   ```json
+   {
+       "reddit": {
+           "client_id": "YOUR_ACTUAL_CLIENT_ID",
+           "client_secret": "YOUR_ACTUAL_CLIENT_SECRET",
+           "user_agent": "Sentopic:v1.0 (by u/yourusername)"
+       }
+   }
+   ```
 
 Replace:
-- `YOUR_CLIENT_ID_HERE` with your Reddit app's client ID
-- `YOUR_CLIENT_SECRET_HERE` with your Reddit app's client secret  
+- `YOUR_ACTUAL_CLIENT_ID` with your Reddit app's client ID
+- `YOUR_ACTUAL_CLIENT_SECRET` with your Reddit app's client secret  
 - `yourusername` with your Reddit username
+
+**Note**: The `config.json` file is included in `.gitignore` to protect your API credentials. Only the `config.example.json` template is tracked in version control.
 
 ## Usage
 
@@ -88,6 +96,12 @@ The collector includes built-in rate limiting to respect Reddit's API limits:
 - 1-second delay between requests
 - Graceful error handling for API issues
 - Progress bars show collection status
+
+## Security Notes
+
+- API credentials are stored in `config.json` which is excluded from version control
+- The database file (`sentopic.db`) is also excluded as it may contain user data
+- Always keep your Reddit API credentials secure and never share them publicly
 
 ## Integration with Future Phases
 

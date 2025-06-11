@@ -22,7 +22,7 @@ class Collection(Base):
     created_at = Column(Integer, nullable=False)
     status = Column(String, default='running')  # 'running', 'completed', 'failed'
     
-    # Relationships
+    # Relationships (simplified - no cross-references between Post and Comment)
     posts = relationship("Post", back_populates="collection", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="collection", cascade="all, delete-orphan")
 
@@ -30,36 +30,40 @@ class Collection(Base):
 class Post(Base):
     __tablename__ = 'posts'
     
-    id = Column(String, primary_key=True)  # Reddit post ID
+    # Composite primary key: collection_id + reddit_id
+    collection_id = Column(String, ForeignKey('collections.id'), primary_key=True)
+    reddit_id = Column(String, primary_key=True)  # Original Reddit post ID
     subreddit = Column(String, nullable=False)
     title = Column(Text, nullable=False)
-    content = Column(Text, nullable=True)  # selftext for text posts
-    author = Column(String, nullable=True)  # Can be None for deleted users
-    score = Column(Integer, nullable=False)
-    created_utc = Column(Integer, nullable=False)
-    url = Column(Text, nullable=True)
-    collection_id = Column(String, ForeignKey('collections.id'), nullable=False)
+    content = Column(Text)  # Self-text content for text posts
+    author = Column(String)
+    score = Column(Integer, default=0)
+    upvote_ratio = Column(Float)  # Ratio of upvotes to total votes
+    created_utc = Column(Integer)
+    url = Column(String)
+    is_self = Column(Boolean, default=False)  # True for text posts, False for link posts
     
-    # Relationships
+    # Relationship to collection only
     collection = relationship("Collection", back_populates="posts")
-    comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
 
 
 class Comment(Base):
     __tablename__ = 'comments'
     
-    id = Column(String, primary_key=True)  # Reddit comment ID
-    post_id = Column(String, ForeignKey('posts.id'), nullable=False)
-    parent_id = Column(String, nullable=True)  # None for root comments, comment_id for replies
-    content = Column(Text, nullable=False)
-    author = Column(String, nullable=True)  # Can be None for deleted users
-    score = Column(Integer, nullable=False)
-    created_utc = Column(Integer, nullable=False)
-    is_root = Column(Boolean, nullable=False)
-    collection_id = Column(String, ForeignKey('collections.id'), nullable=False)
+    # Composite primary key: collection_id + reddit_id
+    collection_id = Column(String, ForeignKey('collections.id'), primary_key=True)
+    reddit_id = Column(String, primary_key=True)  # Original Reddit comment ID
+    post_reddit_id = Column(String, nullable=False)  # Which post this belongs to (references Post.reddit_id)
+    parent_reddit_id = Column(String)  # For threading (None if root comment)
+    content = Column(Text, nullable=False)  # Comment text content
+    author = Column(String)
+    score = Column(Integer, default=0)
+    created_utc = Column(Integer)
+    is_root = Column(Boolean, default=True)  # True for top-level comments
+    depth = Column(Integer, default=0)  # Comment nesting depth (0=root, 1=reply, 2=reply to reply, etc.)
+    position = Column(Integer, default=1)  # Position within the same depth level
     
-    # Relationships
-    post = relationship("Post", back_populates="comments")
+    # Relationship to collection only
     collection = relationship("Collection", back_populates="comments")
 
 
@@ -115,17 +119,19 @@ class Database:
         session = self.get_session()
         try:
             post = Post(
-                id=post_data['id'],
+                collection_id=collection_id,
+                reddit_id=post_data['id'],
                 subreddit=post_data['subreddit'],
                 title=post_data['title'],
                 content=post_data['content'],
                 author=post_data['author'],
                 score=post_data['score'],
+                upvote_ratio=post_data['upvote_ratio'],
                 created_utc=post_data['created_utc'],
                 url=post_data['url'],
-                collection_id=collection_id
+                is_self=post_data['is_self']
             )
-            session.merge(post)  # Use merge to handle duplicates
+            session.add(post)  # Use add() instead of merge()
             session.commit()
         finally:
             session.close()
@@ -135,17 +141,19 @@ class Database:
         session = self.get_session()
         try:
             comment = Comment(
-                id=comment_data['id'],
-                post_id=comment_data['post_id'],
-                parent_id=comment_data['parent_id'],
+                collection_id=collection_id,
+                reddit_id=comment_data['id'],
+                post_reddit_id=comment_data['post_id'],
+                parent_reddit_id=comment_data['parent_id'],
                 content=comment_data['content'],
                 author=comment_data['author'],
                 score=comment_data['score'],
                 created_utc=comment_data['created_utc'],
                 is_root=comment_data['is_root'],
-                collection_id=collection_id
+                depth=comment_data['depth'],
+                position=comment_data['position']
             )
-            session.merge(comment)  # Use merge to handle duplicates
+            session.add(comment)  # Use add() instead of merge()
             session.commit()
         finally:
             session.close()
@@ -154,7 +162,7 @@ class Database:
         """Get all collections."""
         session = self.get_session()
         try:
-            return session.query(Collection).all()
+            return session.query(Collection).order_by(Collection.created_at.desc()).all()
         finally:
             session.close()
 
