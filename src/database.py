@@ -1,12 +1,15 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, ForeignKey, Text, Float
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, ForeignKey, Text, Float, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from typing import Optional, List
+import json
 
 Base = declarative_base()
 
+
+# Phase 1: Collection Tables (existing)
 
 class Collection(Base):
     __tablename__ = 'collections'
@@ -66,6 +69,83 @@ class Comment(Base):
     # Relationship to collection only
     collection = relationship("Collection", back_populates="comments")
 
+# Phase 2: Analytics Tables (new)
+
+class AnalysisSession(Base):
+    __tablename__ = 'analysis_sessions'
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, nullable=False)
+    keywords = Column(Text, nullable=False)  # JSON array of keywords
+    collection_ids = Column(Text, nullable=False)  # JSON array of collection IDs
+    created_at = Column(Integer, nullable=False)
+    status = Column(String, default='running')  # 'running', 'completed', 'failed'
+    total_mentions = Column(Integer, default=0)
+    avg_sentiment = Column(Float, default=0.0)
+    partial_matching = Column(Boolean, default=False)
+    context_window_words = Column(Integer, default=20)
+    
+    # Relationships
+    keyword_mentions = relationship("KeywordMention", back_populates="session", cascade="all, delete-orphan")
+    keyword_stats = relationship("KeywordStat", back_populates="session", cascade="all, delete-orphan")
+    keyword_cooccurrences = relationship("KeywordCooccurrence", back_populates="session", cascade="all, delete-orphan")
+
+
+class KeywordMention(Base):
+    __tablename__ = 'keyword_mentions'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    analysis_session_id = Column(String, ForeignKey('analysis_sessions.id'), nullable=False)
+    keyword = Column(String, nullable=False)
+    content_type = Column(String, nullable=False)  # 'post' or 'comment'
+    content_reddit_id = Column(String, nullable=False)  # references posts.reddit_id or comments.reddit_id
+    collection_id = Column(String, nullable=False)
+    sentiment_score = Column(Float, nullable=False)  # VADER sentiment score: -1 to +1
+    created_utc = Column(Integer, nullable=False)  # copied from original post/comment
+    position_in_content = Column(Integer, nullable=False)  # character index of keyword
+    
+    # Relationship
+    session = relationship("AnalysisSession", back_populates="keyword_mentions")
+
+
+class KeywordStat(Base):
+    __tablename__ = 'keyword_stats'
+    
+    analysis_session_id = Column(String, ForeignKey('analysis_sessions.id'), primary_key=True)
+    keyword = Column(String, primary_key=True)
+    total_mentions = Column(Integer, nullable=False)
+    avg_sentiment = Column(Float, nullable=False)
+    posts_found_in = Column(Integer, nullable=False)
+    comments_found_in = Column(Integer, nullable=False)
+    collections_found_in = Column(Text, nullable=False)  # JSON array of collection IDs
+    first_mention_date = Column(Integer, nullable=False)
+    last_mention_date = Column(Integer, nullable=False)
+    
+    # Relationship
+    session = relationship("AnalysisSession", back_populates="keyword_stats")
+
+
+class KeywordCooccurrence(Base):
+    __tablename__ = 'keyword_cooccurrences'
+    
+    analysis_session_id = Column(String, ForeignKey('analysis_sessions.id'), primary_key=True)
+    keyword1 = Column(String, primary_key=True)  # alphabetically first keyword
+    keyword2 = Column(String, primary_key=True)  # alphabetically second keyword
+    cooccurrence_count = Column(Integer, nullable=False)
+    in_posts = Column(Integer, nullable=False)
+    in_comments = Column(Integer, nullable=False)
+    
+    # Relationship
+    session = relationship("AnalysisSession", back_populates="keyword_cooccurrences")
+
+
+# Indexes for performance optimization
+Index('idx_keyword_mentions_session', KeywordMention.analysis_session_id)
+Index('idx_keyword_mentions_keyword', KeywordMention.keyword)
+Index('idx_keyword_mentions_date', KeywordMention.created_utc)
+Index('idx_keyword_stats_session', KeywordStat.analysis_session_id)
+Index('idx_cooccurrences_session', KeywordCooccurrence.analysis_session_id)
+
 
 class Database:
     def __init__(self, db_path: str = "sentopic.db"):
@@ -80,6 +160,8 @@ class Database:
     def get_session(self):
         """Get a database session."""
         return self.SessionLocal()
+    
+    # Phase 1: Collection Methods (existing - unchanged)
     
     def create_collection(self, subreddit: str, sort_method: str, time_period: Optional[str],
                          posts_requested: int, root_comments_requested: int, 
@@ -163,6 +245,79 @@ class Database:
         session = self.get_session()
         try:
             return session.query(Collection).order_by(Collection.created_at.desc()).all()
+        finally:
+            session.close()
+    
+    # Phase 2: Analytics Methods (new)
+    
+    def create_analysis_session(self, name: str, keywords: List[str], collection_ids: List[str],
+                               partial_matching: bool = False, context_window_words: int = 20) -> str:
+        """Create a new analysis session and return its ID."""
+        session = self.get_session()
+        try:
+            analysis_session = AnalysisSession(
+                name=name,
+                keywords=json.dumps(keywords),
+                collection_ids=json.dumps(collection_ids),
+                created_at=int(datetime.utcnow().timestamp()),
+                partial_matching=partial_matching,
+                context_window_words=context_window_words
+            )
+            session.add(analysis_session)
+            session.commit()
+            return analysis_session.id
+        finally:
+            session.close()
+    
+    def update_analysis_session_status(self, session_id: str, status: str):
+        """Update the status of an analysis session."""
+        session = self.get_session()
+        try:
+            analysis_session = session.query(AnalysisSession).filter(AnalysisSession.id == session_id).first()
+            if analysis_session:
+                analysis_session.status = status
+                session.commit()
+        finally:
+            session.close()
+    
+    def update_analysis_session_stats(self, session_id: str, total_mentions: int, avg_sentiment: float):
+        """Update overall statistics for an analysis session."""
+        session = self.get_session()
+        try:
+            analysis_session = session.query(AnalysisSession).filter(AnalysisSession.id == session_id).first()
+            if analysis_session:
+                analysis_session.total_mentions = total_mentions
+                analysis_session.avg_sentiment = avg_sentiment
+                session.commit()
+        finally:
+            session.close()
+    
+    def get_analysis_sessions(self) -> List[AnalysisSession]:
+        """Get all analysis sessions."""
+        session = self.get_session()
+        try:
+            return session.query(AnalysisSession).order_by(AnalysisSession.created_at.desc()).all()
+        finally:
+            session.close()
+    
+    def get_analysis_session(self, session_id: str) -> Optional[AnalysisSession]:
+        """Get a specific analysis session."""
+        session = self.get_session()
+        try:
+            return session.query(AnalysisSession).filter(AnalysisSession.id == session_id).first()
+        finally:
+            session.close()
+    
+    def delete_analysis_session(self, session_id: str):
+        """Delete an analysis session and all related data."""
+        session = self.get_session()
+        try:
+            analysis_session = session.query(AnalysisSession).filter(AnalysisSession.id == session_id).first()
+            if analysis_session:
+                session.delete(analysis_session)
+                session.commit()
+                return True
+            return False
         finally:
             session.close()
 
