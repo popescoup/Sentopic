@@ -10,7 +10,7 @@ import numpy as np
 import pickle
 from typing import List, Dict, Any, Tuple, Optional
 from dataclasses import dataclass
-from ..database import db
+from ...database import db
 
 
 @dataclass
