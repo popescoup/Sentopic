@@ -273,7 +273,7 @@ def show_trends_analysis(session_id: str):
             print("│             │ " + " │ ".join(["Men   Sent"] * len(valid_keywords)) + " │")
             print("├─────────────┼─" + "─┼─".join(["─────────────"] * len(valid_keywords)) + "─┤")
             
-            for period in sorted_periods[-10:]:  # Show last 10 periods
+            for period in sorted_periods:  # Show all periods
                 row = f"│ {period:<11} │ "
                 
                 for kw in valid_keywords:
