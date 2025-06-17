@@ -3,5 +3,34 @@
         "client_id": "YOUR_CLIENT_ID_HERE",
         "client_secret": "YOUR_CLIENT_SECRET_HERE",
         "user_agent": "Sentopic:v1.0 (by u/yourusername)"
+    },
+    "llm": {
+        "enabled": true,
+        "default_provider": "anthropic",
+        "providers": {
+            "anthropic": {
+                "api_key": "YOUR_ANTHROPIC_API_KEY_HERE",
+                "model": "claude-3-5-sonnet-20240620",
+                "max_tokens": 4000,
+                "temperature": 0.1
+            },
+            "openai": {
+                "api_key": "YOUR_OPENAI_API_KEY_HERE",
+                "model": "gpt-4o",
+                "max_tokens": 4000,
+                "temperature": 0.1
+            }
+        },
+        "features": {
+            "keyword_suggestion": true,
+            "summarization": true,
+            "rag_search": true,
+            "chat_agent": true
+        },
+        "embeddings": {
+            "provider": "openai",
+            "model": "text-embedding-3-small",
+            "storage": "sqlite"
+        }
     }
 }

@@ -2,3 +2,7 @@ praw==7.8.1
 sqlalchemy>=2.0.35
 tqdm==4.66.1
 vaderSentiment>=3.3.2
+anthropic>=0.25.0
+openai>=1.0.0
+sentence-transformers>=2.2.0
+numpy>=1.24.0

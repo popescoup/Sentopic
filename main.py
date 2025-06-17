@@ -3,6 +3,7 @@
 import sys
 from src.cli.collection import handle_collection_commands
 from src.cli.analytics import handle_analytics_commands
+from src.cli.llm import handle_llm_commands
 
 
 def show_help():
@@ -19,6 +20,12 @@ def show_help():
     print("  python main.py --results <id>     - View session results")
     print("  python main.py --trends <id>      - View trend analysis for session")
     print("  python main.py --delete-session <id> - Delete analysis session")
+    print()
+    print("LLM Commands:")
+    print("  python main.py --test-llm         - Test LLM configuration and providers")
+    print("  python main.py --suggest-keywords - Interactive keyword suggestions")
+    print("  python main.py --suggest-keywords \"research goal\" - Direct keyword suggestions")
+    print("  python main.py --llm-status       - Show LLM status and configuration")
     print()
     print("General:")
     print("  python main.py --help             - Show this help")
@@ -41,6 +48,10 @@ def main():
         # Analytics commands
         if command in ["--analyze", "--sessions", "--results", "--trends", "--delete-session"]:
             return handle_analytics_commands(sys.argv[1:])
+        
+        # LLM commands
+        if command in ["--test-llm", "--suggest-keywords", "--llm-status"]:
+            return handle_llm_commands(sys.argv[1:])
         
         # Unknown command
         print(f"Unknown command: {command}")

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, ForeignKey, Text, Float, Index
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, ForeignKey, Text, Float, Index, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from typing import Optional, List
@@ -69,7 +69,7 @@ class Comment(Base):
     # Relationship to collection only
     collection = relationship("Collection", back_populates="comments")
 
-# Phase 2: Analytics Tables (new)
+# Phase 2: Analytics Tables (existing)
 
 class AnalysisSession(Base):
     __tablename__ = 'analysis_sessions'
@@ -89,6 +89,7 @@ class AnalysisSession(Base):
     keyword_mentions = relationship("KeywordMention", back_populates="session", cascade="all, delete-orphan")
     keyword_stats = relationship("KeywordStat", back_populates="session", cascade="all, delete-orphan")
     keyword_cooccurrences = relationship("KeywordCooccurrence", back_populates="session", cascade="all, delete-orphan")
+    llm_summary = relationship("LLMSummary", back_populates="session", uselist=False, cascade="all, delete-orphan")
 
 
 class KeywordMention(Base):
@@ -139,12 +140,80 @@ class KeywordCooccurrence(Base):
     session = relationship("AnalysisSession", back_populates="keyword_cooccurrences")
 
 
+# Phase 3: LLM Tables (new)
+
+class LLMSummary(Base):
+    __tablename__ = 'llm_summaries'
+    
+    analysis_session_id = Column(String, ForeignKey('analysis_sessions.id'), primary_key=True)
+    user_query = Column(Text)  # Original user problem description
+    summary_text = Column(Text, nullable=False)  # AI-generated summary
+    generated_at = Column(Integer, nullable=False)
+    provider_used = Column(String, nullable=False)  # 'anthropic', 'openai', etc.
+    model_used = Column(String, nullable=False)  # Specific model name
+    tokens_used = Column(Integer, default=0)
+    cost_estimate = Column(Float, default=0.0)
+    
+    # Relationship
+    session = relationship("AnalysisSession", back_populates="llm_summary")
+
+
+class ContentEmbedding(Base):
+    __tablename__ = 'content_embeddings'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    content_type = Column(String, nullable=False)  # 'post' or 'comment'
+    content_id = Column(String, nullable=False)  # reddit_id from posts or comments
+    collection_id = Column(String, nullable=False)
+    embedding = Column(LargeBinary, nullable=False)  # Serialized vector embedding
+    model = Column(String, nullable=False)  # Model used to generate embedding
+    provider = Column(String, nullable=False)  # Provider used ('openai', 'local', etc.)
+    created_at = Column(Integer, nullable=False)
+    
+    # Composite index for efficient lookups
+    __table_args__ = (
+        Index('idx_content_embedding_lookup', 'content_id', 'content_type', 'collection_id'),
+        Index('idx_content_embedding_collection', 'collection_id'),
+    )
+
+
+class ChatSession(Base):
+    __tablename__ = 'chat_sessions'
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    analysis_session_id = Column(String, ForeignKey('analysis_sessions.id'), nullable=False)
+    created_at = Column(Integer, nullable=False)
+    last_active = Column(Integer, nullable=False)
+    
+    # Relationships
+    messages = relationship("ChatMessage", back_populates="chat_session", cascade="all, delete-orphan")
+
+
+class ChatMessage(Base):
+    __tablename__ = 'chat_messages'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    chat_session_id = Column(String, ForeignKey('chat_sessions.id'), nullable=False)
+    role = Column(String, nullable=False)  # 'user' or 'assistant'
+    content = Column(Text, nullable=False)
+    timestamp = Column(Integer, nullable=False)
+    provider_used = Column(String)  # Which LLM provider was used (for assistant messages)
+    model_used = Column(String)  # Which model was used (for assistant messages)
+    tokens_used = Column(Integer, default=0)
+    cost_estimate = Column(Float, default=0.0)
+    
+    # Relationship
+    chat_session = relationship("ChatSession", back_populates="messages")
+
+
 # Indexes for performance optimization
 Index('idx_keyword_mentions_session', KeywordMention.analysis_session_id)
 Index('idx_keyword_mentions_keyword', KeywordMention.keyword)
 Index('idx_keyword_mentions_date', KeywordMention.created_utc)
 Index('idx_keyword_stats_session', KeywordStat.analysis_session_id)
 Index('idx_cooccurrences_session', KeywordCooccurrence.analysis_session_id)
+Index('idx_chat_messages_session', ChatMessage.chat_session_id)
+Index('idx_chat_messages_timestamp', ChatMessage.timestamp)
 
 
 class Database:
@@ -248,7 +317,7 @@ class Database:
         finally:
             session.close()
     
-    # Phase 2: Analytics Methods (new)
+    # Phase 2: Analytics Methods (existing - unchanged)
     
     def create_analysis_session(self, name: str, keywords: List[str], collection_ids: List[str],
                                partial_matching: bool = False, context_window_words: int = 20) -> str:
@@ -318,6 +387,98 @@ class Database:
                 session.commit()
                 return True
             return False
+        finally:
+            session.close()
+    
+    # Phase 3: LLM Methods (new)
+    
+    def save_llm_summary(self, session_id: str, user_query: str, summary_text: str,
+                        provider_used: str, model_used: str, tokens_used: int, cost_estimate: float):
+        """Save an LLM-generated summary for an analysis session."""
+        session = self.get_session()
+        try:
+            llm_summary = LLMSummary(
+                analysis_session_id=session_id,
+                user_query=user_query,
+                summary_text=summary_text,
+                generated_at=int(datetime.utcnow().timestamp()),
+                provider_used=provider_used,
+                model_used=model_used,
+                tokens_used=tokens_used,
+                cost_estimate=cost_estimate
+            )
+            session.merge(llm_summary)  # Use merge to handle updates
+            session.commit()
+        finally:
+            session.close()
+    
+    def get_llm_summary(self, session_id: str) -> Optional[LLMSummary]:
+        """Get LLM summary for an analysis session."""
+        session = self.get_session()
+        try:
+            return session.query(LLMSummary).filter(LLMSummary.analysis_session_id == session_id).first()
+        finally:
+            session.close()
+    
+    def create_chat_session(self, analysis_session_id: str) -> str:
+        """Create a new chat session and return its ID."""
+        session = self.get_session()
+        try:
+            chat_session = ChatSession(
+                analysis_session_id=analysis_session_id,
+                created_at=int(datetime.utcnow().timestamp()),
+                last_active=int(datetime.utcnow().timestamp())
+            )
+            session.add(chat_session)
+            session.commit()
+            return chat_session.id
+        finally:
+            session.close()
+    
+    def save_chat_message(self, chat_session_id: str, role: str, content: str,
+                         provider_used: str = None, model_used: str = None,
+                         tokens_used: int = 0, cost_estimate: float = 0.0):
+        """Save a chat message."""
+        session = self.get_session()
+        try:
+            message = ChatMessage(
+                chat_session_id=chat_session_id,
+                role=role,
+                content=content,
+                timestamp=int(datetime.utcnow().timestamp()),
+                provider_used=provider_used,
+                model_used=model_used,
+                tokens_used=tokens_used,
+                cost_estimate=cost_estimate
+            )
+            session.add(message)
+            
+            # Update chat session last_active
+            chat_session = session.query(ChatSession).filter(ChatSession.id == chat_session_id).first()
+            if chat_session:
+                chat_session.last_active = int(datetime.utcnow().timestamp())
+            
+            session.commit()
+        finally:
+            session.close()
+    
+    def get_chat_sessions(self, analysis_session_id: str) -> List[ChatSession]:
+        """Get chat sessions for an analysis session."""
+        session = self.get_session()
+        try:
+            return session.query(ChatSession).filter(
+                ChatSession.analysis_session_id == analysis_session_id
+            ).order_by(ChatSession.last_active.desc()).all()
+        finally:
+            session.close()
+    
+    def get_chat_messages(self, chat_session_id: str, limit: int = 50) -> List[ChatMessage]:
+        """Get messages for a chat session."""
+        session = self.get_session()
+        try:
+            return session.query(ChatMessage).filter(
+                ChatMessage.chat_session_id == chat_session_id
+            ).order_by(ChatMessage.timestamp.desc()).limit(limit).all()
         finally:
             session.close()
 
