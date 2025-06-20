@@ -3,7 +3,7 @@ Analytics Engine
 
 Main orchestration class for Phase 2 analytics functionality.
 Coordinates keyword analysis, sentiment analysis, co-occurrence tracking,
-and trend analysis.
+and trend analysis. Enhanced with Phase 3.3 summarization capabilities.
 """
 
 import json
@@ -16,6 +16,8 @@ from .keywords import keyword_processor
 from .sentiment import sentiment_analyzer
 from .cooccurrence import cooccurrence_detector
 from .trends import trends_analyzer
+from ..llm.services.summarizer import analysis_summarizer
+from ..llm import is_llm_available
 
 
 class AnalyticsEngine:
@@ -185,6 +187,92 @@ class AnalyticsEngine:
         except Exception as e:
             db.update_analysis_session_status(session_id, 'failed')
             raise e
+    
+    def run_analysis_with_summary(self, session_id: str, user_query: str = None, 
+                                  generate_summary: bool = False) -> Dict[str, Any]:
+        """
+        Run complete analysis for a session with optional summary generation.
+        
+        Args:
+            session_id: Session ID to analyze
+            user_query: Optional user's research description for better summaries
+            generate_summary: Whether to generate AI summary after analysis
+        
+        Returns:
+            Dictionary with analysis results and summary information
+        """
+        # Run the standard analysis first
+        analysis_results = self.run_analysis(session_id)
+        
+        # Generate summary if requested and LLM is available
+        summary_results = None
+        if generate_summary:
+            if not is_llm_available():
+                print("⚠️  Warning: LLM not available. Skipping summary generation.")
+                print("   Enable LLM features in config.json to use summaries.")
+            else:
+                try:
+                    print("\n🤖 Generating AI summary...")
+                    summary_results = analysis_summarizer.generate_summary(session_id, user_query)
+                    print("✅ Summary generated successfully!")
+                except Exception as e:
+                    print(f"⚠️  Warning: Failed to generate summary: {e}")
+                    print("   Analysis completed successfully, but summary generation failed.")
+        
+        # Combine results
+        combined_results = analysis_results.copy()
+        if summary_results:
+            combined_results['summary'] = summary_results
+        
+        return combined_results
+
+    def get_session_summary(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get existing summary for an analysis session.
+        
+        Args:
+            session_id: Session ID to get summary for
+        
+        Returns:
+            Summary data or None if no summary exists
+        """
+        return analysis_summarizer.get_existing_summary(session_id)
+
+    def regenerate_session_summary(self, session_id: str, user_query: str = None) -> Dict[str, Any]:
+        """
+        Regenerate summary for an existing analysis session.
+        
+        Args:
+            session_id: Session ID to regenerate summary for
+            user_query: Optional updated research description
+        
+        Returns:
+            Dictionary with new summary results
+        """
+        if not is_llm_available():
+            raise RuntimeError("LLM not available. Cannot generate summaries.")
+        
+        return analysis_summarizer.regenerate_summary(session_id, user_query)
+
+    def get_session_results_with_summary(self, session_id: str) -> Dict[str, Any]:
+        """
+        Get comprehensive results for an analysis session including summary if available.
+        
+        Args:
+            session_id: Session ID to get results for
+        
+        Returns:
+            Dictionary with complete session results and summary
+        """
+        # Get standard session results
+        results = self.get_session_results(session_id)
+        
+        # Add summary if available
+        summary = self.get_session_summary(session_id)
+        if summary:
+            results['summary'] = summary
+        
+        return results
     
     def get_session_results(self, session_id: str) -> Dict[str, Any]:
         """
