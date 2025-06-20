@@ -21,6 +21,14 @@ def show_help():
     print("  python main.py --trends <id>      - View trend analysis for session")
     print("  python main.py --delete-session <id> - Delete analysis session")
     print()
+    print("AI Summary Commands:")
+    print("  python main.py --show-summary <id>      - View AI summary for session")
+    print("  python main.py --generate-summary <id>  - Generate/regenerate AI summary")
+    print()
+    print("Chat & Search Commands:")
+    print("  python main.py --chat <id>              - Start interactive chat with analysis data")
+    print("  python main.py --index-content <id>     - Index content for semantic search")
+    print()
     print("LLM Commands:")
     print("  python main.py --test-llm         - Test LLM configuration and providers")
     print("  python main.py --suggest-keywords - Interactive keyword suggestions")
@@ -45,8 +53,9 @@ def main():
         if command in ["--list"]:
             return handle_collection_commands(sys.argv[1:])
         
-        # Analytics commands
-        if command in ["--analyze", "--sessions", "--results", "--trends", "--delete-session"]:
+        # Analytics commands (including summary and chat commands)
+        if command in ["--analyze", "--sessions", "--results", "--trends", "--delete-session", 
+                       "--show-summary", "--generate-summary", "--chat", "--index-content"]:
             return handle_analytics_commands(sys.argv[1:])
         
         # LLM commands
