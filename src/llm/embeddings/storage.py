@@ -10,6 +10,7 @@ import numpy as np
 import pickle
 from typing import List, Dict, Any, Tuple, Optional
 from dataclasses import dataclass
+from sqlalchemy import text
 from ...database import db
 
 
@@ -43,7 +44,7 @@ class VectorStorage:
         try:
             # Tables will be created by database.py updates
             # This is just to ensure they exist
-            session.execute("SELECT 1 FROM content_embeddings LIMIT 1")
+            session.execute(text("SELECT 1 FROM content_embeddings LIMIT 1"))
         except Exception:
             # Tables don't exist yet - they'll be created by database schema updates
             pass
@@ -79,12 +80,12 @@ class VectorStorage:
                 # Serialize embedding as blob
                 embedding_blob = pickle.dumps(embedding.astype(np.float32))
                 
-                # Insert or update embedding
-                session.execute("""
+                # Insert or update embedding - FIXED: Convert to tuple
+                session.execute(text("""
                     INSERT OR REPLACE INTO content_embeddings 
                     (content_type, content_id, collection_id, embedding, model, provider, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (
+                """), (
                     content_item['content_type'],
                     content_item['content_id'],
                     content_item['collection_id'],
@@ -141,13 +142,14 @@ class VectorStorage:
                 where_clause = "WHERE " + " AND ".join(conditions)
             
             # Fetch all embeddings (we'll compute similarity in Python)
-            query = f"""
+            query_text = f"""
                 SELECT content_id, content_type, collection_id, embedding 
                 FROM content_embeddings 
                 {where_clause}
             """
             
-            results = session.execute(query, params).fetchall()
+            # FIXED: Convert params list to tuple
+            results = session.execute(text(query_text), tuple(params) if params else ()).fetchall()
             
             if not results:
                 return []
@@ -208,22 +210,22 @@ class VectorStorage:
         """Fetch the actual text content for a given item."""
         try:
             if content_type == 'post':
-                result = session.execute("""
+                result = session.execute(text("""
                     SELECT title, content 
                     FROM posts 
                     WHERE reddit_id = ? AND collection_id = ?
-                """, (content_id, collection_id)).fetchone()
+                """), (content_id, collection_id)).fetchone()
                 
                 if result:
                     title, content = result
                     return f"{title} {content or ''}".strip()
             
             elif content_type == 'comment':
-                result = session.execute("""
+                result = session.execute(text("""
                     SELECT content 
                     FROM comments 
                     WHERE reddit_id = ? AND collection_id = ?
-                """, (content_id, collection_id)).fetchone()
+                """), (content_id, collection_id)).fetchone()
                 
                 if result:
                     return result[0] or ""
@@ -257,28 +259,31 @@ class VectorStorage:
             if conditions:
                 where_clause = "WHERE " + " AND ".join(conditions)
             
+            # FIXED: Convert params list to tuple
+            params_tuple = tuple(params) if params else ()
+            
             # Get total counts
-            total_result = session.execute(f"""
+            total_result = session.execute(text(f"""
                 SELECT COUNT(*) FROM content_embeddings {where_clause}
-            """, params).fetchone()
+            """), params_tuple).fetchone()
             
             total_embeddings = total_result[0] if total_result else 0
             
             # Get counts by content type
-            type_results = session.execute(f"""
+            type_results = session.execute(text(f"""
                 SELECT content_type, COUNT(*) 
                 FROM content_embeddings {where_clause}
                 GROUP BY content_type
-            """, params).fetchall()
+            """), params_tuple).fetchall()
             
             type_counts = {content_type: count for content_type, count in type_results}
             
             # Get model usage
-            model_results = session.execute(f"""
+            model_results = session.execute(text(f"""
                 SELECT model, provider, COUNT(*) 
                 FROM content_embeddings {where_clause}
                 GROUP BY model, provider
-            """, params).fetchall()
+            """), params_tuple).fetchall()
             
             model_usage = []
             for model, provider, count in model_results:
@@ -329,17 +334,20 @@ class VectorStorage:
             
             where_clause = "WHERE " + " AND ".join(conditions)
             
+            # FIXED: Convert params list to tuple
+            params_tuple = tuple(params)
+            
             # Count before deletion
-            count_result = session.execute(f"""
+            count_result = session.execute(text(f"""
                 SELECT COUNT(*) FROM content_embeddings {where_clause}
-            """, params).fetchone()
+            """), params_tuple).fetchone()
             
             count_before = count_result[0] if count_result else 0
             
             # Delete embeddings
-            session.execute(f"""
+            session.execute(text(f"""
                 DELETE FROM content_embeddings {where_clause}
-            """, params)
+            """), params_tuple)
             
             session.commit()
             return count_before
@@ -362,10 +370,10 @@ class VectorStorage:
         """
         session = db.get_session()
         try:
-            result = session.execute("""
+            result = session.execute(text("""
                 SELECT 1 FROM content_embeddings 
                 WHERE content_id = ? AND content_type = ? AND collection_id = ?
-            """, (content_id, content_type, collection_id)).fetchone()
+            """), (content_id, content_type, collection_id)).fetchone()
             
             return result is not None
             

@@ -12,7 +12,8 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 import re
 from ...database import db, Post, Comment
-from ..embeddings import vector_storage, get_embedding_provider
+from ..embeddings import vector_storage
+from .. import get_embedding_provider
 
 
 @dataclass

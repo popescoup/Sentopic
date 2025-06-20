@@ -11,6 +11,7 @@ from datetime import datetime
 
 from .search_engine import SearchEngineFactory, SearchResult
 from ...llm import get_llm_provider
+from ...database import db, Post, Comment  # ADDED db IMPORT
 
 
 @dataclass
@@ -199,8 +200,6 @@ Please provide a comprehensive answer based on the sources above. Include specif
         Returns:
             Full content details or None if not found
         """
-        from ...database import Post, Comment
-        
         session = db.get_session()
         try:
             if content_type == 'post':
