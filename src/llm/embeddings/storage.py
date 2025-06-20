@@ -3,6 +3,8 @@ Vector Embeddings Storage
 
 Handles storage and retrieval of vector embeddings for semantic search.
 Uses SQLite with vector extensions for efficient similarity search.
+
+FIXED: Parameter binding issues with SQLAlchemy text() queries
 """
 
 import sqlite3
@@ -80,20 +82,20 @@ class VectorStorage:
                 # Serialize embedding as blob
                 embedding_blob = pickle.dumps(embedding.astype(np.float32))
                 
-                # Insert or update embedding - FIXED: Convert to tuple
+                # FIXED: Use dictionary parameters instead of positional
                 session.execute(text("""
                     INSERT OR REPLACE INTO content_embeddings 
                     (content_type, content_id, collection_id, embedding, model, provider, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """), (
-                    content_item['content_type'],
-                    content_item['content_id'],
-                    content_item['collection_id'],
-                    embedding_blob,
-                    model,
-                    provider,
-                    int(np.datetime64('now').astype('datetime64[s]').astype(int))
-                ))
+                    VALUES (:content_type, :content_id, :collection_id, :embedding, :model, :provider, :created_at)
+                """), {
+                    'content_type': content_item['content_type'],
+                    'content_id': content_item['content_id'],
+                    'collection_id': content_item['collection_id'],
+                    'embedding': embedding_blob,
+                    'model': model,
+                    'provider': provider,
+                    'created_at': int(np.datetime64('now').astype('datetime64[s]').astype(int))
+                })
                 
                 stored_count += 1
             
@@ -123,19 +125,23 @@ class VectorStorage:
         """
         session = db.get_session()
         try:
-            # Build query conditions
+            # Build query conditions and parameters using dictionary format
             conditions = []
-            params = []
+            params = {}
             
             if collection_ids:
-                placeholders = ','.join(['?' for _ in collection_ids])
-                conditions.append(f"collection_id IN ({placeholders})")
-                params.extend(collection_ids)
+                # FIXED: Use dictionary parameters with IN clause
+                collection_placeholders = ','.join([f':collection_id_{i}' for i in range(len(collection_ids))])
+                conditions.append(f"collection_id IN ({collection_placeholders})")
+                for i, collection_id in enumerate(collection_ids):
+                    params[f'collection_id_{i}'] = collection_id
             
             if content_types:
-                placeholders = ','.join(['?' for _ in content_types])
-                conditions.append(f"content_type IN ({placeholders})")
-                params.extend(content_types)
+                # FIXED: Use dictionary parameters with IN clause
+                type_placeholders = ','.join([f':content_type_{i}' for i in range(len(content_types))])
+                conditions.append(f"content_type IN ({type_placeholders})")
+                for i, content_type in enumerate(content_types):
+                    params[f'content_type_{i}'] = content_type
             
             where_clause = ""
             if conditions:
@@ -148,8 +154,8 @@ class VectorStorage:
                 {where_clause}
             """
             
-            # FIXED: Convert params list to tuple
-            results = session.execute(text(query_text), tuple(params) if params else ()).fetchall()
+            # FIXED: Use dictionary parameters
+            results = session.execute(text(query_text), params).fetchall()
             
             if not results:
                 return []
@@ -210,22 +216,30 @@ class VectorStorage:
         """Fetch the actual text content for a given item."""
         try:
             if content_type == 'post':
+                # FIXED: Use dictionary parameters
                 result = session.execute(text("""
                     SELECT title, content 
                     FROM posts 
-                    WHERE reddit_id = ? AND collection_id = ?
-                """), (content_id, collection_id)).fetchone()
+                    WHERE reddit_id = :content_id AND collection_id = :collection_id
+                """), {
+                    'content_id': content_id, 
+                    'collection_id': collection_id
+                }).fetchone()
                 
                 if result:
                     title, content = result
                     return f"{title} {content or ''}".strip()
             
             elif content_type == 'comment':
+                # FIXED: Use dictionary parameters
                 result = session.execute(text("""
                     SELECT content 
                     FROM comments 
-                    WHERE reddit_id = ? AND collection_id = ?
-                """), (content_id, collection_id)).fetchone()
+                    WHERE reddit_id = :content_id AND collection_id = :collection_id
+                """), {
+                    'content_id': content_id,
+                    'collection_id': collection_id
+                }).fetchone()
                 
                 if result:
                     return result[0] or ""
@@ -247,25 +261,25 @@ class VectorStorage:
         """
         session = db.get_session()
         try:
+            # Build conditions and parameters using dictionary format
             conditions = []
-            params = []
+            params = {}
             
             if collection_ids:
-                placeholders = ','.join(['?' for _ in collection_ids])
-                conditions.append(f"collection_id IN ({placeholders})")
-                params.extend(collection_ids)
+                # FIXED: Use dictionary parameters with IN clause
+                collection_placeholders = ','.join([f':collection_id_{i}' for i in range(len(collection_ids))])
+                conditions.append(f"collection_id IN ({collection_placeholders})")
+                for i, collection_id in enumerate(collection_ids):
+                    params[f'collection_id_{i}'] = collection_id
             
             where_clause = ""
             if conditions:
                 where_clause = "WHERE " + " AND ".join(conditions)
             
-            # FIXED: Convert params list to tuple
-            params_tuple = tuple(params) if params else ()
-            
             # Get total counts
             total_result = session.execute(text(f"""
                 SELECT COUNT(*) FROM content_embeddings {where_clause}
-            """), params_tuple).fetchone()
+            """), params).fetchone()
             
             total_embeddings = total_result[0] if total_result else 0
             
@@ -274,7 +288,7 @@ class VectorStorage:
                 SELECT content_type, COUNT(*) 
                 FROM content_embeddings {where_clause}
                 GROUP BY content_type
-            """), params_tuple).fetchall()
+            """), params).fetchall()
             
             type_counts = {content_type: count for content_type, count in type_results}
             
@@ -283,7 +297,7 @@ class VectorStorage:
                 SELECT model, provider, COUNT(*) 
                 FROM content_embeddings {where_clause}
                 GROUP BY model, provider
-            """), params_tuple).fetchall()
+            """), params).fetchall()
             
             model_usage = []
             for model, provider, count in model_results:
@@ -316,38 +330,40 @@ class VectorStorage:
         """
         session = db.get_session()
         try:
+            # Build conditions and parameters using dictionary format
             conditions = []
-            params = []
+            params = {}
             
             if collection_ids:
-                placeholders = ','.join(['?' for _ in collection_ids])
-                conditions.append(f"collection_id IN ({placeholders})")
-                params.extend(collection_ids)
+                # FIXED: Use dictionary parameters with IN clause
+                collection_placeholders = ','.join([f':collection_id_{i}' for i in range(len(collection_ids))])
+                conditions.append(f"collection_id IN ({collection_placeholders})")
+                for i, collection_id in enumerate(collection_ids):
+                    params[f'collection_id_{i}'] = collection_id
             
             if content_types:
-                placeholders = ','.join(['?' for _ in content_types])
-                conditions.append(f"content_type IN ({placeholders})")
-                params.extend(content_types)
+                # FIXED: Use dictionary parameters with IN clause
+                type_placeholders = ','.join([f':content_type_{i}' for i in range(len(content_types))])
+                conditions.append(f"content_type IN ({type_placeholders})")
+                for i, content_type in enumerate(content_types):
+                    params[f'content_type_{i}'] = content_type
             
             if not conditions:
                 raise ValueError("Must specify at least one deletion criteria")
             
             where_clause = "WHERE " + " AND ".join(conditions)
             
-            # FIXED: Convert params list to tuple
-            params_tuple = tuple(params)
-            
             # Count before deletion
             count_result = session.execute(text(f"""
                 SELECT COUNT(*) FROM content_embeddings {where_clause}
-            """), params_tuple).fetchone()
+            """), params).fetchone()
             
             count_before = count_result[0] if count_result else 0
             
             # Delete embeddings
             session.execute(text(f"""
                 DELETE FROM content_embeddings {where_clause}
-            """), params_tuple)
+            """), params)
             
             session.commit()
             return count_before
@@ -370,10 +386,15 @@ class VectorStorage:
         """
         session = db.get_session()
         try:
+            # FIXED: Use dictionary parameters
             result = session.execute(text("""
                 SELECT 1 FROM content_embeddings 
-                WHERE content_id = ? AND content_type = ? AND collection_id = ?
-            """), (content_id, content_type, collection_id)).fetchone()
+                WHERE content_id = :content_id AND content_type = :content_type AND collection_id = :collection_id
+            """), {
+                'content_id': content_id,
+                'content_type': content_type,
+                'collection_id': collection_id
+            }).fetchone()
             
             return result is not None
             
