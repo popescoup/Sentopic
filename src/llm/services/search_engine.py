@@ -149,9 +149,23 @@ class AnalyticsDrivenSearchEngine(SearchEngine):
         """Get list of keywords available in analytics data."""
         session = db.get_session()
         try:
-            from ...database import KeywordStat
+            from ...database import KeywordStat, AnalysisSession
+            import json
+        
+            # FIXED: Get analysis sessions that analyzed these collections
+            analysis_sessions = session.query(AnalysisSession).all()
+        
+            matching_session_ids = []
+            for analysis_session in analysis_sessions:
+                session_collection_ids = json.loads(analysis_session.collection_ids)
+                if any(collection_id in session_collection_ids for collection_id in collection_ids):
+                    matching_session_ids.append(analysis_session.id)
+        
+            if not matching_session_ids:
+                return []
+        
             keywords = session.query(KeywordStat.keyword).filter(
-                KeywordStat.collection_id.in_(collection_ids)
+                KeywordStat.analysis_session_id.in_(matching_session_ids)  # FIXED: Use analysis_session_id
             ).distinct().all()
             return [kw.keyword for kw in keywords]
         except:

@@ -702,9 +702,24 @@ Please analyze what the Reddit community is actually saying about this topic. In
         """Get list of available keywords from analytics data."""
         session = db.get_session()
         try:
-            from ...database import KeywordStat
+            from ...database import KeywordStat, AnalysisSession
+            import json
+        
+            # FIXED: Get analysis sessions that analyzed these collections
+            analysis_sessions = session.query(AnalysisSession).all()
+        
+            matching_session_ids = []
+            for analysis_session in analysis_sessions:
+                session_collection_ids = json.loads(analysis_session.collection_ids)
+                if any(collection_id in session_collection_ids for collection_id in collection_ids):
+                    matching_session_ids.append(analysis_session.id)
+        
+            if not matching_session_ids:
+                return []
+        
+            # Get keywords from matching analysis sessions
             keywords = session.query(KeywordStat.keyword).filter(
-                KeywordStat.collection_id.in_(collection_ids)
+                KeywordStat.analysis_session_id.in_(matching_session_ids)  # FIXED: Use analysis_session_id
             ).distinct().all()
             return [kw.keyword for kw in keywords]
         except:
@@ -716,15 +731,30 @@ Please analyze what the Reddit community is actually saying about this topic. In
         """Get general analytics overview for collections."""
         session = db.get_session()
         try:
-            from ...database import KeywordStat
+            from ...database import KeywordStat, AnalysisSession
+            import json
+        
+            # FIXED: Get analysis sessions that analyzed these collections
+            analysis_sessions = session.query(AnalysisSession).all()
+        
+            matching_session_ids = []
+            for analysis_session in analysis_sessions:
+                session_collection_ids = json.loads(analysis_session.collection_ids)
+                if any(collection_id in session_collection_ids for collection_id in collection_ids):
+                    matching_session_ids.append(analysis_session.id)
+        
+            if not matching_session_ids:
+                return f"Analysis covers {len(collection_ids)} collections."
+        
+            # Get stats from matching analysis sessions
             stats = session.query(KeywordStat).filter(
-                KeywordStat.collection_id.in_(collection_ids)
+                KeywordStat.analysis_session_id.in_(matching_session_ids)  # FIXED: Use analysis_session_id
             ).all()
-            
+        
             total_keywords = len(set(stat.keyword for stat in stats))
             total_mentions = sum(stat.total_mentions for stat in stats)
             avg_sentiment = sum(stat.avg_sentiment * stat.total_mentions for stat in stats) / total_mentions if total_mentions > 0 else 0
-            
+        
             return f"Analysis covers {total_keywords} keywords with {total_mentions:,} total mentions and {avg_sentiment:+.3f} average sentiment across {len(collection_ids)} collections."
         except:
             return f"Analysis covers {len(collection_ids)} collections."
