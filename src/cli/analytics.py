@@ -571,16 +571,6 @@ def run_chat_session(session_id: str):
                 response = chat_agent.send_message(chat_session_id, user_input, current_search_type)
                 print(response.message)
                 
-                # Show sources if available
-                if response.sources:
-                    print(f"\n📚 Sources ({len(response.sources)} found):")
-                    for i, source in enumerate(response.sources[:3], 1):  # Show top 3 sources
-                        content_type = source['content_type'].title()
-                        author = source.get('author', 'Unknown')
-                        print(f"   {i}. {content_type} by {author} (ID: {source['content_id']}) - {source['preview']}")
-                    
-                    if len(response.sources) > 3:
-                        print(f"   ... and {len(response.sources) - 3} more sources")
                 
                 # Show cost info if significant
                 if response.cost_estimate > 0.001:
