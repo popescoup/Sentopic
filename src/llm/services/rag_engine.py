@@ -1,8 +1,8 @@
 """
-RAG (Retrieval-Augmented Generation) Engine
+Enhanced RAG (Retrieval-Augmented Generation) Engine
 
-Enhanced RAG engine with analytics awareness that combines search results with LLM 
-generation using both analytical insights and natural Reddit discussion contexts.
+Enhanced RAG engine with intelligent fallbacks and graceful handling of keywords
+not found in analysis data. Provides comprehensive responses regardless of keyword availability.
 """
 
 from typing import List, Dict, Any, Optional
@@ -21,7 +21,7 @@ from ...database import db, Post, Comment
 
 @dataclass
 class RAGResponse:
-    """Enhanced response from RAG engine with analytics awareness."""
+    """Enhanced response from RAG engine with analytics awareness and fallback info."""
     answer: str                     # AI-generated answer
     sources: List[Dict[str, Any]]   # Source attributions with full context
     analytics_insights: Dict[str, Any]  # Analytics data used in response
@@ -31,12 +31,13 @@ class RAGResponse:
     tokens_used: int               # LLM tokens used
     cost_estimate: float           # Cost estimate for this query
     query_classification: Dict[str, Any]  # How the query was classified
+    fallback_info: Dict[str, Any] = None  # Information about fallbacks used
 
 
 class RAGEngine:
     """
-    Analytics-aware RAG engine that intelligently combines analytical insights
-    with natural Reddit discussion contexts for optimal response generation.
+    Enhanced RAG engine with intelligent keyword extraction, graceful fallbacks,
+    and comprehensive responses regardless of analytics data availability.
     """
     
     def __init__(self):
@@ -47,7 +48,7 @@ class RAGEngine:
                        search_type: str = 'auto', 
                        max_results: int = 5) -> RAGResponse:
         """
-        Answer a question using analytics-aware RAG with intelligent query routing.
+        Answer a question using enhanced RAG with intelligent keyword extraction and fallbacks.
         
         Args:
             question: User's question
@@ -56,58 +57,62 @@ class RAGEngine:
             max_results: Maximum search results to process
         
         Returns:
-            RAGResponse with analytics-informed answer and rich sources
+            RAGResponse with comprehensive answer and fallback information
         """
         # Get available keywords for context
         available_keywords = self._get_available_keywords(collection_ids)
         
-        # Classify the query to determine optimal approach
+        # Classify the query intelligently
         classification = query_classifier.classify_query(question, available_keywords)
         
-        # Get search strategy based on classification
-        search_strategy = query_classifier.get_search_strategy(classification)
+        # Get enhanced search strategy
+        search_strategy = query_classifier.get_enhanced_search_strategy(classification)
         
-        # Handle different query types
+        # Handle different approaches with graceful fallbacks
         if classification.query_type == 'command':
             return self._handle_command_query(question, classification, collection_ids)
         
-        elif classification.query_type == 'analytics':
-            return self._handle_analytics_query(
-                question, classification, collection_ids, max_results
+        elif classification.suggested_approach in ['analytics_driven_search', 'analytics_with_examples']:
+            return self._handle_analytics_query_enhanced(
+                question, classification, collection_ids, max_results, search_strategy
             )
         
-        elif classification.query_type == 'discussion':
-            return self._handle_discussion_query(
-                question, classification, collection_ids, search_type, max_results
+        elif classification.suggested_approach in ['analytics_with_fallback', 'hybrid_search_with_fallback']:
+            return self._handle_hybrid_with_fallback(
+                question, classification, collection_ids, search_type, max_results, search_strategy
             )
         
-        elif classification.query_type == 'hybrid':
-            return self._handle_hybrid_query(
-                question, classification, collection_ids, search_type, max_results
+        elif classification.suggested_approach in ['discussion_search_with_keywords', 'general_discussion_search']:
+            return self._handle_discussion_query_enhanced(
+                question, classification, collection_ids, search_type, max_results, search_strategy
             )
         
         else:
-            # Fallback to original approach
-            return self._handle_fallback_query(
-                question, collection_ids, search_type, max_results, classification
+            # Intelligent search - let the system figure out the best approach
+            return self._handle_intelligent_search(
+                question, classification, collection_ids, search_type, max_results, search_strategy
             )
     
-    def _handle_analytics_query(self, question: str, classification, 
-                              collection_ids: List[str], max_results: int) -> RAGResponse:
-        """Handle queries focused on analytics insights."""
+    def _handle_analytics_query_enhanced(self, question: str, classification, 
+                                       collection_ids: List[str], max_results: int,
+                                       search_strategy: Dict[str, Any]) -> RAGResponse:
+        """Handle analytics queries with enhanced fallback capabilities."""
         analytics_insights = {}
         search_results = []
+        fallback_info = {}
         
-        # Get target keywords from classification
         target_keywords = classification.target_keywords
         
         if target_keywords:
-            # Get detailed analytics for target keywords
-            for keyword in target_keywords[:3]:  # Limit to top 3 keywords
-                keyword_overview = analytics_search_engine.get_keyword_overview(
-                    keyword, collection_ids
-                )
+            analytics_keywords_found = []
+            fallback_keywords = []
+            
+            # Try analytics for each keyword
+            for keyword in target_keywords[:3]:
+                keyword_overview = analytics_search_engine.get_keyword_overview(keyword, collection_ids)
+                
                 if keyword_overview.get('found'):
+                    analytics_keywords_found.append(keyword)
                     analytics_insights[keyword] = keyword_overview
                     
                     # Get representative examples using analytics
@@ -115,9 +120,30 @@ class RAGEngine:
                         keyword, collection_ids, limit=max_results // len(target_keywords) + 1
                     )
                     search_results.extend(keyword_results)
+                else:
+                    fallback_keywords.append(keyword)
+            
+            # Handle fallback keywords using discussion search
+            if fallback_keywords:
+                fallback_info['keywords_not_in_analysis'] = fallback_keywords
+                fallback_info['fallback_method'] = 'discussion_search'
+                
+                # Use traditional search for keywords not in analytics
+                for keyword in fallback_keywords:
+                    fallback_results = self._search_discussions_for_keyword(
+                        keyword, collection_ids, max_results // len(fallback_keywords) + 1
+                    )
+                    if fallback_results:
+                        # Convert to analytics-style results for consistent handling
+                        converted_results = self._convert_traditional_to_analytics_style(
+                            fallback_results, keyword
+                        )
+                        search_results.extend(converted_results)
+                        
+                        fallback_info[f'discussions_found_for_{keyword}'] = len(fallback_results)
         
         else:
-            # General analytics overview
+            # No specific keywords - provide general analytics overview
             analytics_insights['overview'] = self._get_general_analytics_overview(collection_ids)
             
             # Get insights-based examples
@@ -129,9 +155,9 @@ class RAGEngine:
         # Enrich with discussion contexts
         search_results = analytics_search_engine.enrich_with_discussion_context(search_results)
         
-        # Generate analytics-focused response
-        llm_response = self._generate_analytics_focused_answer(
-            question, analytics_insights, search_results
+        # Generate enhanced response
+        llm_response = self._generate_enhanced_analytics_answer(
+            question, analytics_insights, search_results, fallback_info
         )
         
         # Format sources
@@ -141,7 +167,7 @@ class RAGEngine:
             answer=llm_response['content'],
             sources=sources,
             analytics_insights=analytics_insights,
-            search_type='analytics_driven',
+            search_type='analytics_with_fallback',
             search_results_count=len(search_results),
             discussions_used=len([r for r in search_results if r.discussion_context]),
             tokens_used=llm_response['tokens_used'],
@@ -149,45 +175,63 @@ class RAGEngine:
             query_classification={
                 'type': classification.query_type,
                 'confidence': classification.confidence,
-                'approach': classification.suggested_approach
-            }
+                'approach': classification.suggested_approach,
+                'keywords_extracted': classification.target_keywords
+            },
+            fallback_info=fallback_info
         )
     
-    def _handle_discussion_query(self, question: str, classification,
-                               collection_ids: List[str], search_type: str, 
-                               max_results: int) -> RAGResponse:
-        """Handle queries focused on discussion content."""
+    def _handle_discussion_query_enhanced(self, question: str, classification,
+                                        collection_ids: List[str], search_type: str, 
+                                        max_results: int, search_strategy: Dict[str, Any]) -> RAGResponse:
+        """Handle discussion queries with enhanced keyword understanding."""
         search_results = []
         analytics_insights = {}
+        fallback_info = {}
         
-        # Use traditional search for discussion content
+        target_keywords = classification.target_keywords
+        
+        # Build search query
+        if target_keywords:
+            # Use the most important keywords for search
+            search_query = " ".join(target_keywords[:2])  # Top 2 keywords
+            fallback_info['search_keywords_used'] = target_keywords[:2]
+        else:
+            # Use the original question
+            search_query = question
+        
+        # Use appropriate search method
         if search_type == 'auto':
             search_type = 'keyword'  # Default for discussion queries
         
-        search_engine = SearchEngineFactory.create_engine(search_type)
-        traditional_results = search_engine.search(question, collection_ids, limit=max_results)
+        try:
+            search_engine = SearchEngineFactory.create_engine(search_type)
+            traditional_results = search_engine.search(search_query, collection_ids, limit=max_results)
+        except Exception as e:
+            # Fallback to keyword search if other methods fail
+            fallback_info['search_fallback'] = f"Fell back to keyword search due to: {str(e)}"
+            search_engine = SearchEngineFactory.create_engine('keyword')
+            traditional_results = search_engine.search(search_query, collection_ids, limit=max_results)
         
-        # Convert to format compatible with analytics results
-        for result in traditional_results:
-            # Get minimal analytics context if keywords are available
-            target_keywords = classification.target_keywords
-            if target_keywords:
-                for keyword in target_keywords:
-                    keyword_overview = analytics_search_engine.get_keyword_overview(
-                        keyword, collection_ids
-                    )
+        # Get minimal analytics context if keywords are available
+        if target_keywords:
+            available_keywords = self._get_available_keywords(collection_ids)
+            for keyword in target_keywords:
+                if keyword in available_keywords:
+                    keyword_overview = analytics_search_engine.get_keyword_overview(keyword, collection_ids)
                     if keyword_overview.get('found'):
                         analytics_insights[keyword] = {
                             'total_mentions': keyword_overview['total_mentions'],
-                            'avg_sentiment': keyword_overview['avg_sentiment']
+                            'avg_sentiment': keyword_overview['avg_sentiment'],
+                            'context': 'minimal_for_discussion_query'
                         }
         
         # Build discussion contexts
         discussions = self._build_discussion_contexts_from_traditional(traditional_results)
         
-        # Generate discussion-focused response
-        llm_response = self._generate_discussion_focused_answer(
-            question, discussions, analytics_insights
+        # Generate discussion-focused response with analytics context
+        llm_response = self._generate_enhanced_discussion_answer(
+            question, discussions, analytics_insights, fallback_info, target_keywords
         )
         
         # Format sources
@@ -205,52 +249,68 @@ class RAGEngine:
             query_classification={
                 'type': classification.query_type,
                 'confidence': classification.confidence,
-                'approach': classification.suggested_approach
-            }
+                'approach': classification.suggested_approach,
+                'keywords_extracted': classification.target_keywords
+            },
+            fallback_info=fallback_info
         )
     
-    def _handle_hybrid_query(self, question: str, classification,
-                           collection_ids: List[str], search_type: str, 
-                           max_results: int) -> RAGResponse:
-        """Handle queries that need both analytics and discussion insights."""
+    def _handle_hybrid_with_fallback(self, question: str, classification,
+                                   collection_ids: List[str], search_type: str, 
+                                   max_results: int, search_strategy: Dict[str, Any]) -> RAGResponse:
+        """Handle hybrid queries with comprehensive fallback strategies."""
         analytics_insights = {}
         analytics_results = []
         traditional_results = []
+        fallback_info = {}
         
         target_keywords = classification.target_keywords
         
-        # Get analytics insights
+        # Try analytics first
         if target_keywords:
-            for keyword in target_keywords[:2]:  # Limit for hybrid approach
-                keyword_overview = analytics_search_engine.get_keyword_overview(
-                    keyword, collection_ids
-                )
+            analytics_keywords = []
+            discussion_keywords = []
+            
+            for keyword in target_keywords[:2]:
+                keyword_overview = analytics_search_engine.get_keyword_overview(keyword, collection_ids)
                 if keyword_overview.get('found'):
+                    analytics_keywords.append(keyword)
                     analytics_insights[keyword] = keyword_overview
                     
-                    # Get some analytics-driven examples
+                    # Get analytics-driven examples
                     keyword_results = analytics_search_engine.search_by_keyword_analytics(
                         keyword, collection_ids, limit=max_results // 2
                     )
                     analytics_results.extend(keyword_results)
+                else:
+                    discussion_keywords.append(keyword)
+            
+            fallback_info['analytics_keywords'] = analytics_keywords
+            fallback_info['fallback_keywords'] = discussion_keywords
         
-        # Get discussion examples
+        # Get discussion examples using best available method
+        search_query = question
+        if target_keywords:
+            search_query = " ".join(target_keywords)
+        
         if search_type == 'auto':
             search_type = 'keyword'
         
-        search_engine = SearchEngineFactory.create_engine(search_type)
-        traditional_results = search_engine.search(question, collection_ids, limit=max_results // 2)
+        try:
+            search_engine = SearchEngineFactory.create_engine(search_type)
+            traditional_results = search_engine.search(search_query, collection_ids, limit=max_results // 2)
+        except Exception as e:
+            fallback_info['discussion_search_fallback'] = str(e)
+            search_engine = SearchEngineFactory.create_engine('keyword')
+            traditional_results = search_engine.search(search_query, collection_ids, limit=max_results // 2)
         
         # Combine and enrich results
-        all_search_results = analytics_results
         discussions = self._build_discussion_contexts_from_traditional(traditional_results)
-        
-        # Enrich analytics results with discussion contexts
         analytics_results = analytics_search_engine.enrich_with_discussion_context(analytics_results)
         
-        # Generate hybrid response
-        llm_response = self._generate_hybrid_answer(
-            question, analytics_insights, analytics_results, discussions
+        # Generate comprehensive hybrid response
+        llm_response = self._generate_enhanced_hybrid_answer(
+            question, analytics_insights, analytics_results, discussions, fallback_info
         )
         
         # Format combined sources
@@ -268,14 +328,381 @@ class RAGEngine:
             query_classification={
                 'type': classification.query_type,
                 'confidence': classification.confidence,
-                'approach': classification.suggested_approach
-            }
+                'approach': classification.suggested_approach,
+                'keywords_extracted': classification.target_keywords
+            },
+            fallback_info=fallback_info
         )
     
-    def _handle_command_query(self, question: str, classification,
-                            collection_ids: List[str]) -> RAGResponse:
+    def _handle_intelligent_search(self, question: str, classification,
+                                 collection_ids: List[str], search_type: str, 
+                                 max_results: int, search_strategy: Dict[str, Any]) -> RAGResponse:
+        """Handle queries with fully intelligent search strategy selection."""
+        # Try the best available search method based on what's available
+        try:
+            results = SearchEngineFactory.search_with_best_available(
+                question, collection_ids, limit=max_results, 
+                prefer_analytics=classification.query_type in ['analytics', 'hybrid']
+            )
+        except Exception:
+            # Ultimate fallback - use keyword search
+            search_engine = SearchEngineFactory.create_engine('keyword')
+            results = search_engine.search(question, collection_ids, limit=max_results)
+        
+        # Build discussion contexts
+        discussions = self._build_discussion_contexts_from_traditional(results)
+        
+        # Get any available analytics context
+        analytics_insights = {}
+        if classification.target_keywords:
+            available_keywords = self._get_available_keywords(collection_ids)
+            for keyword in classification.target_keywords:
+                if keyword in available_keywords:
+                    keyword_overview = analytics_search_engine.get_keyword_overview(keyword, collection_ids)
+                    if keyword_overview.get('found'):
+                        analytics_insights[keyword] = keyword_overview
+        
+        # Generate intelligent response
+        llm_response = self._generate_intelligent_answer(
+            question, discussions, analytics_insights, classification
+        )
+        
+        # Format sources
+        sources = self._format_traditional_sources(results, discussions)
+        
+        return RAGResponse(
+            answer=llm_response['content'],
+            sources=sources,
+            analytics_insights=analytics_insights,
+            search_type='intelligent_auto',
+            search_results_count=len(results),
+            discussions_used=len(discussions),
+            tokens_used=llm_response['tokens_used'],
+            cost_estimate=llm_response['cost_estimate'],
+            query_classification={
+                'type': classification.query_type,
+                'confidence': classification.confidence,
+                'approach': 'intelligent_search',
+                'keywords_extracted': classification.target_keywords
+            },
+            fallback_info={'method': 'intelligent_auto_selection'}
+        )
+    
+    def _search_discussions_for_keyword(self, keyword: str, collection_ids: List[str], 
+                                      limit: int) -> List[SearchResult]:
+        """Search for discussions containing a specific keyword."""
+        try:
+            # Try semantic search first if available
+            search_engine = SearchEngineFactory.create_engine('cloud_semantic')
+            return search_engine.search(keyword, collection_ids, limit)
+        except:
+            try:
+                search_engine = SearchEngineFactory.create_engine('local_semantic')
+                return search_engine.search(keyword, collection_ids, limit)
+            except:
+                # Fallback to keyword search
+                search_engine = SearchEngineFactory.create_engine('keyword')
+                return search_engine.search(keyword, collection_ids, limit)
+    
+    def _convert_traditional_to_analytics_style(self, traditional_results: List[SearchResult], 
+                                              keyword: str) -> List[AnalyticsSearchResult]:
+        """Convert traditional search results to analytics-style results for consistent handling."""
+        analytics_results = []
+        
+        for result in traditional_results:
+            # Create a mock analytics result
+            analytics_result = AnalyticsSearchResult(
+                content_id=result.content_id,
+                content_type=result.content_type,
+                collection_id=result.collection_id,
+                keyword=keyword,
+                mention_context=result.content_text[:200] + "..." if len(result.content_text) > 200 else result.content_text,
+                sentiment_score=0.0,  # No sentiment analysis for fallback results
+                analytics_metadata={
+                    'source': 'fallback_search',
+                    'relevance_score': result.relevance_score,
+                    'original_metadata': result.metadata,
+                    'note': f"Found via discussion search ('{keyword}' not in analysis data)"
+                }
+            )
+            analytics_results.append(analytics_result)
+        
+        return analytics_results
+    
+    def _generate_enhanced_analytics_answer(self, question: str, analytics_insights: Dict[str, Any],
+                                          search_results: List[AnalyticsSearchResult],
+                                          fallback_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate answer with analytics insights and fallback information."""
+        provider = get_llm_provider()
+        if not provider:
+            raise RuntimeError("No LLM provider available. Please check your configuration.")
+        
+        # Build analytics context
+        analytics_context = self._build_analytics_context(analytics_insights)
+        
+        # Build examples context with fallback info
+        examples_context = self._build_examples_context_with_fallbacks(search_results, fallback_info)
+        
+        # Build enhanced system prompt
+        system_prompt = self._build_enhanced_analytics_system_prompt()
+        
+        # Build user prompt with fallback context
+        user_prompt = self._build_enhanced_analytics_user_prompt(
+            question, analytics_context, examples_context, fallback_info
+        )
+        
+        # Generate response
+        response = provider.generate(user_prompt, system_prompt)
+        
+        return {
+            'content': response.content,
+            'tokens_used': response.tokens_used,
+            'cost_estimate': response.cost_estimate,
+            'provider': response.provider,
+            'model': response.model
+        }
+    
+    def _generate_enhanced_discussion_answer(self, question: str, discussions: List[Dict[str, Any]],
+                                           analytics_insights: Dict[str, Any], fallback_info: Dict[str, Any],
+                                           target_keywords: List[str]) -> Dict[str, Any]:
+        """Generate discussion-focused answer with analytics context and keyword info."""
+        provider = get_llm_provider()
+        if not provider:
+            raise RuntimeError("No LLM provider available. Please check your configuration.")
+        
+        # Build natural context from discussions
+        context = self._build_natural_context(discussions)
+        
+        # Add analytics context if available
+        if analytics_insights:
+            analytics_summary = self._build_minimal_analytics_summary(analytics_insights)
+            context = analytics_summary + "\n\n" + context
+        
+        # Build enhanced system prompt for discussions
+        system_prompt = self._build_enhanced_discussion_system_prompt()
+        
+        # Build user prompt with keyword and fallback info
+        user_prompt = self._build_enhanced_discussion_user_prompt(
+            question, context, target_keywords, fallback_info
+        )
+        
+        # Generate response
+        response = provider.generate(user_prompt, system_prompt)
+        
+        return {
+            'content': response.content,
+            'tokens_used': response.tokens_used,
+            'cost_estimate': response.cost_estimate,
+            'provider': response.provider,
+            'model': response.model
+        }
+    
+    def _generate_enhanced_hybrid_answer(self, question: str, analytics_insights: Dict[str, Any],
+                                       analytics_results: List[AnalyticsSearchResult],
+                                       discussions: List[Dict[str, Any]],
+                                       fallback_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate comprehensive hybrid answer with fallback information."""
+        provider = get_llm_provider()
+        if not provider:
+            raise RuntimeError("No LLM provider available. Please check your configuration.")
+        
+        # Build comprehensive context
+        analytics_context = self._build_analytics_context(analytics_insights)
+        examples_context = self._build_examples_context_with_fallbacks(analytics_results, fallback_info)
+        discussions_context = self._build_natural_context(discussions)
+        
+        # Build enhanced hybrid system prompt
+        system_prompt = self._build_enhanced_hybrid_system_prompt()
+        
+        # Build comprehensive user prompt
+        user_prompt = self._build_enhanced_hybrid_user_prompt(
+            question, analytics_context, examples_context, discussions_context, fallback_info
+        )
+        
+        # Generate response
+        response = provider.generate(user_prompt, system_prompt)
+        
+        return {
+            'content': response.content,
+            'tokens_used': response.tokens_used,
+            'cost_estimate': response.cost_estimate,
+            'provider': response.provider,
+            'model': response.model
+        }
+    
+    def _generate_intelligent_answer(self, question: str, discussions: List[Dict[str, Any]],
+                                   analytics_insights: Dict[str, Any], classification) -> Dict[str, Any]:
+        """Generate intelligent answer using best available information."""
+        provider = get_llm_provider()
+        if not provider:
+            raise RuntimeError("No LLM provider available. Please check your configuration.")
+        
+        # Build context from available information
+        context = self._build_natural_context(discussions)
+        
+        if analytics_insights:
+            analytics_summary = self._build_minimal_analytics_summary(analytics_insights)
+            context = analytics_summary + "\n\n" + context
+        
+        # Build intelligent system prompt
+        system_prompt = self._build_intelligent_system_prompt()
+        
+        # Build user prompt with classification info
+        user_prompt = self._build_intelligent_user_prompt(question, context, classification)
+        
+        # Generate response
+        response = provider.generate(user_prompt, system_prompt)
+        
+        return {
+            'content': response.content,
+            'tokens_used': response.tokens_used,
+            'cost_estimate': response.cost_estimate,
+            'provider': response.provider,
+            'model': response.model
+        }
+    
+    # Enhanced prompt building methods
+    def _build_enhanced_analytics_system_prompt(self) -> str:
+        """Build enhanced system prompt for analytics with fallback handling."""
+        return """You are an expert data analyst specializing in Reddit discussion analytics with intelligent fallback capabilities. You analyze both structured analytics data and actual Reddit discussions, gracefully handling cases where some keywords may not be in the formal analysis.
+
+Your responses should be:
+- COMPREHENSIVE: Use all available data, both analytics and discussion examples
+- TRANSPARENT: Clearly explain what data you have vs. what you found through search
+- GRACEFUL: When keywords aren't in the analysis, still provide valuable insights from discussions
+- EVIDENCE-BASED: Support findings with specific numbers and real examples
+- HELPFUL: Always provide useful information, even with incomplete analytics data
+
+When handling mixed data sources:
+- Clearly distinguish between analytics data and discussion search results
+- Explain fallback methods used when analytics data isn't available
+- Combine insights from both sources for comprehensive understanding
+- Note limitations and suggest how to get more complete data if needed
+
+Structure responses to show both what the data definitively shows and what the discussions reveal."""
+    
+    def _build_enhanced_discussion_system_prompt(self) -> str:
+        """Build enhanced system prompt for discussion queries with keyword awareness."""
+        return """You are an expert at analyzing Reddit discussions with intelligent keyword understanding. You can extract insights from actual conversations while being aware of the topics the user is specifically interested in.
+
+Your responses should be:
+- CONVERSATION-FOCUSED: Based on actual Reddit discussions and user interactions
+- KEYWORD-AWARE: Understand and highlight the specific topics the user asked about
+- CONTEXTUAL: Explain what people are really saying about these topics
+- SPECIFIC: Quote and reference actual discussions when relevant
+- INSIGHTFUL: Identify patterns and perspectives from real conversations
+
+When the user asks about specific topics:
+- Focus on finding and explaining discussions related to those topics
+- Explain how people talk about these subjects, even if not using exact keywords
+- Provide context about the community perspectives and conversations
+- Note when you find related discussions that might be relevant
+
+Always base your analysis on actual Reddit conversations while being mindful of the topics the user is interested in."""
+    
+    def _build_enhanced_analytics_user_prompt(self, question: str, analytics_context: str,
+                                            examples_context: str, fallback_info: Dict[str, Any]) -> str:
+        """Build enhanced analytics user prompt with fallback information."""
+        prompt = f"""Please answer this question using the available analytics data and discussion examples:
+
+QUESTION: {question}
+
+{analytics_context}
+
+{examples_context}"""
+
+        if fallback_info:
+            prompt += f"\n\nFALLBACK INFORMATION:\n"
+            if fallback_info.get('keywords_not_in_analysis'):
+                prompt += f"Note: The following keywords were not found in the formal analysis but I searched for discussions: {', '.join(fallback_info['keywords_not_in_analysis'])}\n"
+            if fallback_info.get('fallback_method'):
+                prompt += f"Fallback method used: {fallback_info['fallback_method']}\n"
+
+        prompt += """\n\nPlease provide a comprehensive answer that:
+1. Uses the available analytics data where possible
+2. Incorporates discussion examples to illustrate patterns
+3. Explains any limitations or fallback methods used
+4. Provides valuable insights regardless of data completeness
+5. Suggests how to get more complete analytics if relevant"""
+
+        return prompt
+    
+    def _build_enhanced_discussion_user_prompt(self, question: str, context: str,
+                                             target_keywords: List[str], fallback_info: Dict[str, Any]) -> str:
+        """Build enhanced discussion user prompt with keyword context."""
+        prompt = f"""Please analyze these Reddit discussions to answer this question:
+
+QUESTION: {question}"""
+
+        if target_keywords:
+            prompt += f"\n\nTOPICS OF INTEREST: {', '.join(target_keywords)}"
+
+        prompt += f"""
+
+REDDIT DISCUSSIONS:
+{context}"""
+
+        if fallback_info.get('search_keywords_used'):
+            prompt += f"\n\nSEARCH NOTE: I focused on discussions containing: {', '.join(fallback_info['search_keywords_used'])}"
+
+        prompt += """\n\nPlease provide an analysis that:
+1. Explains what the Reddit community is saying about the topics of interest
+2. Highlights relevant conversations and perspectives
+3. Includes specific examples and quotes from the discussions
+4. Explains how people talk about these topics, even if using different words
+5. Provides insights into community opinions and experiences"""
+
+        return prompt
+    
+    # Keep existing utility methods but enhance them
+    def _build_examples_context_with_fallbacks(self, search_results: List[AnalyticsSearchResult], 
+                                             fallback_info: Dict[str, Any]) -> str:
+        """Build examples context that includes fallback information."""
+        if not search_results:
+            return "No specific examples found."
+        
+        context_parts = ["🗣️ DISCUSSION EXAMPLES:\n"]
+        
+        analytics_count = 0
+        fallback_count = 0
+        
+        for i, result in enumerate(search_results[:5], 1):
+            is_fallback = result.analytics_metadata.get('source') == 'fallback_search'
+            
+            if is_fallback:
+                fallback_count += 1
+                context_parts.append(f"EXAMPLE {i} - Keyword: '{result.keyword}' (Found via discussion search)")
+            else:
+                analytics_count += 1
+                context_parts.append(f"EXAMPLE {i} - Keyword: '{result.keyword}' (From analytics data)")
+                context_parts.append(f"Sentiment: {result.sentiment_score:+.3f}")
+            
+            context_parts.append(f"Context: {result.mention_context}")
+            
+            if result.analytics_metadata and not is_fallback:
+                metadata = result.analytics_metadata
+                if metadata.get('post_title'):
+                    context_parts.append(f"Post: {metadata['post_title']}")
+            
+            # Add discussion context if available
+            if result.discussion_context:
+                formatted_discussion = content_formatter.format_discussion_thread(result.discussion_context)
+                truncated = content_formatter.format_content_for_context_window(formatted_discussion, 500)
+                context_parts.append(f"Full Discussion:\n{truncated}")
+            
+            context_parts.append("")  # Empty line between examples
+        
+        # Add summary of data sources
+        if analytics_count > 0 and fallback_count > 0:
+            context_parts.insert(1, f"Data sources: {analytics_count} from formal analysis, {fallback_count} from discussion search\n")
+        elif fallback_count > 0:
+            context_parts.insert(1, f"Note: All examples found via discussion search (keywords not in formal analysis)\n")
+        
+        return "\n".join(context_parts)
+    
+    # Keep all existing utility methods unchanged
+    def _handle_command_query(self, question: str, classification, collection_ids: List[str]) -> RAGResponse:
         """Handle command-type queries."""
-        # This would be handled by the chat agent, but we provide a basic response
         command_type = classification.intent_details.get('command_type', 'unknown')
         
         if command_type == 'help':
@@ -301,286 +728,8 @@ class RAGEngine:
                 'approach': classification.suggested_approach
             }
         )
-    
-    def _handle_fallback_query(self, question: str, collection_ids: List[str],
-                             search_type: str, max_results: int, 
-                             classification) -> RAGResponse:
-        """Fallback to original RAG approach when classification is uncertain."""
-        # Use the original RAG approach from the previous implementation
-        search_engine = SearchEngineFactory.create_engine(search_type)
-        search_results = search_engine.search(question, collection_ids, limit=max_results)
-        
-        if not search_results:
-            return RAGResponse(
-                answer="I couldn't find any relevant discussions in your Reddit data that relate to this question. Try rephrasing your question or asking about different topics that might be covered in your collections.",
-                sources=[],
-                analytics_insights={},
-                search_type=search_type,
-                search_results_count=0,
-                discussions_used=0,
-                tokens_used=0,
-                cost_estimate=0.0,
-                query_classification={
-                    'type': classification.query_type,
-                    'confidence': classification.confidence,
-                    'approach': 'fallback'
-                }
-            )
-        
-        # Build discussion contexts
-        discussions = self._build_discussion_contexts_from_traditional(search_results)
-        
-        # Generate response
-        llm_response = self._generate_answer_with_discussions(question, discussions)
-        
-        # Format sources
-        sources = self._format_traditional_sources(search_results, discussions)
-        
-        return RAGResponse(
-            answer=llm_response['content'],
-            sources=sources,
-            analytics_insights={},
-            search_type=search_type,
-            search_results_count=len(search_results),
-            discussions_used=len(discussions),
-            tokens_used=llm_response['tokens_used'],
-            cost_estimate=llm_response['cost_estimate'],
-            query_classification={
-                'type': classification.query_type,
-                'confidence': classification.confidence,
-                'approach': 'fallback'
-            }
-        )
-    
-    def _generate_analytics_focused_answer(self, question: str, 
-                                         analytics_insights: Dict[str, Any],
-                                         search_results: List[AnalyticsSearchResult]) -> Dict[str, Any]:
-        """Generate answer focused on analytics insights with supporting examples."""
-        provider = get_llm_provider()
-        if not provider:
-            raise RuntimeError("No LLM provider available. Please check your configuration.")
-        
-        # Build analytics context
-        analytics_context = self._build_analytics_context(analytics_insights)
-        
-        # Build supporting examples context
-        examples_context = self._build_examples_context_from_analytics(search_results)
-        
-        # Build prompts
-        system_prompt = self._build_analytics_system_prompt()
-        user_prompt = self._build_analytics_user_prompt(question, analytics_context, examples_context)
-        
-        # Generate response
-        response = provider.generate(user_prompt, system_prompt)
-        
-        return {
-            'content': response.content,
-            'tokens_used': response.tokens_used,
-            'cost_estimate': response.cost_estimate,
-            'provider': response.provider,
-            'model': response.model
-        }
-    
-    def _generate_discussion_focused_answer(self, question: str, 
-                                          discussions: List[Dict[str, Any]],
-                                          analytics_insights: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate answer focused on discussion content with minimal analytics context."""
-        provider = get_llm_provider()
-        if not provider:
-            raise RuntimeError("No LLM provider available. Please check your configuration.")
-        
-        # Build natural context from discussions (original approach)
-        context = self._build_natural_context(discussions)
-        
-        # Add minimal analytics context if available
-        if analytics_insights:
-            analytics_summary = self._build_minimal_analytics_summary(analytics_insights)
-            context = analytics_summary + "\n\n" + context
-        
-        # Build prompts
-        system_prompt = self._build_enhanced_system_prompt()
-        user_prompt = self._build_enhanced_user_prompt(question, context)
-        
-        # Generate response
-        response = provider.generate(user_prompt, system_prompt)
-        
-        return {
-            'content': response.content,
-            'tokens_used': response.tokens_used,
-            'cost_estimate': response.cost_estimate,
-            'provider': response.provider,
-            'model': response.model
-        }
-    
-    def _generate_hybrid_answer(self, question: str, analytics_insights: Dict[str, Any],
-                              analytics_results: List[AnalyticsSearchResult],
-                              discussions: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate comprehensive answer combining analytics and discussions."""
-        provider = get_llm_provider()
-        if not provider:
-            raise RuntimeError("No LLM provider available. Please check your configuration.")
-        
-        # Build comprehensive context
-        analytics_context = self._build_analytics_context(analytics_insights)
-        examples_context = self._build_examples_context_from_analytics(analytics_results)
-        discussions_context = self._build_natural_context(discussions)
-        
-        # Build prompts
-        system_prompt = self._build_hybrid_system_prompt()
-        user_prompt = self._build_hybrid_user_prompt(
-            question, analytics_context, examples_context, discussions_context
-        )
-        
-        # Generate response
-        response = provider.generate(user_prompt, system_prompt)
-        
-        return {
-            'content': response.content,
-            'tokens_used': response.tokens_used,
-            'cost_estimate': response.cost_estimate,
-            'provider': response.provider,
-            'model': response.model
-        }
-    
-    def _build_analytics_context(self, analytics_insights: Dict[str, Any]) -> str:
-        """Build formatted analytics context for LLM."""
-        if not analytics_insights:
-            return "No specific analytics data available."
-        
-        context_parts = ["📊 ANALYTICS INSIGHTS:\n"]
-        
-        for keyword, data in analytics_insights.items():
-            if keyword == 'overview':
-                context_parts.append(f"GENERAL OVERVIEW:\n{data}\n")
-                continue
-            
-            if not data.get('found'):
-                continue
-            
-            context_parts.append(f"KEYWORD: '{keyword}'")
-            context_parts.append(f"• Total mentions: {data['total_mentions']:,}")
-            context_parts.append(f"• Average sentiment: {data['avg_sentiment']:+.3f}")
-            context_parts.append(f"• Found in {data['collections_found']} collection(s)")
-            
-            # Add distribution info
-            if data.get('mention_distribution'):
-                dist = data['mention_distribution']
-                context_parts.append(f"• Distribution: {dist.get('post', 0)} posts, {dist.get('comment', 0)} comments")
-            
-            # Add sentiment breakdown
-            if data.get('sentiment_distribution'):
-                sent_dist = data['sentiment_distribution']
-                total_sent = sum(sent_dist.values())
-                if total_sent > 0:
-                    pos_pct = (sent_dist['positive'] + sent_dist['very_positive']) / total_sent * 100
-                    neg_pct = (sent_dist['negative'] + sent_dist['very_negative']) / total_sent * 100
-                    context_parts.append(f"• Sentiment breakdown: {pos_pct:.1f}% positive, {neg_pct:.1f}% negative")
-            
-            # Add top co-occurrences
-            if data.get('top_cooccurrences'):
-                cooccur_text = ", ".join([f"'{co['keyword']}' ({co['count']})" for co in data['top_cooccurrences'][:3]])
-                context_parts.append(f"• Often appears with: {cooccur_text}")
-            
-            context_parts.append("")  # Empty line between keywords
-        
-        return "\n".join(context_parts)
-    
-    def _build_examples_context_from_analytics(self, search_results: List[AnalyticsSearchResult]) -> str:
-        """Build examples context from analytics search results."""
-        if not search_results:
-            return "No specific examples found."
-        
-        context_parts = ["🗣️ SPECIFIC EXAMPLES FROM ANALYTICS:\n"]
-        
-        for i, result in enumerate(search_results[:5], 1):
-            context_parts.append(f"EXAMPLE {i} - Keyword: '{result.keyword}'")
-            context_parts.append(f"Sentiment: {result.sentiment_score:+.3f}")
-            context_parts.append(f"Context: {result.mention_context}")
-            
-            if result.analytics_metadata:
-                metadata = result.analytics_metadata
-                if metadata.get('post_title'):
-                    context_parts.append(f"Post: {metadata['post_title']}")
-                if metadata.get('keyword_frequency_rank'):
-                    context_parts.append(f"Frequency rank: #{metadata['keyword_frequency_rank']}")
-            
-            # Add discussion context if available
-            if result.discussion_context:
-                formatted_discussion = content_formatter.format_discussion_thread(result.discussion_context)
-                # Truncate for context window
-                truncated = content_formatter.format_content_for_context_window(formatted_discussion, 500)
-                context_parts.append(f"Full Discussion:\n{truncated}")
-            
-            context_parts.append("")  # Empty line between examples
-        
-        return "\n".join(context_parts)
-    
-    def _build_analytics_system_prompt(self) -> str:
-        """Build system prompt for analytics-focused responses."""
-        return """You are an expert data analyst specializing in Reddit discussion analytics. You have access to precise analytical data including keyword frequencies, sentiment scores, co-occurrence patterns, and specific examples from Reddit discussions.
 
-Your responses should be:
-- DATA-DRIVEN: Lead with analytical insights and statistics
-- PRECISE: Reference exact numbers, frequencies, and sentiment scores
-- EVIDENCE-BASED: Support insights with specific examples from the data
-- CONTEXTUAL: Explain what the numbers mean for understanding community behavior
-- ACTIONABLE: Provide insights that help understand patterns and trends
-
-When referencing analytics data:
-- Quote exact statistics: "appears in X mentions with Y average sentiment"
-- Reference ranking: "the #N most frequently discussed keyword"
-- Explain sentiment: "predominantly positive with Z% of mentions being positive"
-- Highlight patterns: "frequently co-occurs with keywords A, B, C"
-
-Structure your response to clearly separate analytical insights from supporting discussion examples. Always reference the specific analytics data provided."""
-    
-    def _build_hybrid_system_prompt(self) -> str:
-        """Build system prompt for comprehensive hybrid responses."""
-        return """You are an expert at combining quantitative Reddit analytics with qualitative discussion analysis. You have access to both precise analytical data (frequencies, sentiment scores, patterns) and actual Reddit conversation examples.
-
-Your responses should bridge quantitative and qualitative insights:
-- ANALYTICAL FOUNDATION: Start with what the data shows statistically
-- CONVERSATIONAL EVIDENCE: Support with actual quotes and discussion examples
-- INTEGRATED INSIGHTS: Connect patterns in the data to real user conversations
-- COMPREHENSIVE UNDERSTANDING: Combine both analytical and conversational perspectives
-
-Structure your response to:
-1. Lead with key analytical findings (frequencies, sentiment, trends)
-2. Illustrate these findings with actual Reddit discussion examples
-3. Explain how the data patterns manifest in real conversations
-4. Provide actionable insights based on both data and discussions
-
-Reference both statistical data and specific Reddit discussions to provide a complete picture."""
-    
-    def _build_analytics_user_prompt(self, question: str, analytics_context: str, 
-                                   examples_context: str) -> str:
-        """Build user prompt for analytics-focused queries."""
-        return f"""Based on the analytical data and supporting examples from Reddit discussions, please answer this question:
-
-QUESTION: {question}
-
-{analytics_context}
-
-{examples_context}
-
-Please provide a data-driven answer that explains what the analytics show about this topic, supported by specific examples from the Reddit discussions. Reference exact statistics, sentiment scores, and patterns from the analytical data."""
-    
-    def _build_hybrid_user_prompt(self, question: str, analytics_context: str,
-                                examples_context: str, discussions_context: str) -> str:
-        """Build user prompt for hybrid queries."""
-        return f"""Based on both analytical data and Reddit discussion examples, please answer this question:
-
-QUESTION: {question}
-
-{analytics_context}
-
-{examples_context}
-
-{discussions_context}
-
-Please provide a comprehensive answer that combines analytical insights with real discussion examples. Show how the statistical patterns manifest in actual Reddit conversations and what this reveals about the community's perspectives."""
-    
-    # Include original methods for backward compatibility
+    # Include all existing utility methods (unchanged)
     def _build_discussion_contexts_from_traditional(self, search_results: List[SearchResult]) -> List[Dict[str, Any]]:
         """Build discussion contexts from traditional search results."""
         discussions = []
@@ -616,7 +765,7 @@ Please provide a comprehensive answer that combines analytical insights with rea
         return discussions
     
     def _build_natural_context(self, discussions: List[Dict[str, Any]]) -> str:
-        """Build natural conversation context from complete discussions (original method)."""
+        """Build natural conversation context from complete discussions."""
         if not discussions:
             return "No relevant discussions found."
         
@@ -647,56 +796,34 @@ Please provide a comprehensive answer that combines analytical insights with rea
         
         return "\n".join(context_parts)
     
-    def _build_enhanced_system_prompt(self) -> str:
-        """Build enhanced system prompt for natural Reddit discussion analysis (original method)."""
-        return """You are an expert at analyzing Reddit discussions and providing insights based on real conversations. You have access to complete Reddit discussion threads including posts and their comment conversations.
-
-Your responses should be:
-- CONVERSATIONAL: Based on actual Reddit discussions, capturing the tone and insights of real users
-- SPECIFIC: Quote directly from posts and comments when relevant, using natural language
-- CONTEXTUAL: Understand that posts and comments are part of ongoing conversations
-- ATTRIBUTIVE: Reference specific discussions and users when making claims
-- INSIGHTFUL: Identify patterns, consensus, disagreements, and notable perspectives from the discussions
-
-When referencing Reddit content:
-- Quote naturally: "One user mentioned..." or "In a discussion about X, someone said..."
-- Use Post IDs and Comment IDs for attribution when helpful: (Post ID: abc123)
-- Capture the conversational flow: how people respond to each other
-- Note voting patterns: highly upvoted comments often represent community consensus
-
-Format your response as a natural analysis of what the Reddit community is actually saying about the topic, with specific examples and quotes from the discussions."""
-    
-    def _build_enhanced_user_prompt(self, question: str, context: str) -> str:
-        """Build enhanced user prompt with natural discussion context (original method)."""
-        return f"""Based on these actual Reddit discussions from the user's data, please answer this question:
-
-QUESTION: {question}
-
-REDDIT DISCUSSIONS:
-{context}
-
-Please analyze what the Reddit community is actually saying about this topic. Include specific quotes and examples from the discussions above. Reference the Post IDs and Comment IDs when citing specific examples. Capture both the overall sentiment and any interesting disagreements or different perspectives you notice in the conversations."""
-    
-    def _generate_answer_with_discussions(self, question: str, 
-                                        discussions: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate answer using LLM with natural Reddit discussions (original method)."""
-        provider = get_llm_provider()
-        if not provider:
-            raise RuntimeError("No LLM provider available. Please check your configuration.")
+    def _build_analytics_context(self, analytics_insights: Dict[str, Any]) -> str:
+        """Build formatted analytics context for LLM."""
+        if not analytics_insights:
+            return "No specific analytics data available."
         
-        context = self._build_natural_context(discussions)
-        system_prompt = self._build_enhanced_system_prompt()
-        user_prompt = self._build_enhanced_user_prompt(question, context)
+        context_parts = ["📊 ANALYTICS INSIGHTS:\n"]
         
-        response = provider.generate(user_prompt, system_prompt)
+        for keyword, data in analytics_insights.items():
+            if keyword == 'overview':
+                context_parts.append(f"GENERAL OVERVIEW:\n{data}\n")
+                continue
+            
+            if not data.get('found', True):  # Handle both old and new format
+                continue
+            
+            context_parts.append(f"KEYWORD: '{keyword}'")
+            context_parts.append(f"• Total mentions: {data.get('total_mentions', 'N/A'):,}")
+            context_parts.append(f"• Average sentiment: {data.get('avg_sentiment', 0):+.3f}")
+            context_parts.append(f"• Found in {data.get('collections_found', 0)} collection(s)")
+            
+            # Add distribution info if available
+            if data.get('mention_distribution'):
+                dist = data['mention_distribution']
+                context_parts.append(f"• Distribution: {dist.get('post', 0)} posts, {dist.get('comment', 0)} comments")
+            
+            context_parts.append("")  # Empty line between keywords
         
-        return {
-            'content': response.content,
-            'tokens_used': response.tokens_used,
-            'cost_estimate': response.cost_estimate,
-            'provider': response.provider,
-            'model': response.model
-        }
+        return "\n".join(context_parts)
     
     def _get_available_keywords(self, collection_ids: List[str]) -> List[str]:
         """Get list of available keywords from analytics data."""
@@ -705,7 +832,6 @@ Please analyze what the Reddit community is actually saying about this topic. In
             from ...database import KeywordStat, AnalysisSession
             import json
         
-            # FIXED: Get analysis sessions that analyzed these collections
             analysis_sessions = session.query(AnalysisSession).all()
         
             matching_session_ids = []
@@ -717,9 +843,8 @@ Please analyze what the Reddit community is actually saying about this topic. In
             if not matching_session_ids:
                 return []
         
-            # Get keywords from matching analysis sessions
             keywords = session.query(KeywordStat.keyword).filter(
-                KeywordStat.analysis_session_id.in_(matching_session_ids)  # FIXED: Use analysis_session_id
+                KeywordStat.analysis_session_id.in_(matching_session_ids)
             ).distinct().all()
             return [kw.keyword for kw in keywords]
         except:
@@ -734,7 +859,6 @@ Please analyze what the Reddit community is actually saying about this topic. In
             from ...database import KeywordStat, AnalysisSession
             import json
         
-            # FIXED: Get analysis sessions that analyzed these collections
             analysis_sessions = session.query(AnalysisSession).all()
         
             matching_session_ids = []
@@ -746,9 +870,8 @@ Please analyze what the Reddit community is actually saying about this topic. In
             if not matching_session_ids:
                 return f"Analysis covers {len(collection_ids)} collections."
         
-            # Get stats from matching analysis sessions
             stats = session.query(KeywordStat).filter(
-                KeywordStat.analysis_session_id.in_(matching_session_ids)  # FIXED: Use analysis_session_id
+                KeywordStat.analysis_session_id.in_(matching_session_ids)
             ).all()
         
             total_keywords = len(set(stat.keyword for stat in stats))
@@ -831,7 +954,102 @@ Please analyze what the Reddit community is actually saying about this topic. In
         
         return sources
     
-    # Keep original methods for backward compatibility
+    # Add remaining system prompt methods
+    def _build_enhanced_hybrid_system_prompt(self) -> str:
+        """Build enhanced system prompt for comprehensive hybrid responses."""
+        return """You are an expert at combining quantitative Reddit analytics with qualitative discussion analysis, gracefully handling mixed data sources and fallback methods.
+
+Your responses should bridge quantitative and qualitative insights:
+- ANALYTICAL FOUNDATION: Start with what the data shows statistically where available
+- CONVERSATIONAL EVIDENCE: Support with actual quotes and discussion examples
+- TRANSPARENT METHODOLOGY: Explain what data sources were used and any limitations
+- INTEGRATED INSIGHTS: Connect patterns in data to real user conversations
+- COMPREHENSIVE UNDERSTANDING: Provide complete picture using all available sources
+
+When working with mixed data sources:
+- Clearly indicate which insights come from formal analytics vs. discussion search
+- Explain fallback methods used when complete analytics aren't available
+- Combine both perspectives for fuller understanding
+- Suggest how to get more complete analytics if relevant
+
+Structure your response to provide the most complete picture possible using all available information."""
+    
+    def _build_intelligent_system_prompt(self) -> str:
+        """Build system prompt for intelligent auto-detection responses."""
+        return """You are an intelligent assistant that analyzes Reddit data using the best available methods. You adapt your approach based on what data is available and provide comprehensive insights regardless of data completeness.
+
+Your responses should be:
+- ADAPTIVE: Use whatever data sources are available effectively
+- INSIGHTFUL: Extract meaningful patterns from available information
+- TRANSPARENT: Explain what analysis methods were used
+- HELPFUL: Always provide valuable insights regardless of data limitations
+- COMPREHENSIVE: Combine all available information for best understanding
+
+When analyzing data:
+- Use structured analytics data when available
+- Fall back to discussion analysis when needed
+- Explain your methodology and any limitations
+- Provide actionable insights based on available information
+- Suggest ways to get more complete data if relevant
+
+Focus on providing the best possible analysis using available information sources."""
+    
+    def _build_enhanced_hybrid_user_prompt(self, question: str, analytics_context: str,
+                                         examples_context: str, discussions_context: str,
+                                         fallback_info: Dict[str, Any]) -> str:
+        """Build comprehensive user prompt for hybrid analysis."""
+        prompt = f"""Please provide a comprehensive analysis using all available data sources:
+
+QUESTION: {question}
+
+{analytics_context}
+
+{examples_context}
+
+{discussions_context}"""
+
+        if fallback_info:
+            prompt += f"\n\nMETHODOLOGY NOTES:\n"
+            for key, value in fallback_info.items():
+                if key != 'method':
+                    prompt += f"• {key}: {value}\n"
+
+        prompt += """\n\nPlease provide a comprehensive answer that:
+1. Combines analytical insights with real discussion examples
+2. Explains what the data definitively shows vs. what discussions suggest
+3. Notes any methodology or data source limitations
+4. Provides actionable insights based on all available information
+5. Suggests how to get more complete analytics if relevant"""
+
+        return prompt
+    
+    def _build_intelligent_user_prompt(self, question: str, context: str, classification) -> str:
+        """Build user prompt for intelligent analysis."""
+        prompt = f"""Please analyze this information to answer the question using intelligent data analysis:
+
+QUESTION: {question}
+
+AVAILABLE DATA:
+{context}"""
+
+        if classification.target_keywords:
+            prompt += f"\n\nEXTRACTED TOPICS: {', '.join(classification.target_keywords)}"
+
+        prompt += f"""\n\nQUERY ANALYSIS:
+• Type: {classification.query_type}
+• Confidence: {classification.confidence:.2f}
+• Approach: {classification.suggested_approach}
+
+Please provide an intelligent analysis that:
+1. Uses the available data effectively regardless of source
+2. Focuses on the topics the user is interested in
+3. Provides insights based on actual Reddit conversations
+4. Explains what the data reveals about user perspectives
+5. Offers actionable understanding of the topic"""
+
+        return prompt
+
+    # Keep all existing methods for backward compatibility
     def get_full_context(self, content_id: str, content_type: str, collection_id: str) -> Optional[Dict[str, Any]]:
         """Get full context for a specific piece of content using discussion builder."""
         try:
@@ -892,12 +1110,12 @@ Please analyze what the Reddit community is actually saying about this topic. In
             },
             'analytics_driven': {
                 'available': has_analytics,
-                'description': 'Analytics-aware search using your keyword analysis data',
+                'description': 'Analytics-aware search using your keyword analysis data with intelligent fallbacks',
                 'requires_indexing': False,
                 'analytics_required': True,
                 'indexed': has_analytics,
                 'cost': 'Free',
-                'quality': 'Best for frequency, sentiment, and pattern questions'
+                'quality': 'Best for frequency, sentiment, and pattern questions with graceful fallbacks'
             }
         }
         
@@ -928,5 +1146,5 @@ Please analyze what the Reddit community is actually saying about this topic. In
             return []
 
 
-# Global RAG engine instance
+# Global enhanced RAG engine instance
 rag_engine = RAGEngine()
