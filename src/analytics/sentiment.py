@@ -15,7 +15,7 @@ class SentimentAnalyzer:
         self.analyzer = SentimentIntensityAnalyzer()
     
     def extract_context_window(self, text: str, keyword: str, position: int, 
-                              window_words: int = 20) -> str:
+                              window_words: int = 5) -> str:
         """
         Extract context window around a keyword in text.
         
@@ -88,7 +88,7 @@ class SentimentAnalyzer:
         return scores['compound']
     
     def analyze_keyword_sentiment(self, text: str, keyword: str, position: int,
-                                 window_words: int = 20) -> Tuple[str, float]:
+                                 window_words: int =5) -> Tuple[str, float]:
         """
         Extract context around keyword and analyze its sentiment.
         

@@ -84,7 +84,7 @@ def get_analysis_input():
     
     # STEP 6: Get context window size
     try:
-        context_window = int(input("Context window size (words before/after keyword, default 20): ") or "20")
+        context_window = int(input("Context window size (words before/after keyword, default 5): ") or "5")
         if context_window < 1:
             print("Error: Context window must be at least 1")
             return None

@@ -25,7 +25,7 @@ class AnalyticsEngine:
         pass
     
     def create_session(self, name: str, keywords: List[str], collection_ids: List[str],
-                      partial_matching: bool = False, context_window_words: int = 20) -> str:
+                      partial_matching: bool = False, context_window_words: int = 5) -> str:
         """
         Create a new analysis session.
         
