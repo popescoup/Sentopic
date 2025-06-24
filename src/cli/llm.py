@@ -137,11 +137,12 @@ def suggest_keywords_interactive():
 Given a research goal or topic, suggest 5-10 specific keywords that would be effective for finding relevant posts and comments.
 
 Guidelines:
-- Include both exact phrases and related terms
-- Consider common abbreviations and slang
+- Suggest ONLY single words, not phrases (e.g. "climate" not "climate change")
+- Include related terms and synonyms as separate single words
+- Consider common abbreviations and slang terms
 - Think about how people actually discuss this topic on Reddit
-- Include both positive and negative aspects
-- Suggest keywords that are specific enough to be meaningful
+- Include words that capture both positive and negative aspects
+- Each keyword should be one word that is specific enough to be meaningful
 
 Return only the keywords, separated by commas, with no additional explanation."""
         
