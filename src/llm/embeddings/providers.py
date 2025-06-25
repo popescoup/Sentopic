@@ -143,7 +143,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
     
     def get_provider_name(self) -> str:
         """Return provider name."""
-        return "openai_embeddings"
+        return "openai"
     
     def _calculate_cost(self, tokens_used: int) -> float:
         """Calculate cost for OpenAI embeddings."""
@@ -232,7 +232,7 @@ class LocalEmbeddingProvider(EmbeddingProvider):
     
     def get_provider_name(self) -> str:
         """Return provider name."""
-        return "local_embeddings"
+        return "local"
 
 
 class EmbeddingProviderFactory:
