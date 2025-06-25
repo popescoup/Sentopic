@@ -45,8 +45,9 @@ class RAGEngine:
         self.max_context_length = 8000  # Character limit for context
     
     def answer_question(self, question: str, collection_ids: List[str], 
-                       search_type: str = 'auto', 
-                       max_results: int = 5) -> RAGResponse:
+                    search_type: str = 'auto', 
+                    max_results: int = 5,
+                    analysis_session_id: str = None) -> RAGResponse:
         """
         Answer a question using enhanced RAG with intelligent keyword extraction and fallbacks.
         
@@ -60,8 +61,8 @@ class RAGEngine:
             RAGResponse with comprehensive answer and fallback information
         """
         # Get available keywords for context
-        available_keywords = self._get_available_keywords(collection_ids)
-        
+        available_keywords = self._get_available_keywords(collection_ids, analysis_session_id)
+
         # Classify the query intelligently
         classification = query_classifier.classify_query(question, available_keywords)
         
@@ -74,7 +75,7 @@ class RAGEngine:
         
         elif classification.suggested_approach in ['analytics_driven_search', 'analytics_with_examples']:
             return self._handle_analytics_query_enhanced(
-                question, classification, collection_ids, max_results, search_strategy
+                question, classification, collection_ids, max_results, search_strategy, analysis_session_id
             )
         
         elif classification.suggested_approach in ['analytics_with_fallback', 'hybrid_search_with_fallback']:
@@ -94,8 +95,9 @@ class RAGEngine:
             )
     
     def _handle_analytics_query_enhanced(self, question: str, classification, 
-                                       collection_ids: List[str], max_results: int,
-                                       search_strategy: Dict[str, Any]) -> RAGResponse:
+                                        collection_ids: List[str], max_results: int,
+                                        search_strategy: Dict[str, Any], 
+                                        analysis_session_id: str = None) -> RAGResponse:
         """Handle analytics queries with enhanced fallback capabilities."""
         analytics_insights = {}
         search_results = []
@@ -109,7 +111,7 @@ class RAGEngine:
             
             # Try analytics for each keyword
             for keyword in target_keywords[:3]:
-                keyword_overview = analytics_search_engine.get_keyword_overview(keyword, collection_ids)
+                keyword_overview = analytics_search_engine.get_keyword_overview(keyword, collection_ids, analysis_session_id)
                 
                 if keyword_overview.get('found'):
                     analytics_keywords_found.append(keyword)
@@ -825,20 +827,24 @@ REDDIT DISCUSSIONS:
         
         return "\n".join(context_parts)
     
-    def _get_available_keywords(self, collection_ids: List[str]) -> List[str]:
+    def _get_available_keywords(self, collection_ids: List[str], analysis_session_id: str = None) -> List[str]:
         """Get list of available keywords from analytics data."""
         session = db.get_session()
         try:
             from ...database import KeywordStat, AnalysisSession
             import json
-        
-            analysis_sessions = session.query(AnalysisSession).all()
-        
-            matching_session_ids = []
-            for analysis_session in analysis_sessions:
-                session_collection_ids = json.loads(analysis_session.collection_ids)
-                if any(collection_id in session_collection_ids for collection_id in collection_ids):
-                    matching_session_ids.append(analysis_session.id)
+    
+            # If specific session provided, use only that session
+            if analysis_session_id:
+                matching_session_ids = [analysis_session_id]
+            else:
+                # Fallback to old behavior
+                analysis_sessions = session.query(AnalysisSession).all()
+                matching_session_ids = []
+                for analysis_session in analysis_sessions:
+                    session_collection_ids = json.loads(analysis_session.collection_ids)
+                    if any(collection_id in session_collection_ids for collection_id in collection_ids):
+                        matching_session_ids.append(analysis_session.id)
         
             if not matching_session_ids:
                 return []

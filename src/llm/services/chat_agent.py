@@ -132,6 +132,7 @@ class ChatAgent:
             rag_response = rag_engine.answer_question(
                 question=user_message,
                 collection_ids=collection_ids,
+                analysis_session_id=chat_session.analysis_session_id,
                 search_type=search_type,
                 max_results=5
             )

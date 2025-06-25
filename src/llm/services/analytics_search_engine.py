@@ -85,21 +85,26 @@ class AnalyticsSearchEngine:
         finally:
             session.close()
     
-    def get_keyword_overview(self, keyword: str, collection_ids: List[str]) -> Dict[str, Any]:
+    def get_keyword_overview(self, keyword: str, collection_ids: List[str], 
+                            analysis_session_id: str = None) -> Dict[str, Any]:
         """
         Enhanced keyword overview with suggestions when keyword not found.
-        
+    
         Args:
             keyword: Keyword to analyze
             collection_ids: Collection IDs to include
-        
+            analysis_session_id: Specific analysis session ID to use (optional)
+    
         Returns:
             Comprehensive keyword analytics with suggestions if not found
         """
         session = db.get_session()
         try:
             # Get analysis sessions that analyzed these collections
-            analysis_session_ids = self._get_analysis_sessions_for_collections(collection_ids, session)
+            if analysis_session_id:
+                analysis_session_ids = [analysis_session_id]
+            else:
+                analysis_session_ids = self._get_analysis_sessions_for_collections(collection_ids, session)
             
             if not analysis_session_ids:
                 return {
