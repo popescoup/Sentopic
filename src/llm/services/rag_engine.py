@@ -574,6 +574,9 @@ Your responses should be:
 - GRACEFUL: When keywords aren't in the analysis, still provide valuable insights from discussions
 - EVIDENCE-BASED: Support findings with specific numbers and real examples
 - HELPFUL: Always provide useful information, even with incomplete analytics data
+- NATURAL: Weave discussion examples naturally into your analysis using phrases like "in one discussion..." or "another gardener mentioned..." rather than numbered lists
+
+When referencing discussion examples, integrate them smoothly into your analysis rather than listing them as separate numbered items. Focus on the insights and patterns rather than the structure of the examples.
 
 When handling mixed data sources:
 - Clearly distinguish between analytics data and discussion search results
@@ -658,27 +661,27 @@ REDDIT DISCUSSIONS:
     
     # Keep existing utility methods but enhance them
     def _build_examples_context_with_fallbacks(self, search_results: List[AnalyticsSearchResult], 
-                                             fallback_info: Dict[str, Any]) -> str:
+                                            fallback_info: Dict[str, Any]) -> str:
         """Build examples context that includes fallback information."""
         if not search_results:
             return "No specific examples found."
-        
+    
         context_parts = ["🗣️ DISCUSSION EXAMPLES:\n"]
-        
+    
         analytics_count = 0
         fallback_count = 0
-        
-        for i, result in enumerate(search_results[:5], 1):
+    
+        for result in search_results[:5]:
             is_fallback = result.analytics_metadata.get('source') == 'fallback_search'
-            
+        
             if is_fallback:
                 fallback_count += 1
-                context_parts.append(f"EXAMPLE {i} - Keyword: '{result.keyword}' (Found via discussion search)")
+                context_parts.append(f"Discussion about '{result.keyword}' (Found via discussion search):")
             else:
                 analytics_count += 1
-                context_parts.append(f"EXAMPLE {i} - Keyword: '{result.keyword}' (From analytics data)")
+                context_parts.append(f"Discussion about '{result.keyword}' (From analytics data):")
                 context_parts.append(f"Sentiment: {result.sentiment_score:+.3f}")
-            
+        
             context_parts.append(f"Context: {result.mention_context}")
             
             if result.analytics_metadata and not is_fallback:

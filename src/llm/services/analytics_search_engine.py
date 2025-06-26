@@ -600,6 +600,50 @@ class AnalyticsSearchEngine:
             
         finally:
             session.close()
+
+    def _get_parent_post_id(self, comment_id: str, collection_id: str) -> str:
+        """Get the parent post ID for a comment to enable deduplication by discussion."""
+        session = db.get_session()
+        try:
+            comment = session.query(Comment).filter(
+                Comment.reddit_id == comment_id,
+                Comment.collection_id == collection_id
+            ).first()
+            return comment.post_reddit_id if comment else comment_id
+        except:
+            return comment_id  # Fallback to comment_id if lookup fails
+        finally:
+            session.close()
+
+    def _merge_keyword_info(self, existing_result: AnalyticsSearchResult, 
+                        new_result: AnalyticsSearchResult) -> AnalyticsSearchResult:
+        """
+        Merge keyword information from duplicate results into a single result.
+    
+        Args:
+            existing_result: The result we're keeping
+            new_result: The duplicate result with additional keyword info
+    
+        Returns:
+            Enhanced existing result with merged keyword information
+        """
+        # Update analytics metadata to include info from both results
+        if existing_result.analytics_metadata:
+            # Add additional keywords found
+            existing_keywords = existing_result.analytics_metadata.get('keywords_found', [existing_result.keyword])
+            if existing_result.keyword not in existing_keywords:
+                existing_keywords.append(existing_result.keyword)
+            if new_result.keyword not in existing_keywords:
+                existing_keywords.append(new_result.keyword)
+        
+            existing_result.analytics_metadata['keywords_found'] = existing_keywords
+            existing_result.analytics_metadata['multiple_keyword_matches'] = True
+        
+            # Update mention context to be more comprehensive if needed
+            if len(new_result.mention_context) > len(existing_result.mention_context):
+                existing_result.mention_context = new_result.mention_context
+    
+        return existing_result
     
     def _get_analysis_sessions_for_collections(self, collection_ids: List[str], session) -> List[str]:
         """
@@ -740,18 +784,38 @@ class AnalyticsSearchEngine:
     def enrich_with_discussion_context(self, results: List[AnalyticsSearchResult]) -> List[AnalyticsSearchResult]:
         """
         Enrich analytics search results with full discussion contexts.
-        
+        Deduplicates results that refer to the same underlying discussion.
+    
         Args:
             results: List of analytics search results
-        
+    
         Returns:
-            Results enriched with complete discussion threads
+            Deduplicated results enriched with complete discussion threads
         """
+        processed_discussions = {}  # Track: (content_id, collection_id) -> enriched_result
+        enriched_results = []
+    
         for result in results:
             # Skip system messages
             if result.content_type == "system_message":
+                enriched_results.append(result)
                 continue
-                
+        
+            # Create key for deduplication based on the underlying post
+            if result.content_type == 'post':
+                discussion_key = (result.content_id, result.collection_id)
+            else:
+                # For comments, we want to dedupe by the parent post
+                discussion_key = (self._get_parent_post_id(result.content_id, result.collection_id), result.collection_id)
+        
+            # Check if we've already processed this discussion
+            if discussion_key in processed_discussions:
+                # Merge keyword information into existing result
+                existing_result = processed_discussions[discussion_key]
+                existing_result = self._merge_keyword_info(existing_result, result)
+                continue
+        
+            # New discussion - enrich it
             try:
                 if result.content_type == 'post':
                     discussion = discussion_builder.build_discussion_from_post(
@@ -761,13 +825,15 @@ class AnalyticsSearchEngine:
                     discussion = discussion_builder.build_discussion_from_comment(
                         result.content_id, result.collection_id
                     )
-                
+            
                 result.discussion_context = discussion
+                processed_discussions[discussion_key] = result
+                enriched_results.append(result)
             except Exception:
                 # Continue if individual discussion building fails
                 continue
-        
-        return results
+    
+        return enriched_results
 
 
 # Global enhanced analytics search engine instance
