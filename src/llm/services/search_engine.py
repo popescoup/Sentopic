@@ -14,7 +14,7 @@ from ..embeddings import vector_storage
 from .. import get_embedding_provider
 from .discussion_builder import discussion_builder
 from .analytics_search_engine import analytics_search_engine, AnalyticsSearchResult
-
+import numpy as np
 
 @dataclass
 class SearchResult:
@@ -515,7 +515,7 @@ class CloudSemanticSearchEngine(SearchEngine):
         
         # Get OpenAI embedding provider
         provider = get_embedding_provider()
-        if not provider or provider.get_provider_name() != 'openai_embeddings':
+        if not provider or provider.get_provider_name() != 'openai':
             raise RuntimeError("OpenAI embeddings not available. Check configuration.")
         
         # Generate query embedding
@@ -525,14 +525,15 @@ class CloudSemanticSearchEngine(SearchEngine):
         
         query_embedding = query_response.embeddings[0]
         
+        
         # Search using vector storage
         vector_results = vector_storage.search_similar(
             query_embedding=query_embedding,
             collection_ids=collection_ids,
             limit=limit,
-            min_similarity=0.4
+            min_similarity=0.3
         )
-        
+
         # Convert to enhanced SearchResult format
         results = []
         session = db.get_session()
