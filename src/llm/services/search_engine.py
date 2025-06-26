@@ -405,7 +405,7 @@ class LocalSemanticSearchEngine(SearchEngine):
             return []
         
         query_embedding = query_response.embeddings[0]
-        
+
         # Search using vector storage
         vector_results = vector_storage.search_similar(
             query_embedding=query_embedding,
