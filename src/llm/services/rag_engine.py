@@ -69,6 +69,7 @@ class RAGEngine:
         # Get enhanced search strategy
         search_strategy = query_classifier.get_enhanced_search_strategy(classification)
         
+
         # Handle different approaches with graceful fallbacks
         if classification.query_type == 'command':
             return self._handle_command_query(question, classification, collection_ids)
@@ -112,7 +113,7 @@ class RAGEngine:
             # Try analytics for each keyword
             for keyword in target_keywords[:3]:
                 keyword_overview = analytics_search_engine.get_keyword_overview(keyword, collection_ids, analysis_session_id)
-                
+
                 if keyword_overview.get('found'):
                     analytics_keywords_found.append(keyword)
                     analytics_insights[keyword] = keyword_overview
@@ -164,7 +165,7 @@ class RAGEngine:
         
         # Format sources
         sources = self._format_analytics_sources(search_results, analytics_insights)
-        
+
         return RAGResponse(
             answer=llm_response['content'],
             sources=sources,

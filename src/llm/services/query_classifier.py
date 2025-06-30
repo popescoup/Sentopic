@@ -125,6 +125,7 @@ class QueryClassifier:
         Returns:
             QueryClassification with smart routing recommendation
         """
+
         if not query or not query.strip():
             return QueryClassification(
                 query_type='discussion',
