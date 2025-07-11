@@ -79,7 +79,7 @@ class AnalysisSession(Base):
     keywords = Column(Text, nullable=False)  # JSON array of keywords
     collection_ids = Column(Text, nullable=False)  # JSON array of collection IDs
     created_at = Column(Integer, nullable=False)
-    status = Column(String, default='running')  # 'running', 'completed', 'failed'
+    status = Column(String, default='created')  # 'running', 'completed', 'failed'
     total_mentions = Column(Integer, default=0)
     avg_sentiment = Column(Float, default=0.0)
     partial_matching = Column(Boolean, default=False)

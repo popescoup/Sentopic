@@ -106,6 +106,9 @@ class AnalyticsEngine:
         print()
         
         try:
+            # Set status to running when analysis starts
+            db.update_analysis_session_status(session_id, 'running')
+
             # Process each collection
             all_keyword_mentions = []
             all_posts = []

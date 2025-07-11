@@ -19,6 +19,9 @@ from src.llm.services.summarizer import analysis_summarizer
 from src.llm import is_llm_available
 from .models import ProjectResponse, ProjectStats, ProjectSummary, ProjectCreate
 
+# Temporary in-memory storage for project preferences
+_project_preferences = {}
+
 
 class ProjectService:
     """Service class for project-related operations with analysis workflow management."""
@@ -77,22 +80,11 @@ class ProjectService:
     
     @staticmethod
     async def create_project(project_data: ProjectCreate) -> ProjectResponse:
-        """
-        Create a new research project.
-        
-        Args:
-            project_data: ProjectCreate object with project details
-            
-        Returns:
-            ProjectResponse for the newly created project
-            
-        Raises:
-            ValueError: If validation fails or project creation fails
-        """
+        """Create a new research project."""
         try:
             # Validate that collections exist
             ProjectService._validate_collections_exist(project_data.collection_ids)
-            
+        
             # Create analysis session using existing backend
             session_id = analytics_engine.create_session(
                 name=project_data.name,
@@ -101,15 +93,20 @@ class ProjectService:
                 partial_matching=project_data.partial_matching,
                 context_window_words=project_data.context_window_words
             )
-            
+        
+            # Store the generate_summary preference for this project
+            _project_preferences[session_id] = {
+                'generate_summary': project_data.generate_summary
+            }
+        
             # Get the newly created session
             analysis_session = db.get_analysis_session(session_id)
             if not analysis_session:
                 raise ValueError(f"Failed to retrieve created session: {session_id}")
-            
+        
             # Transform to ProjectResponse format
             project = await ProjectService._transform_session_to_project(analysis_session)
-            
+        
             return project
             
         except ValueError as e:
@@ -122,30 +119,22 @@ class ProjectService:
     
     @staticmethod
     async def delete_project(project_id: str) -> bool:
-        """
-        Delete a project and all its associated data.
-        
-        Args:
-            project_id: Project ID to delete
-            
-        Returns:
-            True if deletion successful, False if project not found
-            
-        Raises:
-            ValueError: If deletion fails due to server error
-        """
+        """Delete a project and all its associated data."""
         try:
             # Check if project exists first
             analysis_session = db.get_analysis_session(project_id)
             if not analysis_session:
                 return False
-            
+        
             # Delete the analysis session (and all related data)
             success = analytics_engine.delete_session(project_id)
-            
+        
             if not success:
                 raise ValueError(f"Failed to delete project: {project_id}")
-            
+        
+            # Clean up any stored preferences
+            _project_preferences.pop(project_id, None)
+        
             return True
             
         except ValueError as e:
@@ -162,40 +151,33 @@ class ProjectService:
     
     @staticmethod
     async def start_analysis(project_id: str, background_tasks: BackgroundTasks) -> Dict[str, Any]:
-        """
-        Start analysis processing for a project using background tasks.
-        
-        Args:
-            project_id: Project ID to analyze
-            background_tasks: FastAPI background tasks for async processing
-            
-        Returns:
-            Dictionary with analysis start confirmation
-            
-        Raises:
-            ValueError: If project not found or analysis cannot be started
-        """
+        """Start analysis processing for a project using background tasks."""
         try:
             # Get and validate analysis session
             analysis_session = db.get_analysis_session(project_id)
             if not analysis_session:
                 raise ValueError(f"Project not found: {project_id}")
-            
+        
             # Check if analysis is already running or completed
             if analysis_session.status == 'running':
                 raise ValueError(f"Analysis is already running for project: {project_id}")
-            
+        
             # Note: Allow re-running completed analyses for flexibility
             # Users might want to re-analyze with updated data or different parameters
-            
+        
             # Reset session status to running
             db.update_analysis_session_status(project_id, 'running')
-            
-            # Start background analysis task
+        
+            # Get the user's generate_summary preference from project creation
+            preferences = _project_preferences.get(project_id, {})
+            generate_summary = preferences.get('generate_summary', False)
+        
+            # Start background analysis task with stored preference
             background_tasks.add_task(
                 ProjectService._run_background_analysis,
                 project_id,
-                analysis_session
+                analysis_session,
+                generate_summary
             )
             
             # Return immediate confirmation
@@ -323,36 +305,36 @@ class ProjectService:
     # ============================================================================
     
     @staticmethod
-    async def _run_background_analysis(project_id: str, analysis_session):
-        """
-        Run analysis in background task with comprehensive error handling.
-        
-        Args:
-            project_id: Project ID to analyze
-            analysis_session: Analysis session object
-        """
+    async def _run_background_analysis(project_id: str, analysis_session, 
+                                  generate_summary: bool = False):
+        """Run analysis in background task with user preference."""
         try:
             print(f"🚀 Starting background analysis for project: {project_id}")
-            
-            # Check if we should generate AI summary
-            generate_summary = is_llm_available()
-            
-            # Run comprehensive analysis with summary if LLM available
-            if generate_summary:
+        
+            # Use user preference from project creation AND check if LLM is available
+            should_generate_summary = generate_summary and is_llm_available()
+        
+            if should_generate_summary:
                 print(f"📊 Running analysis with AI summary for project: {project_id}")
                 analytics_engine.run_analysis_with_summary(
                     session_id=project_id,
                     generate_summary=True
                 )
             else:
-                print(f"📊 Running analysis without AI summary for project: {project_id}")
+                reason = "user disabled" if not generate_summary else "LLM not available"
+                print(f"📊 Running analysis without AI summary for project: {project_id} ({reason})")
                 analytics_engine.run_analysis(project_id)
-            
+        
             print(f"✅ Analysis completed successfully for project: {project_id}")
-            
+        
+            # Clean up the preference after analysis is complete
+            _project_preferences.pop(project_id, None)
+        
         except Exception as e:
             # Mark analysis as failed and log error
             print(f"❌ Analysis failed for project {project_id}: {str(e)}")
+            # Clean up preference even on failure
+            _project_preferences.pop(project_id, None)
             db.update_analysis_session_status(project_id, 'failed')
     
     @staticmethod
