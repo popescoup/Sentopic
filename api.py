@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from typing import Dict, Any
@@ -20,11 +20,12 @@ app = FastAPI(
     * **Analytics Engine**: Comprehensive sentiment and trend analysis  
     * **AI Integration**: LLM-powered insights and chat capabilities
     * **Data Collection**: Reddit data collection and management
+    * **Analysis Workflow**: Background processing with real-time status tracking
 
     ### API Organization
     * **System**: Health checks and system status
     * **Projects**: Project lifecycle management
-    * **Analytics**: Analysis execution and results
+    * **Analysis**: Analysis execution, progress tracking, and results
     * **Collections**: Reddit data collection management
     * **AI**: Chat agent and LLM features
     """,
@@ -41,8 +42,8 @@ app = FastAPI(
             "description": "Project management and lifecycle operations"
         },
         {
-            "name": "analytics",
-            "description": "Analysis execution and results retrieval"
+            "name": "analysis",
+            "description": "Analysis execution, progress tracking, and results retrieval"
         },
         {
             "name": "collections",
@@ -404,6 +405,250 @@ async def delete_project(project_id: str):
             detail={
                 "error": "server_error",
                 "message": "An unexpected error occurred while deleting the project",
+                "details": {"project_id": project_id}
+            }
+        )
+
+# ============================================================================
+# ANALYSIS WORKFLOW ENDPOINTS (NEW - STEP 3)
+# ============================================================================
+
+@app.post("/projects/{project_id}/analysis/start",
+          responses={
+              200: {"description": "Analysis started successfully"},
+              404: {"model": APIError, "description": "Project not found"},
+              409: {"model": APIError, "description": "Analysis already running"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["analysis"],
+          summary="Start Analysis",
+          description="Start analysis processing for a project")
+async def start_analysis(project_id: str, background_tasks: BackgroundTasks) -> Dict[str, Any]:
+    """
+    **Start Analysis Processing**
+    
+    Initiates the comprehensive analysis workflow for a research project including:
+    
+    * **Keyword Analysis**: Finding all keyword mentions in collected data
+    * **Sentiment Analysis**: VADER sentiment analysis for each mention
+    * **Co-occurrence Analysis**: Identifying keyword relationships
+    * **Trend Analysis**: Temporal patterns and changes
+    * **AI Summary Generation**: Optional LLM-powered insights (if configured)
+    
+    **Analysis Process**:
+    1. Validates project exists and is ready for analysis
+    2. Starts background processing (non-blocking)
+    3. Returns immediately with status confirmation
+    4. Updates project status as analysis progresses
+    
+    **Use Case**: Called when user clicks "Start Analysis" in the project setup
+    wizard or "Re-run Analysis" in the project workspace.
+    
+    **Path Parameters**:
+    * **project_id**: Unique identifier of the project to analyze
+    
+    **Response**: Immediate confirmation with status information
+    """
+    try:
+        # Start analysis using service layer
+        result = await ProjectService.start_analysis(project_id, background_tasks)
+        
+        return result
+        
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "project_not_found",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        elif "already running" in error_message or "already completed" in error_message:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "analysis_conflict",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "analysis_error",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in start_analysis endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while starting analysis",
+                "details": {"project_id": project_id}
+            }
+        )
+
+@app.get("/projects/{project_id}/analysis/status",
+         responses={
+             200: {"description": "Analysis status retrieved successfully"},
+             404: {"model": APIError, "description": "Project not found"},
+             500: {"model": APIError, "description": "Server error"}
+         },
+         tags=["analysis"],
+         summary="Get Analysis Status",
+         description="Get current analysis progress and status for a project")
+async def get_analysis_status(project_id: str) -> Dict[str, Any]:
+    """
+    **Get Analysis Progress and Status**
+    
+    Returns comprehensive status information for ongoing or completed analysis including:
+    
+    * **Current Status**: `'running'`, `'completed'`, `'failed'`
+    * **Progress Information**: Current phase and completion estimates
+    * **Performance Metrics**: Processing speed and estimated time remaining
+    * **Error Details**: Detailed error information if analysis failed
+    * **Partial Results**: Available data if analysis is in progress
+    
+    **Status Values**:
+    * `running` - Analysis is actively processing
+    * `completed` - Analysis finished successfully, results available
+    * `failed` - Analysis encountered an error and stopped
+    
+    **Use Case**: Powers the Analysis Progress Screen with real-time updates.
+    Frontend should poll this endpoint every 2-3 seconds during analysis.
+    
+    **Path Parameters**:
+    * **project_id**: Unique identifier of the project to check
+    
+    **Response**: Detailed status information with progress indicators
+    """
+    try:
+        status = await ProjectService.get_analysis_status(project_id)
+        
+        return status
+        
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "project_not_found",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "status_error",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in get_analysis_status endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while retrieving analysis status",
+                "details": {"project_id": project_id}
+            }
+        )
+
+@app.get("/projects/{project_id}/analysis/results",
+         response_model=ProjectResponse,
+         responses={
+             200: {"description": "Analysis results retrieved successfully"},
+             404: {"model": APIError, "description": "Project not found"},
+             409: {"model": APIError, "description": "Analysis not completed"},
+             500: {"model": APIError, "description": "Server error"}
+         },
+         tags=["analysis"],
+         summary="Get Analysis Results",
+         description="Get complete analysis results for a project")
+async def get_analysis_results(project_id: str) -> ProjectResponse:
+    """
+    **Get Complete Analysis Results**
+    
+    Returns comprehensive analysis results for a completed project including:
+    
+    * **Keyword Statistics**: Mention counts, sentiment scores, and distributions
+    * **Trend Analysis**: Temporal patterns and changes over time
+    * **Co-occurrence Data**: Keyword relationships and associations
+    * **Sentiment Insights**: Overall sentiment patterns and keyword-specific sentiment
+    * **AI Summary**: LLM-generated insights and business implications (if available)
+    * **Representative Examples**: Sample discussions that illustrate key findings
+    
+    **Result Categories**:
+    * **Quantitative Analytics**: Statistical patterns from your keyword analysis
+    * **Qualitative Insights**: AI-powered interpretation of discussion patterns
+    * **Actionable Intelligence**: Business-relevant insights extracted from Reddit discussions
+    
+    **Use Case**: Powers the Project Workspace main dashboard with comprehensive
+    insights. Only available after analysis status is `'completed'`.
+    
+    **Path Parameters**:
+    * **project_id**: Unique identifier of the project to get results for
+    
+    **Response**: Complete project object with full analysis results and insights
+    """
+    try:
+        results = await ProjectService.get_analysis_results(project_id)
+        
+        return results
+        
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "project_not_found",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        elif "not completed" in error_message:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "analysis_not_completed",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "results_error",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in get_analysis_results endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while retrieving analysis results",
                 "details": {"project_id": project_id}
             }
         )
