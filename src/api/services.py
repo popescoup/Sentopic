@@ -6,6 +6,7 @@ Handles the complex work of converting between backend data structures
 and frontend-friendly API responses.
 
 Enhanced with Step 3: Analysis Workflow Management
+Enhanced with Step 4: Chat and AI Feature Services
 """
 
 from typing import List, Dict, Any, Optional
@@ -16,15 +17,21 @@ import json
 from src.analytics import analytics_engine
 from src.database import db
 from src.llm.services.summarizer import analysis_summarizer
-from src.llm import is_llm_available
-from .models import ProjectResponse, ProjectStats, ProjectSummary, ProjectCreate
+from src.llm import is_llm_available, get_llm_provider
+from .models import (
+    ProjectResponse, ProjectStats, ProjectSummary, ProjectCreate,
+    ChatResponse, ChatMessage, ChatSessionInfo, ChatSessionListResponse, 
+    ChatHistoryResponse, ChatMessageCreate, KeywordSuggestionRequest,
+    KeywordSuggestionResponse, AIStatusResponse, AIExplanationRequest,
+    AIExplanationResponse
+)
 
 # Temporary in-memory storage for project preferences
 _project_preferences = {}
 
 
 class ProjectService:
-    """Service class for project-related operations with analysis workflow management."""
+    """Service class for project-related operations with analysis workflow and chat/AI management."""
     
     @staticmethod
     async def get_all_projects() -> List[ProjectResponse]:
@@ -146,7 +153,7 @@ class ProjectService:
             raise ValueError(f"Failed to delete project: {str(e)}")
     
     # ============================================================================
-    # ANALYSIS WORKFLOW METHODS (NEW - STEP 3)
+    # ANALYSIS WORKFLOW METHODS (STEP 3)
     # ============================================================================
     
     @staticmethod
@@ -200,24 +207,12 @@ class ProjectService:
             # Re-raise validation errors
             raise e
         except Exception as e:
-            # Log unexpected errors and convert to ValueError
-            print(f"Error in ProjectService.start_analysis: {e}")
+            print(f"Unexpected error in start_analysis endpoint: {e}")
             raise ValueError(f"Failed to start analysis: {str(e)}")
     
     @staticmethod
     async def get_analysis_status(project_id: str) -> Dict[str, Any]:
-        """
-        Get current analysis status and progress for a project.
-        
-        Args:
-            project_id: Project ID to check status for
-            
-        Returns:
-            Dictionary with comprehensive status information
-            
-        Raises:
-            ValueError: If project not found
-        """
+        """Get current analysis status and progress for a project."""
         try:
             # Get analysis session
             analysis_session = db.get_analysis_session(project_id)
@@ -260,18 +255,7 @@ class ProjectService:
     
     @staticmethod
     async def get_analysis_results(project_id: str) -> ProjectResponse:
-        """
-        Get complete analysis results for a project.
-        
-        Args:
-            project_id: Project ID to get results for
-            
-        Returns:
-            ProjectResponse with complete analysis results
-            
-        Raises:
-            ValueError: If project not found or analysis not completed
-        """
+        """Get complete analysis results for a project."""
         try:
             # Get analysis session
             analysis_session = db.get_analysis_session(project_id)
@@ -301,7 +285,458 @@ class ProjectService:
             raise ValueError(f"Failed to get analysis results: {str(e)}")
     
     # ============================================================================
-    # PRIVATE HELPER METHODS
+    # CHAT AND AI FEATURE METHODS (NEW - STEP 4)
+    # ============================================================================
+    
+    @staticmethod
+    async def get_chat_sessions(project_id: str) -> ChatSessionListResponse:
+        """
+        Get all chat sessions for a project.
+        
+        Args:
+            project_id: Project ID to get chat sessions for
+            
+        Returns:
+            ChatSessionListResponse with session information
+        """
+        try:
+            # Validate project exists
+            analysis_session = db.get_analysis_session(project_id)
+            if not analysis_session:
+                raise ValueError(f"Project not found: {project_id}")
+            
+            # Import chat agent
+            from src.llm.services.chat_agent import chat_agent
+            
+            # Get chat sessions from backend
+            session_summaries = chat_agent.list_chat_sessions(project_id)
+            
+            # Transform to API model format
+            sessions = []
+            for summary in session_summaries:
+                session_info = ChatSessionInfo(
+                    session_id=summary['session_id'],
+                    created_at=datetime.fromtimestamp(summary['created_at']),
+                    last_active=datetime.fromtimestamp(summary['last_active']),
+                    message_count=summary['message_count'],
+                    preview=summary['preview']
+                )
+                sessions.append(session_info)
+            
+            return ChatSessionListResponse(
+                sessions=sessions,
+                total_count=len(sessions)
+            )
+            
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            print(f"Error in get_chat_sessions: {e}")
+            raise ValueError(f"Failed to get chat sessions: {str(e)}")
+    
+    @staticmethod
+    async def start_chat_session(project_id: str) -> ChatSessionInfo:
+        """
+        Start a new chat session for a project.
+        
+        Args:
+            project_id: Project ID to start chat for
+            
+        Returns:
+            ChatSessionInfo for the new session
+        """
+        try:
+            # Validate project exists and is completed
+            analysis_session = db.get_analysis_session(project_id)
+            if not analysis_session:
+                raise ValueError(f"Project not found: {project_id}")
+            
+            if analysis_session.status != 'completed':
+                raise ValueError(f"Project analysis not completed. Current status: {analysis_session.status}")
+            
+            # Check if LLM is available
+            if not is_llm_available():
+                raise ValueError("AI chat features are not available. Please check LLM configuration.")
+            
+            # Import chat agent
+            from src.llm.services.chat_agent import chat_agent
+            
+            # Start new chat session
+            chat_session_id = chat_agent.start_chat_session(project_id)
+            
+            # Return session info
+            return ChatSessionInfo(
+                session_id=chat_session_id,
+                created_at=datetime.utcnow(),
+                last_active=datetime.utcnow(),
+                message_count=1,  # Welcome message
+                preview="New chat session started"
+            )
+            
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            print(f"Error in start_chat_session: {e}")
+            raise ValueError(f"Failed to start chat session: {str(e)}")
+    
+    @staticmethod
+    async def send_chat_message(chat_session_id: str, message_data: ChatMessageCreate) -> ChatResponse:
+        """
+        Send a message to a chat session.
+        
+        Args:
+            chat_session_id: Chat session ID
+            message_data: Message to send
+            
+        Returns:
+            ChatResponse with AI response
+        """
+        try:
+            # Check if LLM is available
+            if not is_llm_available():
+                raise ValueError("AI chat features are not available. Please check LLM configuration.")
+            
+            # Import chat agent
+            from src.llm.services.chat_agent import chat_agent
+            
+            # Send message to chat agent
+            response = chat_agent.send_message(
+                chat_session_id=chat_session_id,
+                user_message=message_data.message,
+                search_type=message_data.search_type
+            )
+            
+            # Transform to API model format
+            return ChatResponse(
+                message=response.message,
+                sources=response.sources,
+                analytics_insights=response.analytics_insights,
+                search_type=response.search_type,
+                discussions_found=response.discussions_found,
+                tokens_used=response.tokens_used,
+                cost_estimate=response.cost_estimate,
+                session_id=response.session_id,
+                query_classification=response.query_classification
+            )
+            
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            print(f"Error in send_chat_message: {e}")
+            raise ValueError(f"Failed to send chat message: {str(e)}")
+    
+    @staticmethod
+    async def get_chat_history(chat_session_id: str, limit: int = 50) -> ChatHistoryResponse:
+        """
+        Get chat history for a session.
+        
+        Args:
+            chat_session_id: Chat session ID
+            limit: Maximum number of messages to return
+            
+        Returns:
+            ChatHistoryResponse with messages
+        """
+        try:
+            # Import chat agent
+            from src.llm.services.chat_agent import chat_agent
+            
+            # Get chat history from backend
+            history = chat_agent.get_chat_history(chat_session_id, limit)
+            
+            # Transform to API model format
+            messages = []
+            for msg in history:
+                chat_message = ChatMessage(
+                    id=msg.get('id', 0),  # Backend should provide ID
+                    role=msg['role'],
+                    content=msg['content'],
+                    timestamp=datetime.fromtimestamp(msg['timestamp']),
+                    tokens_used=msg.get('tokens_used', 0),
+                    cost_estimate=msg.get('cost_estimate', 0.0)
+                )
+                messages.append(chat_message)
+            
+            return ChatHistoryResponse(
+                messages=messages,
+                session_id=chat_session_id,
+                total_messages=len(messages)
+            )
+            
+        except Exception as e:
+            print(f"Error in get_chat_history: {e}")
+            raise ValueError(f"Failed to get chat history: {str(e)}")
+    
+    @staticmethod
+    async def suggest_keywords(suggestion_request: KeywordSuggestionRequest) -> KeywordSuggestionResponse:
+        """
+        Get AI keyword suggestions for research.
+        
+        Args:
+            suggestion_request: Request with research description
+            
+        Returns:
+            KeywordSuggestionResponse with suggested keywords
+        """
+        try:
+            # Check if LLM is available
+            if not is_llm_available():
+                raise ValueError("AI keyword suggestion features are not available. Please check LLM configuration.")
+            
+            # Get LLM provider
+            provider = get_llm_provider()
+            if not provider:
+                raise ValueError("No LLM provider available for keyword suggestions.")
+            
+            # Create keyword suggestion prompt
+            system_prompt = """You are a helpful assistant that suggests relevant keywords for analyzing Reddit discussions. 
+Given a research goal or topic, suggest 5-10 specific keywords that would be effective for finding relevant posts and comments.
+
+Guidelines:
+- Suggest ONLY single words, not phrases (e.g. "battery" not "battery life")
+- Include related terms and synonyms as separate single words
+- Consider common abbreviations and slang terms
+- Think about how people actually discuss this topic on Reddit
+- Include words that capture both positive and negative aspects
+- Each keyword should be one word that is specific enough to be meaningful
+
+Return only the keywords, separated by commas, with no additional explanation."""
+            
+            user_prompt = f"Research goal: {suggestion_request.research_description}\n\nSuggest relevant keywords for Reddit analysis:"
+            
+            # Generate keywords
+            response = provider.generate(user_prompt, system_prompt)
+            
+            if not response.content:
+                raise ValueError("No keywords were generated. Please try rephrasing your research description.")
+            
+            # Parse keywords from response
+            keywords = [kw.strip().strip('"\'') for kw in response.content.split(',')]
+            keywords = [kw for kw in keywords if kw]  # Remove empty strings
+            keywords = keywords[:suggestion_request.max_keywords]  # Limit to requested number
+            
+            return KeywordSuggestionResponse(
+                keywords=keywords,
+                research_description=suggestion_request.research_description,
+                provider=response.provider,
+                model=response.model,
+                tokens_used=response.tokens_used,
+                cost_estimate=response.cost_estimate
+            )
+            
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            print(f"Error in suggest_keywords: {e}")
+            raise ValueError(f"Failed to generate keyword suggestions: {str(e)}")
+    
+    @staticmethod
+    async def get_ai_status() -> AIStatusResponse:
+        """
+        Get current AI system status and capabilities.
+        
+        Returns:
+            AIStatusResponse with system status
+        """
+        try:
+            # Check overall LLM availability
+            ai_available = is_llm_available()
+            
+            # Get provider information
+            providers = {}
+            features = {
+                "keyword_suggestion": False,
+                "summarization": False,
+                "chat_agent": False,
+                "rag_search": False
+            }
+            default_provider = None
+            embeddings_info = {}
+            
+            if ai_available:
+                try:
+                    from src.llm.config import llm_config
+                    
+                    # Get available providers
+                    available_providers = llm_config.get_available_providers()
+                    default_provider = llm_config.get_default_provider()
+                    
+                    # Test each provider
+                    test_results = llm_config.test_providers()
+                    
+                    for provider_name in available_providers:
+                        config = llm_config.get_provider_config(provider_name)
+                        test_success, test_message = test_results.get(provider_name, (False, "Not tested"))
+                        
+                        providers[provider_name] = {
+                            "available": test_success,
+                            "model": config.get('model', 'unknown') if config else 'unknown',
+                            "status": test_message
+                        }
+                    
+                    # Get feature availability
+                    features = llm_config.get_feature_config()
+                    
+                    # Get embeddings info
+                    embeddings_config = llm_config.get_embeddings_config()
+                    if embeddings_config:
+                        embeddings_info = {
+                            "provider": embeddings_config.get('provider', 'unknown'),
+                            "model": embeddings_config.get('model', 'unknown'),
+                            "available": True
+                        }
+                    
+                except Exception as e:
+                    print(f"Error getting detailed AI status: {e}")
+                    # Fallback to basic status
+                    providers = {"unknown": {"available": ai_available, "status": "Basic availability check only"}}
+            
+            return AIStatusResponse(
+                ai_available=ai_available,
+                providers=providers,
+                features=features,
+                default_provider=default_provider,
+                embeddings_info=embeddings_info
+            )
+            
+        except Exception as e:
+            print(f"Error in get_ai_status: {e}")
+            # Return basic unavailable status rather than failing
+            return AIStatusResponse(
+                ai_available=False,
+                providers={},
+                features={"keyword_suggestion": False, "summarization": False, "chat_agent": False, "rag_search": False},
+                default_provider=None,
+                embeddings_info={}
+            )
+    
+    @staticmethod
+    async def explain_analysis(project_id: str, explanation_request: AIExplanationRequest) -> AIExplanationResponse:
+        """
+        Get AI explanation of analysis results for a specific topic.
+        
+        Args:
+            project_id: Project ID to explain
+            explanation_request: Request with topic to explain
+            
+        Returns:
+            AIExplanationResponse with explanation
+        """
+        try:
+            # Validate project exists and is completed
+            analysis_session = db.get_analysis_session(project_id)
+            if not analysis_session:
+                raise ValueError(f"Project not found: {project_id}")
+            
+            if analysis_session.status != 'completed':
+                raise ValueError(f"Project analysis not completed. Current status: {analysis_session.status}")
+            
+            # Check if LLM is available
+            if not is_llm_available():
+                raise ValueError("AI explanation features are not available. Please check LLM configuration.")
+            
+            # Get analysis results
+            session_results = analytics_engine.get_session_results_with_summary(project_id)
+            collection_ids = json.loads(analysis_session.collection_ids)
+            
+            # Get LLM provider
+            provider = get_llm_provider()
+            if not provider:
+                raise ValueError("No LLM provider available for explanations.")
+            
+            # Build context for explanation
+            context_parts = [
+                f"Analysis Overview:",
+                f"- Total mentions: {session_results.get('total_mentions', 0)}",
+                f"- Average sentiment: {session_results.get('avg_sentiment', 0.0):.3f}",
+                f"- Keywords analyzed: {len(session_results.get('keywords', []))}"
+            ]
+            
+            # Add relevant keyword data
+            keywords_data = session_results.get('keywords_data', [])
+            if keywords_data:
+                context_parts.append("\nTop Keywords:")
+                for kw in keywords_data[:5]:
+                    context_parts.append(f"- '{kw['keyword']}': {kw['total_mentions']} mentions, {kw['avg_sentiment']:+.3f} sentiment")
+            
+            context = "\n".join(context_parts)
+            
+            # Create explanation prompt
+            system_prompt = """You are an expert data analyst who explains Reddit discussion analytics in clear, business-relevant terms. 
+Your explanations should help users understand what the data means for their research goals and what actions they might take based on the insights."""
+            
+            user_prompt = f"""Based on this Reddit discussion analysis, please explain the following topic: "{explanation_request.topic}"
+
+Analysis Data:
+{context}
+
+Additional Context: {explanation_request.context or "None provided"}
+
+Please provide a clear explanation that:
+1. Explains what the data shows about this topic
+2. Interprets the business/research implications
+3. Suggests what this means for the user's research
+4. Identifies any notable patterns or insights related to this topic
+
+Focus on practical, actionable insights rather than just restating the numbers."""
+            
+            # Generate explanation
+            response = provider.generate(user_prompt, system_prompt)
+            
+            if not response.content:
+                raise ValueError("No explanation was generated. Please try rephrasing your request.")
+            
+            # Generate related insights
+            related_insights = []
+            if keywords_data:
+                # Find keywords related to the topic
+                topic_lower = explanation_request.topic.lower()
+                related_keywords = [
+                    kw for kw in keywords_data 
+                    if topic_lower in kw['keyword'].lower() or kw['keyword'].lower() in topic_lower
+                ]
+                
+                if related_keywords:
+                    related_insights.append(f"Found {len(related_keywords)} keywords directly related to '{explanation_request.topic}'")
+                
+                # Find sentiment patterns
+                positive_kw = [kw for kw in keywords_data if kw['avg_sentiment'] > 0.1]
+                negative_kw = [kw for kw in keywords_data if kw['avg_sentiment'] < -0.1]
+                
+                if len(negative_kw) > len(positive_kw):
+                    related_insights.append("Overall discussion sentiment trends negative")
+                elif len(positive_kw) > len(negative_kw):
+                    related_insights.append("Overall discussion sentiment trends positive")
+            
+            # Prepare sources used
+            sources_used = [
+                {
+                    "type": "analysis_overview",
+                    "total_mentions": session_results.get('total_mentions', 0),
+                    "avg_sentiment": session_results.get('avg_sentiment', 0.0),
+                    "keywords_count": len(session_results.get('keywords', []))
+                }
+            ]
+            
+            return AIExplanationResponse(
+                explanation=response.content,
+                topic=explanation_request.topic,
+                related_insights=related_insights,
+                sources_used=sources_used,
+                provider=response.provider,
+                model=response.model,
+                tokens_used=response.tokens_used,
+                cost_estimate=response.cost_estimate
+            )
+            
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            print(f"Error in explain_analysis: {e}")
+            raise ValueError(f"Failed to generate explanation: {str(e)}")
+    
+    # ============================================================================
+    # PRIVATE HELPER METHODS (EXISTING + ENHANCEMENTS)
     # ============================================================================
     
     @staticmethod
@@ -339,15 +774,7 @@ class ProjectService:
     
     @staticmethod
     def _estimate_analysis_duration(analysis_session) -> int:
-        """
-        Estimate analysis duration in minutes based on project parameters.
-        
-        Args:
-            analysis_session: Analysis session object
-            
-        Returns:
-            Estimated duration in minutes
-        """
+        """Estimate analysis duration in minutes based on project parameters."""
         try:
             keywords = json.loads(analysis_session.keywords)
             collection_ids = json.loads(analysis_session.collection_ids)
@@ -368,15 +795,7 @@ class ProjectService:
     
     @staticmethod
     def _get_analysis_progress(analysis_session) -> Dict[str, Any]:
-        """
-        Get progress information for running analysis.
-        
-        Args:
-            analysis_session: Analysis session object
-            
-        Returns:
-            Dictionary with progress information
-        """
+        """Get progress information for running analysis."""
         # Calculate elapsed time
         elapsed_minutes = (datetime.utcnow().timestamp() - analysis_session.created_at) / 60
         estimated_duration = ProjectService._estimate_analysis_duration(analysis_session)
@@ -408,15 +827,7 @@ class ProjectService:
     
     @staticmethod
     def _get_completion_info(analysis_session) -> Dict[str, Any]:
-        """
-        Get completion information for completed analysis.
-        
-        Args:
-            analysis_session: Analysis session object
-            
-        Returns:
-            Dictionary with completion information
-        """
+        """Get completion information for completed analysis."""
         return {
             "progress_percentage": 100,
             "completed_at": datetime.utcnow().isoformat(),
@@ -428,15 +839,7 @@ class ProjectService:
     
     @staticmethod
     def _get_error_info(analysis_session) -> Dict[str, Any]:
-        """
-        Get error information for failed analysis.
-        
-        Args:
-            analysis_session: Analysis session object
-            
-        Returns:
-            Dictionary with error information
-        """
+        """Get error information for failed analysis."""
         return {
             "progress_percentage": 0,
             "error": "Analysis failed to complete",
@@ -451,15 +854,7 @@ class ProjectService:
     
     @staticmethod
     async def _transform_session_to_project(session) -> ProjectResponse:
-        """
-        Transform an AnalysisSession into a ProjectResponse.
-        
-        Args:
-            session: AnalysisSession object from database
-            
-        Returns:
-            ProjectResponse ready for API consumption
-        """
+        """Transform an AnalysisSession into a ProjectResponse."""
         # Parse JSON fields from database
         keywords = json.loads(session.keywords)
         collection_ids = json.loads(session.collection_ids)
@@ -493,16 +888,7 @@ class ProjectService:
     
     @staticmethod
     async def _transform_session_to_project_with_results(session, session_results: Dict[str, Any]) -> ProjectResponse:
-        """
-        Transform an AnalysisSession with results into a ProjectResponse.
-        
-        Args:
-            session: AnalysisSession object from database
-            session_results: Complete session results from analytics engine
-            
-        Returns:
-            ProjectResponse with enhanced results data
-        """
+        """Transform an AnalysisSession with results into a ProjectResponse."""
         # Parse JSON fields from database
         keywords = json.loads(session.keywords)
         collection_ids = json.loads(session.collection_ids)
@@ -566,15 +952,7 @@ class ProjectService:
     
     @staticmethod
     async def _get_project_summary(session_id: str) -> Optional[ProjectSummary]:
-        """
-        Get AI summary for a project if it exists.
-        
-        Args:
-            session_id: Analysis session ID
-            
-        Returns:
-            ProjectSummary object or None if no summary exists
-        """
+        """Get AI summary for a project if it exists."""
         try:
             summary_data = analysis_summarizer.get_existing_summary(session_id)
             if not summary_data:
@@ -609,15 +987,7 @@ class ProjectService:
     
     @staticmethod
     def _get_collections_metadata(collection_ids: List[str]) -> List[Dict[str, Any]]:
-        """
-        Get metadata about collections for frontend display.
-        
-        Args:
-            collection_ids: List of collection IDs to get metadata for
-            
-        Returns:
-            List of collection metadata dictionaries
-        """
+        """Get metadata about collections for frontend display."""
         try:
             collections_metadata = []
             collections = db.get_collections()
@@ -642,15 +1012,7 @@ class ProjectService:
     
     @staticmethod
     def _validate_collections_exist(collection_ids: List[str]) -> None:
-        """
-        Validate that all specified collection IDs exist.
-        
-        Args:
-            collection_ids: List of collection IDs to validate
-            
-        Raises:
-            ValueError: If any collection ID doesn't exist
-        """
+        """Validate that all specified collection IDs exist."""
         try:
             existing_collections = db.get_collections()
             existing_ids = {collection.id for collection in existing_collections}
