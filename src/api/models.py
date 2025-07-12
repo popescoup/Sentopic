@@ -4,6 +4,8 @@ API Data Models
 Pydantic models that define the structure of data exchanged between
 the frontend and backend. These models serve as contracts and provide
 automatic validation and documentation.
+
+Enhanced with Step 4: Chat and AI Feature Models
 """
 
 from typing import List, Optional, Dict, Any
@@ -141,6 +143,317 @@ class ProjectListResponse(BaseModel):
                     # ... abbreviated project objects for dashboard
                 ],
                 "total_count": 5
+            }
+        }
+
+
+# ============================================================================
+# CHAT AND AI MODELS (NEW - STEP 4)
+# ============================================================================
+
+class ChatMessageCreate(BaseModel):
+    """Request to send a message in a chat session."""
+    message: str = Field(..., description="User message to send to AI", min_length=1, max_length=2000)
+    search_type: str = Field("auto", description="Search method for AI to use: auto, keyword, local_semantic, cloud_semantic, analytics_driven")
+    
+    @validator('message')
+    def validate_message(cls, v):
+        """Ensure message is not just whitespace."""
+        if not v.strip():
+            raise ValueError("Message cannot be empty")
+        return v.strip()
+    
+    @validator('search_type')
+    def validate_search_type(cls, v):
+        """Validate search type options."""
+        valid_types = ["auto", "keyword", "local_semantic", "cloud_semantic", "analytics_driven"]
+        if v not in valid_types:
+            raise ValueError(f"Search type must be one of: {valid_types}")
+        return v
+
+
+class ChatMessage(BaseModel):
+    """Individual chat message with metadata."""
+    id: int = Field(..., description="Unique message ID")
+    role: str = Field(..., description="Message role: user or assistant")
+    content: str = Field(..., description="Message content")
+    timestamp: datetime = Field(..., description="When the message was sent")
+    tokens_used: int = Field(0, description="Tokens used for this message (assistant only)")
+    cost_estimate: float = Field(0.0, description="Estimated cost for this message (assistant only)")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+        
+        schema_extra = {
+            "example": {
+                "id": 12345,
+                "role": "assistant",
+                "content": "Based on your analysis, users frequently mention battery drain issues with negative sentiment...",
+                "timestamp": "2025-01-15T10:45:30Z",
+                "tokens_used": 245,
+                "cost_estimate": 0.0012
+            }
+        }
+
+
+class ChatResponse(BaseModel):
+    """Response from sending a chat message."""
+    message: str = Field(..., description="AI assistant's response")
+    sources: List[Dict[str, Any]] = Field([], description="Source attributions for the response")
+    analytics_insights: Dict[str, Any] = Field({}, description="Analytics data used in the response")
+    search_type: str = Field(..., description="Search method that was used")
+    discussions_found: int = Field(0, description="Number of discussions found for the response")
+    tokens_used: int = Field(0, description="Tokens used for this response")
+    cost_estimate: float = Field(0.0, description="Estimated cost for this response")
+    session_id: str = Field(..., description="Chat session ID")
+    query_classification: Dict[str, Any] = Field({}, description="How the query was classified and routed")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "message": "Based on your analysis of battery-related discussions, I found significant negative sentiment around charging issues...",
+                "sources": [
+                    {
+                        "content_id": "abc123",
+                        "content_type": "post",
+                        "relevance_score": 0.85
+                    }
+                ],
+                "analytics_insights": {
+                    "battery": {
+                        "total_mentions": 245,
+                        "avg_sentiment": -0.34
+                    }
+                },
+                "search_type": "analytics_driven",
+                "discussions_found": 3,
+                "tokens_used": 245,
+                "cost_estimate": 0.0012,
+                "session_id": "chat_session_123",
+                "query_classification": {
+                    "type": "analytics",
+                    "confidence": 0.9
+                }
+            }
+        }
+
+
+class ChatSessionInfo(BaseModel):
+    """Information about a chat session."""
+    session_id: str = Field(..., description="Unique chat session identifier")
+    created_at: datetime = Field(..., description="When the chat session was created")
+    last_active: datetime = Field(..., description="When the session was last used")
+    message_count: int = Field(0, description="Number of messages in the session")
+    preview: str = Field("", description="Preview of the conversation (first user message)")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+        
+        schema_extra = {
+            "example": {
+                "session_id": "chat_session_123",
+                "created_at": "2025-01-15T10:30:00Z",
+                "last_active": "2025-01-15T10:45:00Z",
+                "message_count": 8,
+                "preview": "What do people think about battery life?"
+            }
+        }
+
+
+class ChatSessionListResponse(BaseModel):
+    """Response for listing chat sessions."""
+    sessions: List[ChatSessionInfo] = Field(..., description="List of chat sessions for the project")
+    total_count: int = Field(..., description="Total number of chat sessions")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "sessions": [
+                    {
+                        "session_id": "chat_session_123",
+                        "created_at": "2025-01-15T10:30:00Z",
+                        "last_active": "2025-01-15T10:45:00Z",
+                        "message_count": 8,
+                        "preview": "What do people think about battery life?"
+                    }
+                ],
+                "total_count": 3
+            }
+        }
+
+
+class ChatHistoryResponse(BaseModel):
+    """Response for retrieving chat history."""
+    messages: List[ChatMessage] = Field(..., description="Chat messages in chronological order")
+    session_id: str = Field(..., description="Chat session ID")
+    total_messages: int = Field(..., description="Total number of messages in the session")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "messages": [
+                    {
+                        "id": 1,
+                        "role": "user",
+                        "content": "What do people think about battery life?",
+                        "timestamp": "2025-01-15T10:30:00Z",
+                        "tokens_used": 0,
+                        "cost_estimate": 0.0
+                    },
+                    {
+                        "id": 2,
+                        "role": "assistant",
+                        "content": "Based on your analysis...",
+                        "timestamp": "2025-01-15T10:30:15Z",
+                        "tokens_used": 245,
+                        "cost_estimate": 0.0012
+                    }
+                ],
+                "session_id": "chat_session_123",
+                "total_messages": 2
+            }
+        }
+
+
+class KeywordSuggestionRequest(BaseModel):
+    """Request for AI keyword suggestions."""
+    research_description: str = Field(..., description="Description of what you want to research", min_length=1, max_length=1000)
+    max_keywords: int = Field(10, description="Maximum number of keywords to suggest", ge=1, le=20)
+    
+    @validator('research_description')
+    def validate_research_description(cls, v):
+        """Ensure research description is not just whitespace."""
+        if not v.strip():
+            raise ValueError("Research description cannot be empty")
+        return v.strip()
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "research_description": "I want to analyze sentiment about iPhone battery life issues and charging problems",
+                "max_keywords": 8
+            }
+        }
+
+
+class KeywordSuggestionResponse(BaseModel):
+    """Response with AI-suggested keywords."""
+    keywords: List[str] = Field(..., description="AI-suggested keywords for the research topic")
+    research_description: str = Field(..., description="Original research description")
+    provider: str = Field(..., description="AI provider used for suggestions")
+    model: str = Field(..., description="AI model used")
+    tokens_used: int = Field(0, description="Tokens used for generation")
+    cost_estimate: float = Field(0.0, description="Estimated cost for this request")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "keywords": ["battery", "charging", "drain", "power", "life", "performance", "issue", "problem"],
+                "research_description": "I want to analyze sentiment about iPhone battery life issues and charging problems",
+                "provider": "anthropic",
+                "model": "claude-3-5-sonnet-20240620",
+                "tokens_used": 125,
+                "cost_estimate": 0.0006
+            }
+        }
+
+
+class AIStatusResponse(BaseModel):
+    """Response about AI system status and capabilities."""
+    ai_available: bool = Field(..., description="Whether AI features are available")
+    providers: Dict[str, Dict[str, Any]] = Field(..., description="Status of each AI provider")
+    features: Dict[str, bool] = Field(..., description="Available AI features")
+    default_provider: Optional[str] = Field(None, description="Default AI provider name")
+    embeddings_info: Dict[str, Any] = Field({}, description="Embeddings system status")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "ai_available": True,
+                "providers": {
+                    "anthropic": {
+                        "available": True,
+                        "model": "claude-3-5-sonnet-20240620",
+                        "status": "Connected successfully"
+                    },
+                    "openai": {
+                        "available": True,
+                        "model": "gpt-4o",
+                        "status": "Connected successfully"
+                    }
+                },
+                "features": {
+                    "keyword_suggestion": True,
+                    "summarization": True,
+                    "chat_agent": True,
+                    "rag_search": True
+                },
+                "default_provider": "anthropic",
+                "embeddings_info": {
+                    "provider": "openai",
+                    "model": "text-embedding-3-small",
+                    "available": True
+                }
+            }
+        }
+
+
+class AIExplanationRequest(BaseModel):
+    """Request for AI explanation of analysis results."""
+    topic: str = Field(..., description="Topic or aspect to explain", min_length=1, max_length=200)
+    context: Optional[str] = Field(None, description="Additional context for the explanation", max_length=500)
+    
+    @validator('topic')
+    def validate_topic(cls, v):
+        """Ensure topic is not just whitespace."""
+        if not v.strip():
+            raise ValueError("Topic cannot be empty")
+        return v.strip()
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "topic": "negative sentiment around charging",
+                "context": "I see that charging-related keywords have very negative sentiment but want to understand why"
+            }
+        }
+
+
+class AIExplanationResponse(BaseModel):
+    """Response with AI explanation of analysis results."""
+    explanation: str = Field(..., description="AI-generated explanation")
+    topic: str = Field(..., description="Original topic that was explained")
+    related_insights: List[str] = Field([], description="Related insights or suggestions")
+    sources_used: List[Dict[str, Any]] = Field([], description="Data sources used for the explanation")
+    provider: str = Field(..., description="AI provider used")
+    model: str = Field(..., description="AI model used")
+    tokens_used: int = Field(0, description="Tokens used for generation")
+    cost_estimate: float = Field(0.0, description="Estimated cost for this request")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "explanation": "The negative sentiment around charging appears to stem from two main issues: slow charging speeds and inconsistent charging behavior...",
+                "topic": "negative sentiment around charging",
+                "related_insights": [
+                    "Fast charging concerns are mentioned 3x more than slow charging",
+                    "Charging issues correlate with battery age discussions"
+                ],
+                "sources_used": [
+                    {
+                        "keyword": "charging",
+                        "mentions": 342,
+                        "avg_sentiment": -0.45
+                    }
+                ],
+                "provider": "anthropic",
+                "model": "claude-3-5-sonnet-20240620",
+                "tokens_used": 287,
+                "cost_estimate": 0.0014
             }
         }
 
