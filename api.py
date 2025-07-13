@@ -5,7 +5,12 @@ from typing import Dict, Any
 
 # Import your service layer and models
 from src.api.services import ProjectService
-from src.api.models import ProjectListResponse, ProjectCreate, ProjectResponse, APIError
+from src.api.models import (
+    ProjectListResponse, ProjectCreate, ProjectResponse, APIError,
+    ChatMessageCreate, ChatResponse, ChatSessionListResponse, ChatHistoryResponse,
+    KeywordSuggestionRequest, KeywordSuggestionResponse, AIStatusResponse,
+    AIExplanationRequest, AIExplanationResponse
+)
 
 # Initialize FastAPI application with enhanced documentation
 app = FastAPI(
@@ -21,13 +26,15 @@ app = FastAPI(
     * **AI Integration**: LLM-powered insights and chat capabilities
     * **Data Collection**: Reddit data collection and management
     * **Analysis Workflow**: Background processing with real-time status tracking
+    * **AI Chat Agent**: Interactive chat with your analysis data
+    * **Keyword Suggestions**: AI-powered keyword recommendations
 
     ### API Organization
     * **System**: Health checks and system status
     * **Projects**: Project lifecycle management
     * **Analysis**: Analysis execution, progress tracking, and results
     * **Collections**: Reddit data collection management
-    * **AI**: Chat agent and LLM features
+    * **AI**: Chat agent, keyword suggestions, and LLM features
     """,
     version="1.0.0",
     docs_url="/docs",
@@ -51,7 +58,7 @@ app = FastAPI(
         },
         {
             "name": "ai",
-            "description": "AI-powered features including chat and insights"
+            "description": "AI-powered features including chat, keyword suggestions, and insights"
         }
     ]
 )
@@ -410,7 +417,7 @@ async def delete_project(project_id: str):
         )
 
 # ============================================================================
-# ANALYSIS WORKFLOW ENDPOINTS (NEW - STEP 3)
+# ANALYSIS WORKFLOW ENDPOINTS (STEP 3)
 # ============================================================================
 
 @app.post("/projects/{project_id}/analysis/start",
@@ -649,6 +656,528 @@ async def get_analysis_results(project_id: str) -> ProjectResponse:
             detail={
                 "error": "server_error",
                 "message": "An unexpected error occurred while retrieving analysis results",
+                "details": {"project_id": project_id}
+            }
+        )
+
+# ============================================================================
+# CHAT AND AI ENDPOINTS (NEW - STEP 4)
+# ============================================================================
+
+@app.get("/projects/{project_id}/chat/sessions",
+         response_model=ChatSessionListResponse,
+         responses={
+             404: {"model": APIError, "description": "Project not found"},
+             500: {"model": APIError, "description": "Server error"}
+         },
+         tags=["ai"],
+         summary="List Chat Sessions",
+         description="Get all chat sessions for a project")
+async def get_chat_sessions(project_id: str) -> ChatSessionListResponse:
+    """
+    **List Chat Sessions for a Project**
+    
+    Returns all chat sessions created for a specific project, allowing users to:
+    
+    * Resume previous conversations with the AI
+    * See conversation previews and activity
+    * Manage multiple chat threads about the same data
+    
+    **Use Case**: Powers the chat session selection interface, allowing users
+    to continue previous conversations or start new ones.
+    
+    **Path Parameters**:
+    * **project_id**: Project ID to get chat sessions for
+    
+    **Response**: List of chat sessions with metadata and previews
+    """
+    try:
+        sessions = await ProjectService.get_chat_sessions(project_id)
+        return sessions
+        
+    except ValueError as e:
+        error_message = str(e)
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "project_not_found",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "chat_error",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in get_chat_sessions endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while retrieving chat sessions",
+                "details": {"project_id": project_id}
+            }
+        )
+
+@app.post("/projects/{project_id}/chat/sessions",
+          status_code=201,
+          responses={
+              201: {"description": "Chat session created successfully"},
+              404: {"model": APIError, "description": "Project not found"},
+              400: {"model": APIError, "description": "Project not ready for chat"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["ai"],
+          summary="Start New Chat Session",
+          description="Create a new AI chat session for a project")
+async def start_chat_session(project_id: str) -> Dict[str, Any]:
+    """
+    **Start New AI Chat Session**
+    
+    Creates a new chat session for interactive AI conversations about your analysis data.
+    
+    **Requirements**:
+    * Project must exist and analysis must be completed
+    * AI/LLM features must be available and configured
+    
+    **What You Get**:
+    * Interactive AI that understands your specific analysis results
+    * Ability to ask questions about patterns, sentiment, and trends
+    * AI can search and reference actual Reddit discussions
+    * Contextual explanations of your analytics findings
+    
+    **Use Case**: Called when user wants to start a new conversation thread
+    about their analysis results.
+    
+    **Path Parameters**:
+    * **project_id**: Project ID to create chat session for
+    
+    **Response**: New chat session information with unique session ID
+    """
+    try:
+        session_info = await ProjectService.start_chat_session(project_id)
+        
+        return {
+            "status": "created",
+            "session_id": session_info.session_id,
+            "created_at": session_info.created_at.isoformat(),
+            "message": "Chat session created successfully. You can now ask questions about your analysis data."
+        }
+        
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "project_not_found",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        elif "not completed" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "analysis_not_completed",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        elif "not available" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "ai_not_available",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "chat_error",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in start_chat_session endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while starting chat session",
+                "details": {"project_id": project_id}
+            }
+        )
+
+@app.post("/chat/{chat_session_id}/messages",
+          response_model=ChatResponse,
+          responses={
+              404: {"model": APIError, "description": "Chat session not found"},
+              400: {"model": APIError, "description": "Invalid message or AI unavailable"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["ai"],
+          summary="Send Chat Message",
+          description="Send a message to the AI chat agent")
+async def send_chat_message(chat_session_id: str, message_data: ChatMessageCreate) -> ChatResponse:
+    """
+    **Send Message to AI Chat Agent**
+    
+    Send a question or message to the AI agent for intelligent analysis of your data.
+    
+    **AI Capabilities**:
+    * Understands your specific analysis results and can answer questions about patterns
+    * Can search through actual Reddit discussions to find relevant examples
+    * Explains sentiment trends, keyword relationships, and temporal patterns
+    * Provides business insights and actionable recommendations
+    * References specific discussions and quotes from your data
+    
+    **Search Types**:
+    * `auto` - AI automatically selects the best search method
+    * `keyword` - Traditional keyword-based search
+    * `local_semantic` - Local semantic search (requires indexing)
+    * `cloud_semantic` - Cloud semantic search (requires indexing)
+    * `analytics_driven` - Uses your keyword analysis data for precise results
+    
+    **Use Case**: Powers the interactive chat interface where users can ask
+    natural language questions about their Reddit analysis data.
+    
+    **Path Parameters**:
+    * **chat_session_id**: Unique chat session identifier
+    
+    **Request Body**:
+    * **message**: Your question or message to the AI
+    * **search_type**: Search method preference (default: "auto")
+    
+    **Response**: AI response with source attributions and analytics insights
+    """
+    try:
+        response = await ProjectService.send_chat_message(chat_session_id, message_data)
+        return response
+        
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "chat_session_not_found",
+                    "message": error_message,
+                    "details": {"chat_session_id": chat_session_id}
+                }
+            )
+        elif "not available" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "ai_not_available",
+                    "message": error_message,
+                    "details": {"chat_session_id": chat_session_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "chat_error",
+                    "message": error_message,
+                    "details": {"chat_session_id": chat_session_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in send_chat_message endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while processing chat message",
+                "details": {"chat_session_id": chat_session_id}
+            }
+        )
+
+@app.get("/chat/{chat_session_id}/history",
+         response_model=ChatHistoryResponse,
+         responses={
+             404: {"model": APIError, "description": "Chat session not found"},
+             500: {"model": APIError, "description": "Server error"}
+         },
+         tags=["ai"],
+         summary="Get Chat History",
+         description="Get conversation history for a chat session")
+async def get_chat_history(chat_session_id: str, limit: int = 50) -> ChatHistoryResponse:
+    """
+    **Get Chat Conversation History**
+    
+    Retrieves the full conversation history for a chat session, including:
+    
+    * All user messages and AI responses in chronological order
+    * Message metadata (timestamps, token usage, costs)
+    * Conversation context for resuming discussions
+    
+    **Use Case**: Powers the chat interface message history and allows users
+    to see previous conversations when resuming a chat session.
+    
+    **Path Parameters**:
+    * **chat_session_id**: Unique chat session identifier
+    
+    **Query Parameters**:
+    * **limit**: Maximum number of messages to return (default: 50)
+    
+    **Response**: Complete conversation history with message details
+    """
+    try:
+        history = await ProjectService.get_chat_history(chat_session_id, limit)
+        return history
+        
+    except ValueError as e:
+        error_message = str(e)
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "chat_session_not_found",
+                    "message": error_message,
+                    "details": {"chat_session_id": chat_session_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "chat_error",
+                    "message": error_message,
+                    "details": {"chat_session_id": chat_session_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in get_chat_history endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while retrieving chat history",
+                "details": {"chat_session_id": chat_session_id}
+            }
+        )
+
+@app.post("/ai/keywords/suggest",
+          response_model=KeywordSuggestionResponse,
+          responses={
+              400: {"model": APIError, "description": "Invalid request or AI unavailable"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["ai"],
+          summary="Get AI Keyword Suggestions",
+          description="Get AI-powered keyword suggestions for research topics")
+async def suggest_keywords(suggestion_request: KeywordSuggestionRequest) -> KeywordSuggestionResponse:
+    """
+    **AI-Powered Keyword Suggestions**
+    
+    Get intelligent keyword suggestions from AI based on your research description.
+    
+    **How It Works**:
+    * Describe what you want to research in natural language
+    * AI analyzes your description and suggests relevant keywords
+    * Suggestions are optimized for Reddit discussion analysis
+    * Keywords focus on how people actually discuss topics on Reddit
+    
+    **Use Case**: Powers the "AI Suggest" feature in project creation wizard.
+    Helps users discover relevant keywords they might not have considered.
+    
+    **Request Body**:
+    * **research_description**: Natural language description of what you want to research
+    * **max_keywords**: Maximum number of keywords to suggest (1-20, default: 10)
+    
+    **Response**: List of AI-suggested keywords with generation metadata
+    
+    **Example**: 
+    Input: "I want to analyze sentiment about iPhone battery life issues"
+    Output: ["battery", "charging", "drain", "power", "life", "performance", "issue", "problem"]
+    """
+    try:
+        suggestions = await ProjectService.suggest_keywords(suggestion_request)
+        return suggestions
+        
+    except ValueError as e:
+        error_message = str(e)
+        if "not available" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "ai_not_available",
+                    "message": error_message,
+                    "details": {}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "suggestion_error",
+                    "message": error_message,
+                    "details": {}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in suggest_keywords endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while generating keyword suggestions",
+                "details": {}
+            }
+        )
+
+@app.get("/ai/status",
+         response_model=AIStatusResponse,
+         responses={500: {"model": APIError}},
+         tags=["ai"],
+         summary="Get AI System Status",
+         description="Get current AI system status and capabilities")
+async def get_ai_status() -> AIStatusResponse:
+    """
+    **AI System Status and Capabilities**
+    
+    Returns comprehensive information about AI system availability and features.
+    
+    **Status Information**:
+    * Overall AI availability (enabled/disabled)
+    * Individual AI provider status (Anthropic, OpenAI, etc.)
+    * Available AI features (chat, summaries, keyword suggestions, etc.)
+    * Configuration details and model information
+    * Embeddings system status for semantic search
+    
+    **Use Case**: 
+    * Frontend can check AI availability before showing AI features
+    * Troubleshooting AI configuration issues
+    * Displaying AI capabilities to users
+    * Determining which features to enable in the UI
+    
+    **Response**: Complete AI system status with provider details and feature availability
+    """
+    try:
+        status = await ProjectService.get_ai_status()
+        return status
+        
+    except Exception as e:
+        print(f"Unexpected error in get_ai_status endpoint: {e}")
+        # Return basic unavailable status rather than failing
+        return AIStatusResponse(
+            ai_available=False,
+            providers={},
+            features={"keyword_suggestion": False, "summarization": False, "chat_agent": False, "rag_search": False},
+            default_provider=None,
+            embeddings_info={}
+        )
+
+@app.post("/projects/{project_id}/ai/explain",
+          response_model=AIExplanationResponse,
+          responses={
+              404: {"model": APIError, "description": "Project not found"},
+              400: {"model": APIError, "description": "Invalid request or AI unavailable"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["ai"],
+          summary="Get AI Explanation",
+          description="Get AI explanation of analysis results for specific topics")
+async def explain_analysis(project_id: str, explanation_request: AIExplanationRequest) -> AIExplanationResponse:
+    """
+    **AI Explanation of Analysis Results**
+    
+    Get intelligent AI explanations of your analysis results for specific topics or patterns.
+    
+    **What AI Can Explain**:
+    * Why certain keywords have negative/positive sentiment
+    * What patterns in the data mean for your business
+    * How to interpret trending topics and changes over time
+    * What specific findings suggest about user behavior
+    * Business implications of sentiment and discussion patterns
+    
+    **Use Case**: 
+    * Click "Explain" buttons next to insights in the project dashboard
+    * Get contextual help understanding what your data means
+    * Translate statistical findings into business insights
+    * Understand the "why" behind the patterns in your data
+    
+    **Path Parameters**:
+    * **project_id**: Project ID to explain results for
+    
+    **Request Body**:
+    * **topic**: Specific topic or aspect to explain (e.g., "negative sentiment around charging")
+    * **context**: Optional additional context for more targeted explanations
+    
+    **Response**: AI-generated explanation with related insights and sources
+    """
+    try:
+        explanation = await ProjectService.explain_analysis(project_id, explanation_request)
+        return explanation
+        
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "project_not_found",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        elif "not completed" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "analysis_not_completed",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        elif "not available" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "ai_not_available",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "explanation_error",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in explain_analysis endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while generating explanation",
                 "details": {"project_id": project_id}
             }
         )
