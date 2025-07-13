@@ -402,62 +402,6 @@ class AIStatusResponse(BaseModel):
         }
 
 
-class AIExplanationRequest(BaseModel):
-    """Request for AI explanation of analysis results."""
-    topic: str = Field(..., description="Topic or aspect to explain", min_length=1, max_length=200)
-    context: Optional[str] = Field(None, description="Additional context for the explanation", max_length=500)
-    
-    @validator('topic')
-    def validate_topic(cls, v):
-        """Ensure topic is not just whitespace."""
-        if not v.strip():
-            raise ValueError("Topic cannot be empty")
-        return v.strip()
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "topic": "negative sentiment around charging",
-                "context": "I see that charging-related keywords have very negative sentiment but want to understand why"
-            }
-        }
-
-
-class AIExplanationResponse(BaseModel):
-    """Response with AI explanation of analysis results."""
-    explanation: str = Field(..., description="AI-generated explanation")
-    topic: str = Field(..., description="Original topic that was explained")
-    related_insights: List[str] = Field([], description="Related insights or suggestions")
-    sources_used: List[Dict[str, Any]] = Field([], description="Data sources used for the explanation")
-    provider: str = Field(..., description="AI provider used")
-    model: str = Field(..., description="AI model used")
-    tokens_used: int = Field(0, description="Tokens used for generation")
-    cost_estimate: float = Field(0.0, description="Estimated cost for this request")
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "explanation": "The negative sentiment around charging appears to stem from two main issues: slow charging speeds and inconsistent charging behavior...",
-                "topic": "negative sentiment around charging",
-                "related_insights": [
-                    "Fast charging concerns are mentioned 3x more than slow charging",
-                    "Charging issues correlate with battery age discussions"
-                ],
-                "sources_used": [
-                    {
-                        "keyword": "charging",
-                        "mentions": 342,
-                        "avg_sentiment": -0.45
-                    }
-                ],
-                "provider": "anthropic",
-                "model": "claude-3-5-sonnet-20240620",
-                "tokens_used": 287,
-                "cost_estimate": 0.0014
-            }
-        }
-
-
 class APIError(BaseModel):
     """Standard error response format."""
     error: str = Field(..., description="Error type or category")

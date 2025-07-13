@@ -9,7 +9,6 @@ from src.api.models import (
     ProjectListResponse, ProjectCreate, ProjectResponse, APIError,
     ChatMessageCreate, ChatResponse, ChatSessionListResponse, ChatHistoryResponse,
     KeywordSuggestionRequest, KeywordSuggestionResponse, AIStatusResponse,
-    AIExplanationRequest, AIExplanationResponse
 )
 
 # Initialize FastAPI application with enhanced documentation
@@ -1088,96 +1087,4 @@ async def get_ai_status() -> AIStatusResponse:
             default_provider=None,
             embeddings_info={}
         )
-
-@app.post("/projects/{project_id}/ai/explain",
-          response_model=AIExplanationResponse,
-          responses={
-              404: {"model": APIError, "description": "Project not found"},
-              400: {"model": APIError, "description": "Invalid request or AI unavailable"},
-              500: {"model": APIError, "description": "Server error"}
-          },
-          tags=["ai"],
-          summary="Get AI Explanation",
-          description="Get AI explanation of analysis results for specific topics")
-async def explain_analysis(project_id: str, explanation_request: AIExplanationRequest) -> AIExplanationResponse:
-    """
-    **AI Explanation of Analysis Results**
     
-    Get intelligent AI explanations of your analysis results for specific topics or patterns.
-    
-    **What AI Can Explain**:
-    * Why certain keywords have negative/positive sentiment
-    * What patterns in the data mean for your business
-    * How to interpret trending topics and changes over time
-    * What specific findings suggest about user behavior
-    * Business implications of sentiment and discussion patterns
-    
-    **Use Case**: 
-    * Click "Explain" buttons next to insights in the project dashboard
-    * Get contextual help understanding what your data means
-    * Translate statistical findings into business insights
-    * Understand the "why" behind the patterns in your data
-    
-    **Path Parameters**:
-    * **project_id**: Project ID to explain results for
-    
-    **Request Body**:
-    * **topic**: Specific topic or aspect to explain (e.g., "negative sentiment around charging")
-    * **context**: Optional additional context for more targeted explanations
-    
-    **Response**: AI-generated explanation with related insights and sources
-    """
-    try:
-        explanation = await ProjectService.explain_analysis(project_id, explanation_request)
-        return explanation
-        
-    except ValueError as e:
-        error_message = str(e)
-        
-        if "not found" in error_message:
-            raise HTTPException(
-                status_code=404,
-                detail={
-                    "error": "project_not_found",
-                    "message": error_message,
-                    "details": {"project_id": project_id}
-                }
-            )
-        elif "not completed" in error_message:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "analysis_not_completed",
-                    "message": error_message,
-                    "details": {"project_id": project_id}
-                }
-            )
-        elif "not available" in error_message:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "ai_not_available",
-                    "message": error_message,
-                    "details": {"project_id": project_id}
-                }
-            )
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "explanation_error",
-                    "message": error_message,
-                    "details": {"project_id": project_id}
-                }
-            )
-    
-    except Exception as e:
-        print(f"Unexpected error in explain_analysis endpoint: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "server_error",
-                "message": "An unexpected error occurred while generating explanation",
-                "details": {"project_id": project_id}
-            }
-        )

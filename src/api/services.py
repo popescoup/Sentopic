@@ -22,8 +22,7 @@ from .models import (
     ProjectResponse, ProjectStats, ProjectSummary, ProjectCreate,
     ChatResponse, ChatMessage, ChatSessionInfo, ChatSessionListResponse, 
     ChatHistoryResponse, ChatMessageCreate, KeywordSuggestionRequest,
-    KeywordSuggestionResponse, AIStatusResponse, AIExplanationRequest,
-    AIExplanationResponse
+    KeywordSuggestionResponse, AIStatusResponse
 )
 
 # Temporary in-memory storage for project preferences
@@ -609,131 +608,6 @@ Return only the keywords, separated by commas, with no additional explanation.""
                 default_provider=None,
                 embeddings_info={}
             )
-    
-    @staticmethod
-    async def explain_analysis(project_id: str, explanation_request: AIExplanationRequest) -> AIExplanationResponse:
-        """
-        Get AI explanation of analysis results for a specific topic.
-        
-        Args:
-            project_id: Project ID to explain
-            explanation_request: Request with topic to explain
-            
-        Returns:
-            AIExplanationResponse with explanation
-        """
-        try:
-            # Validate project exists and is completed
-            analysis_session = db.get_analysis_session(project_id)
-            if not analysis_session:
-                raise ValueError(f"Project not found: {project_id}")
-            
-            if analysis_session.status != 'completed':
-                raise ValueError(f"Project analysis not completed. Current status: {analysis_session.status}")
-            
-            # Check if LLM is available
-            if not is_llm_available():
-                raise ValueError("AI explanation features are not available. Please check LLM configuration.")
-            
-            # Get analysis results
-            session_results = analytics_engine.get_session_results_with_summary(project_id)
-            collection_ids = json.loads(analysis_session.collection_ids)
-            
-            # Get LLM provider
-            provider = get_llm_provider()
-            if not provider:
-                raise ValueError("No LLM provider available for explanations.")
-            
-            # Build context for explanation
-            context_parts = [
-                f"Analysis Overview:",
-                f"- Total mentions: {session_results.get('total_mentions', 0)}",
-                f"- Average sentiment: {session_results.get('avg_sentiment', 0.0):.3f}",
-                f"- Keywords analyzed: {len(session_results.get('keywords', []))}"
-            ]
-            
-            # Add relevant keyword data
-            keywords_data = session_results.get('keywords_data', [])
-            if keywords_data:
-                context_parts.append("\nTop Keywords:")
-                for kw in keywords_data[:5]:
-                    context_parts.append(f"- '{kw['keyword']}': {kw['total_mentions']} mentions, {kw['avg_sentiment']:+.3f} sentiment")
-            
-            context = "\n".join(context_parts)
-            
-            # Create explanation prompt
-            system_prompt = """You are an expert data analyst who explains Reddit discussion analytics in clear, business-relevant terms. 
-Your explanations should help users understand what the data means for their research goals and what actions they might take based on the insights."""
-            
-            user_prompt = f"""Based on this Reddit discussion analysis, please explain the following topic: "{explanation_request.topic}"
-
-Analysis Data:
-{context}
-
-Additional Context: {explanation_request.context or "None provided"}
-
-Please provide a clear explanation that:
-1. Explains what the data shows about this topic
-2. Interprets the business/research implications
-3. Suggests what this means for the user's research
-4. Identifies any notable patterns or insights related to this topic
-
-Focus on practical, actionable insights rather than just restating the numbers."""
-            
-            # Generate explanation
-            response = provider.generate(user_prompt, system_prompt)
-            
-            if not response.content:
-                raise ValueError("No explanation was generated. Please try rephrasing your request.")
-            
-            # Generate related insights
-            related_insights = []
-            if keywords_data:
-                # Find keywords related to the topic
-                topic_lower = explanation_request.topic.lower()
-                related_keywords = [
-                    kw for kw in keywords_data 
-                    if topic_lower in kw['keyword'].lower() or kw['keyword'].lower() in topic_lower
-                ]
-                
-                if related_keywords:
-                    related_insights.append(f"Found {len(related_keywords)} keywords directly related to '{explanation_request.topic}'")
-                
-                # Find sentiment patterns
-                positive_kw = [kw for kw in keywords_data if kw['avg_sentiment'] > 0.1]
-                negative_kw = [kw for kw in keywords_data if kw['avg_sentiment'] < -0.1]
-                
-                if len(negative_kw) > len(positive_kw):
-                    related_insights.append("Overall discussion sentiment trends negative")
-                elif len(positive_kw) > len(negative_kw):
-                    related_insights.append("Overall discussion sentiment trends positive")
-            
-            # Prepare sources used
-            sources_used = [
-                {
-                    "type": "analysis_overview",
-                    "total_mentions": session_results.get('total_mentions', 0),
-                    "avg_sentiment": session_results.get('avg_sentiment', 0.0),
-                    "keywords_count": len(session_results.get('keywords', []))
-                }
-            ]
-            
-            return AIExplanationResponse(
-                explanation=response.content,
-                topic=explanation_request.topic,
-                related_insights=related_insights,
-                sources_used=sources_used,
-                provider=response.provider,
-                model=response.model,
-                tokens_used=response.tokens_used,
-                cost_estimate=response.cost_estimate
-            )
-            
-        except ValueError as e:
-            raise e
-        except Exception as e:
-            print(f"Error in explain_analysis: {e}")
-            raise ValueError(f"Failed to generate explanation: {str(e)}")
     
     # ============================================================================
     # PRIVATE HELPER METHODS (EXISTING + ENHANCEMENTS)
