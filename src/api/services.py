@@ -7,26 +7,35 @@ and frontend-friendly API responses.
 
 Enhanced with Step 3: Analysis Workflow Management
 Enhanced with Step 4: Chat and AI Feature Services
+Enhanced with Step 5: Collection Management Services
 """
 
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import BackgroundTasks
 import json
+import uuid
+import asyncio
 
 from src.analytics import analytics_engine
 from src.database import db
 from src.llm.services.summarizer import analysis_summarizer
 from src.llm import is_llm_available, get_llm_provider
+from src.collector import collector, CollectionParameters
 from .models import (
     ProjectResponse, ProjectStats, ProjectSummary, ProjectCreate,
     ChatResponse, ChatMessage, ChatSessionInfo, ChatSessionListResponse, 
     ChatHistoryResponse, ChatMessageCreate, KeywordSuggestionRequest,
-    KeywordSuggestionResponse, AIStatusResponse
+    KeywordSuggestionResponse, AIStatusResponse, CollectionCreateRequest,
+    CollectionResponse, CollectionBatchResponse, CollectionBatchStatusResponse,
+    CollectionListResponse
 )
 
 # Temporary in-memory storage for project preferences
 _project_preferences = {}
+
+# Temporary in-memory storage for collection batch tracking
+_collection_batches = {}
 
 
 class ProjectService:
@@ -284,7 +293,7 @@ class ProjectService:
             raise ValueError(f"Failed to get analysis results: {str(e)}")
     
     # ============================================================================
-    # CHAT AND AI FEATURE METHODS (NEW - STEP 4)
+    # CHAT AND AI FEATURE METHODS (EXISTING - STEP 4)
     # ============================================================================
     
     @staticmethod
@@ -903,3 +912,340 @@ Return only the keywords, separated by commas, with no additional explanation.""
             if isinstance(e, ValueError):
                 raise e
             raise ValueError(f"Failed to validate collections: {str(e)}")
+
+
+# ============================================================================
+# COLLECTION SERVICE (NEW - STEP 5)
+# ============================================================================
+
+class CollectionService:
+    """Service class for collection management operations."""
+    
+    @staticmethod
+    async def create_collections(request: CollectionCreateRequest, background_tasks: BackgroundTasks) -> CollectionBatchResponse:
+        """
+        Create collections for multiple subreddits.
+        
+        Args:
+            request: Collection creation request with subreddits and parameters
+            background_tasks: FastAPI background tasks for async processing
+            
+        Returns:
+            CollectionBatchResponse with batch tracking information
+        """
+        try:
+            # Generate unique batch ID for tracking
+            batch_id = str(uuid.uuid4())
+            
+            # Create collection records for each subreddit
+            collection_ids = []
+            for subreddit in request.subreddits:
+                collection_id = db.create_collection(
+                    subreddit=subreddit,
+                    sort_method=request.collection_params.sort_method,
+                    time_period=request.collection_params.time_period,
+                    posts_requested=request.collection_params.posts_count,
+                    root_comments_requested=request.collection_params.root_comments,
+                    replies_per_root=request.collection_params.replies_per_root,
+                    min_upvotes=request.collection_params.min_upvotes
+                )
+                collection_ids.append(collection_id)
+            
+            # Initialize batch tracking
+            _collection_batches[batch_id] = {
+                'subreddits': request.subreddits,
+                'collection_ids': collection_ids,
+                'collection_params': request.collection_params,
+                'status': 'started',
+                'started_at': datetime.utcnow(),
+                'current_index': 0,
+                'completed_subreddits': [],
+                'failed_subreddits': [],
+                'error_messages': {}
+            }
+            
+            # Start background collection task
+            background_tasks.add_task(
+                CollectionService._run_background_collection,
+                batch_id,
+                request.subreddits,
+                collection_ids,
+                request.collection_params
+            )
+            
+            # Estimate duration based on number of subreddits and posts
+            estimated_duration = CollectionService._estimate_collection_duration(
+                len(request.subreddits), 
+                request.collection_params.posts_count
+            )
+            
+            return CollectionBatchResponse(
+                batch_id=batch_id,
+                collection_ids=collection_ids,
+                subreddits=request.subreddits,
+                status='started',
+                started_at=datetime.utcnow(),
+                estimated_duration_minutes=estimated_duration
+            )
+            
+        except Exception as e:
+            print(f"Error in CollectionService.create_collections: {e}")
+            raise ValueError(f"Failed to create collections: {str(e)}")
+    
+    @staticmethod
+    async def get_batch_status(batch_id: str) -> CollectionBatchStatusResponse:
+        """
+        Get status of a collection batch.
+        
+        Args:
+            batch_id: Batch ID to check status for
+            
+        Returns:
+            CollectionBatchStatusResponse with current status
+        """
+        try:
+            # Check if batch exists
+            if batch_id not in _collection_batches:
+                raise ValueError(f"Collection batch not found: {batch_id}")
+            
+            batch_info = _collection_batches[batch_id]
+            
+            # Get current collection statuses from database
+            collections = []
+            for collection_id in batch_info['collection_ids']:
+                collection_data = CollectionService._get_collection_response(collection_id)
+                if collection_data:
+                    collections.append(collection_data)
+            
+            # Calculate overall progress
+            completed_count = len(batch_info['completed_subreddits'])
+            failed_count = len(batch_info['failed_subreddits'])
+            total_count = len(batch_info['subreddits'])
+            
+            if completed_count + failed_count >= total_count:
+                overall_status = 'completed'
+                progress_percentage = 100
+                current_subreddit = None
+            elif batch_info['status'] == 'running':
+                overall_status = 'running'
+                progress_percentage = int((completed_count + failed_count) / total_count * 100)
+                current_index = batch_info['current_index']
+                current_subreddit = batch_info['subreddits'][current_index] if current_index < len(batch_info['subreddits']) else None
+            else:
+                overall_status = batch_info['status']
+                progress_percentage = 0
+                current_subreddit = None
+            
+            # Calculate estimated completion
+            estimated_completion = None
+            if overall_status == 'running' and progress_percentage > 0:
+                elapsed_minutes = (datetime.utcnow() - batch_info['started_at']).total_seconds() / 60
+                estimated_total_minutes = elapsed_minutes / (progress_percentage / 100)
+                estimated_completion = batch_info['started_at'] + timedelta(minutes=estimated_total_minutes)
+            
+            return CollectionBatchStatusResponse(
+                batch_id=batch_id,
+                status=overall_status,
+                progress_percentage=progress_percentage,
+                current_subreddit=current_subreddit,
+                completed_subreddits=batch_info['completed_subreddits'],
+                failed_subreddits=batch_info['failed_subreddits'],
+                collections=collections,
+                started_at=batch_info['started_at'],
+                estimated_completion=estimated_completion
+            )
+            
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            print(f"Error in CollectionService.get_batch_status: {e}")
+            raise ValueError(f"Failed to get batch status: {str(e)}")
+    
+    @staticmethod
+    async def get_all_collections() -> CollectionListResponse:
+        """
+        Get all collections with metadata.
+        
+        Returns:
+            CollectionListResponse with all collections
+        """
+        try:
+            # Get all collections from database
+            db_collections = db.get_collections()
+            
+            # Transform to API response format
+            collections = []
+            for db_collection in db_collections:
+                collection_response = CollectionService._get_collection_response(db_collection.id)
+                if collection_response:
+                    collections.append(collection_response)
+            
+            return CollectionListResponse(
+                collections=collections,
+                total_count=len(collections)
+            )
+            
+        except Exception as e:
+            print(f"Error in CollectionService.get_all_collections: {e}")
+            raise ValueError(f"Failed to get collections: {str(e)}")
+    
+    @staticmethod
+    async def delete_collection(collection_id: str) -> bool:
+        """
+        Delete a specific collection.
+        
+        Args:
+            collection_id: Collection ID to delete
+            
+        Returns:
+            True if deleted successfully, False if not found
+        """
+        try:
+            # Get collection from database to check if it exists
+            session = db.get_session()
+            try:
+                from src.database import Collection
+                collection = session.query(Collection).filter(Collection.id == collection_id).first()
+                
+                if not collection:
+                    return False
+                
+                # Delete the collection (cascade will handle posts and comments)
+                session.delete(collection)
+                session.commit()
+                
+                return True
+                
+            finally:
+                session.close()
+                
+        except Exception as e:
+            print(f"Error in CollectionService.delete_collection: {e}")
+            raise ValueError(f"Failed to delete collection: {str(e)}")
+    
+    # ============================================================================
+    # PRIVATE HELPER METHODS
+    # ============================================================================
+    
+    @staticmethod
+    async def _run_background_collection(batch_id: str, subreddits: List[str], 
+                                        collection_ids: List[str], collection_params):
+        """Run collection in background task."""
+        try:
+            print(f"🚀 Starting background collection for batch: {batch_id}")
+            
+            # Update batch status to running
+            if batch_id in _collection_batches:
+                _collection_batches[batch_id]['status'] = 'running'
+            
+            # Process each subreddit
+            for i, subreddit in enumerate(subreddits):
+                try:
+                    print(f"📊 Collecting from r/{subreddit} ({i+1}/{len(subreddits)})")
+                    
+                    # Update current processing index
+                    if batch_id in _collection_batches:
+                        _collection_batches[batch_id]['current_index'] = i
+                    
+                    # Create collection parameters
+                    params = CollectionParameters(
+                        subreddit=subreddit,
+                        sort_method=collection_params.sort_method,
+                        time_period=collection_params.time_period,
+                        posts_count=collection_params.posts_count,
+                        root_comments=collection_params.root_comments,
+                        replies_per_root=collection_params.replies_per_root,
+                        min_upvotes=collection_params.min_upvotes
+                    )
+                    
+                    # Run collection using existing collector
+                    collection_id = collection_ids[i]
+                    collector.current_collection_id = collection_id
+                    collector.collect_data(params)
+                    
+                    # Mark as completed
+                    if batch_id in _collection_batches:
+                        _collection_batches[batch_id]['completed_subreddits'].append(subreddit)
+                    
+                    print(f"✅ Completed r/{subreddit}")
+                    
+                except Exception as e:
+                    print(f"❌ Failed to collect r/{subreddit}: {str(e)}")
+                    
+                    # Mark collection as failed in database
+                    db.update_collection_status(collection_ids[i], 'failed')
+                    
+                    # Track failure in batch
+                    if batch_id in _collection_batches:
+                        _collection_batches[batch_id]['failed_subreddits'].append(subreddit)
+                        _collection_batches[batch_id]['error_messages'][subreddit] = str(e)
+            
+            # Update final batch status
+            if batch_id in _collection_batches:
+                _collection_batches[batch_id]['status'] = 'completed'
+            
+            print(f"✅ Collection batch completed: {batch_id}")
+            
+            # Clean up batch tracking after a delay (keep for a while for status checking)
+            await asyncio.sleep(300)  # Keep for 5 minutes
+            _collection_batches.pop(batch_id, None)
+            
+        except Exception as e:
+            print(f"❌ Collection batch failed {batch_id}: {str(e)}")
+            
+            # Mark batch as failed
+            if batch_id in _collection_batches:
+                _collection_batches[batch_id]['status'] = 'failed'
+    
+    @staticmethod
+    def _estimate_collection_duration(subreddit_count: int, posts_per_subreddit: int) -> int:
+        """Estimate collection duration in minutes."""
+        # Base estimation: ~0.5 minutes per subreddit for basic collection
+        # Add more time for larger post counts
+        base_time = subreddit_count * 0.5
+        
+        # Add time based on posts (more posts = more comments to collect)
+        if posts_per_subreddit > 50:
+            base_time += subreddit_count * 2  # Extra time for large collections
+        elif posts_per_subreddit > 20:
+            base_time += subreddit_count * 1  # Moderate extra time
+        
+        # Minimum 1 minute, maximum 30 minutes for UI purposes
+        return max(1, min(30, int(base_time)))
+    
+    @staticmethod
+    def _get_collection_response(collection_id: str) -> Optional[CollectionResponse]:
+        """Transform a database collection into a CollectionResponse."""
+        try:
+            session = db.get_session()
+            try:
+                from src.database import Collection, Post, Comment
+                
+                # Get collection from database
+                collection = session.query(Collection).filter(Collection.id == collection_id).first()
+                if not collection:
+                    return None
+                
+                # Count actual posts and comments collected
+                posts_collected = session.query(Post).filter(Post.collection_id == collection_id).count()
+                comments_collected = session.query(Comment).filter(Comment.collection_id == collection_id).count()
+                
+                return CollectionResponse(
+                    id=collection.id,
+                    subreddit=collection.subreddit,
+                    sort_method=collection.sort_method,
+                    time_period=collection.time_period,
+                    posts_requested=collection.posts_requested,
+                    posts_collected=posts_collected,
+                    comments_collected=comments_collected,
+                    status=collection.status,
+                    created_at=datetime.fromtimestamp(collection.created_at),
+                    error_message=None  # Could be enhanced to store error messages
+                )
+                
+            finally:
+                session.close()
+                
+        except Exception as e:
+            print(f"Error transforming collection {collection_id}: {e}")
+            return None

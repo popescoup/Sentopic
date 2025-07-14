@@ -4,11 +4,13 @@ from datetime import datetime
 from typing import Dict, Any
 
 # Import your service layer and models
-from src.api.services import ProjectService
+from src.api.services import ProjectService, CollectionService
 from src.api.models import (
     ProjectListResponse, ProjectCreate, ProjectResponse, APIError,
     ChatMessageCreate, ChatResponse, ChatSessionListResponse, ChatHistoryResponse,
     KeywordSuggestionRequest, KeywordSuggestionResponse, AIStatusResponse,
+    CollectionCreateRequest, CollectionBatchResponse, CollectionBatchStatusResponse,
+    CollectionListResponse
 )
 
 # Initialize FastAPI application with enhanced documentation
@@ -27,6 +29,7 @@ app = FastAPI(
     * **Analysis Workflow**: Background processing with real-time status tracking
     * **AI Chat Agent**: Interactive chat with your analysis data
     * **Keyword Suggestions**: AI-powered keyword recommendations
+    * **Collection Management**: CRUD operations for Reddit data collections
 
     ### API Organization
     * **System**: Health checks and system status
@@ -660,7 +663,266 @@ async def get_analysis_results(project_id: str) -> ProjectResponse:
         )
 
 # ============================================================================
-# CHAT AND AI ENDPOINTS (NEW - STEP 4)
+# COLLECTION MANAGEMENT ENDPOINTS (NEW - STEP 5)
+# ============================================================================
+
+@app.post("/collections",
+          response_model=CollectionBatchResponse,
+          status_code=201,
+          responses={
+              400: {"model": APIError, "description": "Validation error"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["collections"],
+          summary="Create Collections",
+          description="Create Reddit data collections for one or more subreddits")
+async def create_collections(request: CollectionCreateRequest, background_tasks: BackgroundTasks) -> CollectionBatchResponse:
+    """
+    **Create Reddit Data Collections**
+    
+    Creates Reddit data collections for one or more subreddits using unified parameters.
+    This endpoint handles both single subreddit and multi-subreddit collection requests.
+    
+    **Collection Process**:
+    1. Validates subreddit names and collection parameters
+    2. Creates individual collection records for each subreddit
+    3. Starts background data collection (non-blocking)
+    4. Returns batch tracking information for progress monitoring
+    
+    **What Gets Collected**:
+    * Reddit posts based on specified sort method and count
+    * Root comments for each post (configurable limit)
+    * Replies to root comments (configurable depth)
+    * Comment filtering by minimum upvotes
+    
+    **Use Case**: Called from Collection Manager when user wants to gather
+    Reddit data for analysis. Collections can then be used in research projects.
+    
+    **Request Body**:
+    * **subreddits**: Array of subreddit names (1-10 subreddits, without r/ prefix)
+    * **collection_params**: Unified parameters applied to all subreddits:
+      * **sort_method**: hot, new, rising, top, controversial
+      * **time_period**: Required for top/controversial (hour, day, week, month, year, all)
+      * **posts_count**: Number of posts to collect per subreddit (1-1000)
+      * **root_comments**: Max root comments per post (0-100)
+      * **replies_per_root**: Max replies per root comment (0-50)
+      * **min_upvotes**: Minimum upvotes for comment inclusion (0+)
+    
+    **Response**: Batch tracking information with individual collection IDs
+    """
+    try:
+        # Create collections using service layer
+        batch_response = await CollectionService.create_collections(request, background_tasks)
+        
+        return batch_response
+        
+    except ValueError as e:
+        # Handle validation errors
+        error_message = str(e)
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "validation_error",
+                "message": error_message,
+                "details": {}
+            }
+        )
+    
+    except Exception as e:
+        # Handle unexpected server errors
+        print(f"Unexpected error in create_collections endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while creating collections",
+                "details": {}
+            }
+        )
+
+@app.get("/collections/{batch_id}/status",
+         response_model=CollectionBatchStatusResponse,
+         responses={
+             200: {"description": "Collection status retrieved successfully"},
+             404: {"model": APIError, "description": "Batch not found"},
+             500: {"model": APIError, "description": "Server error"}
+         },
+         tags=["collections"],
+         summary="Get Collection Progress",
+         description="Get current progress for a collection batch")
+async def get_collection_status(batch_id: str) -> CollectionBatchStatusResponse:
+    """
+    **Get Collection Batch Progress**
+    
+    Returns comprehensive status information for ongoing or completed collection batches.
+    
+    **Status Information**:
+    * **Overall Progress**: Percentage completion across all subreddits
+    * **Current Activity**: Which subreddit is currently being processed
+    * **Individual Status**: Status of each collection in the batch
+    * **Completion Stats**: Lists of completed and failed subreddits
+    * **Time Estimates**: Estimated completion time based on current progress
+    
+    **Use Case**: Powers the Collection Progress Screen with real-time updates.
+    Frontend should poll this endpoint every 2-3 seconds during active collection.
+    
+    **Path Parameters**:
+    * **batch_id**: Unique batch identifier returned from collection creation
+    
+    **Response**: Detailed progress information with individual collection statuses
+    """
+    try:
+        status = await CollectionService.get_batch_status(batch_id)
+        
+        return status
+        
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "batch_not_found",
+                    "message": error_message,
+                    "details": {"batch_id": batch_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "status_error",
+                    "message": error_message,
+                    "details": {"batch_id": batch_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in get_collection_status endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while retrieving collection status",
+                "details": {"batch_id": batch_id}
+            }
+        )
+
+@app.get("/collections",
+         response_model=CollectionListResponse,
+         responses={500: {"model": APIError}},
+         tags=["collections"],
+         summary="List All Collections",
+         description="Get all Reddit data collections")
+async def list_collections() -> CollectionListResponse:
+    """
+    **List All Reddit Data Collections**
+    
+    Returns all available Reddit data collections that can be used for analysis projects.
+    
+    **Collection Information**:
+    * **Basic Metadata**: Subreddit, creation date, collection parameters
+    * **Collection Stats**: Posts collected, comments collected, status
+    * **Usage Info**: Which projects are using each collection
+    
+    **Use Case**: Powers the Collection Manager interface and collection selection
+    during project creation. Shows users what data is available for analysis.
+    
+    **Response**: Complete list of collections with metadata and statistics
+    """
+    try:
+        collections = await CollectionService.get_all_collections()
+        
+        return collections
+        
+    except Exception as e:
+        # Log error for debugging
+        print(f"Error in list_collections endpoint: {e}")
+        
+        # Return empty list rather than failing - more user-friendly
+        return CollectionListResponse(
+            collections=[],
+            total_count=0
+        )
+
+@app.delete("/collections/{collection_id}",
+            status_code=204,
+            responses={
+                404: {"model": APIError, "description": "Collection not found"},
+                500: {"model": APIError, "description": "Server error"}
+            },
+            tags=["collections"],
+            summary="Delete Collection",
+            description="Delete a Reddit data collection")
+async def delete_collection(collection_id: str):
+    """
+    **Delete Reddit Data Collection**
+    
+    Permanently deletes a Reddit data collection and all associated posts and comments.
+    
+    **⚠️ Warning**: This operation cannot be undone. If this collection is being
+    used by any research projects, those projects will need to be updated or
+    deleted as well.
+    
+    **What Gets Deleted**:
+    * Collection metadata and configuration
+    * All Reddit posts collected for this subreddit/configuration
+    * All comments collected for those posts
+    * Related indexing and embeddings data
+    
+    **Use Case**: Called from Collection Manager when user wants to clean up
+    old or unwanted data collections to free up storage space.
+    
+    **Path Parameters**:
+    * **collection_id**: Unique identifier of the collection to delete
+    
+    **Response**: HTTP 204 (No Content) on successful deletion
+    """
+    try:
+        success = await CollectionService.delete_collection(collection_id)
+        
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "collection_not_found",
+                    "message": f"Collection with ID '{collection_id}' not found",
+                    "details": {"collection_id": collection_id}
+                }
+            )
+        
+        # Return 204 No Content (FastAPI handles this automatically when no return value)
+        return
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404)
+        raise
+    except ValueError as e:
+        # Handle deletion errors
+        print(f"Deletion error in delete_collection endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "deletion_failed",
+                "message": str(e),
+                "details": {"collection_id": collection_id}
+            }
+        )
+    except Exception as e:
+        # Handle unexpected server errors
+        print(f"Unexpected error in delete_collection endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while deleting the collection",
+                "details": {"collection_id": collection_id}
+            }
+        )
+
+# ============================================================================
+# CHAT AND AI ENDPOINTS (EXISTING - STEP 4)
 # ============================================================================
 
 @app.get("/projects/{project_id}/chat/sessions",
@@ -1087,4 +1349,3 @@ async def get_ai_status() -> AIStatusResponse:
             default_provider=None,
             embeddings_info={}
         )
-    

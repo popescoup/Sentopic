@@ -6,6 +6,7 @@ the frontend and backend. These models serve as contracts and provide
 automatic validation and documentation.
 
 Enhanced with Step 4: Chat and AI Feature Models
+Enhanced with Step 5: Collection Management Models
 """
 
 from typing import List, Optional, Dict, Any
@@ -97,7 +98,7 @@ class ProjectResponse(ProjectBase):
         }
         
         # Example for API documentation
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": "abc123def",
                 "name": "iPhone Battery Life Research",
@@ -137,7 +138,7 @@ class ProjectListResponse(BaseModel):
     total_count: int = Field(..., description="Total number of projects")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "projects": [
                     # ... abbreviated project objects for dashboard
@@ -148,7 +149,7 @@ class ProjectListResponse(BaseModel):
 
 
 # ============================================================================
-# CHAT AND AI MODELS (NEW - STEP 4)
+# CHAT AND AI MODELS (EXISTING - STEP 4)
 # ============================================================================
 
 class ChatMessageCreate(BaseModel):
@@ -186,7 +187,7 @@ class ChatMessage(BaseModel):
             datetime: lambda v: v.isoformat()
         }
         
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": 12345,
                 "role": "assistant",
@@ -211,7 +212,7 @@ class ChatResponse(BaseModel):
     query_classification: Dict[str, Any] = Field({}, description="How the query was classified and routed")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "message": "Based on your analysis of battery-related discussions, I found significant negative sentiment around charging issues...",
                 "sources": [
@@ -270,7 +271,7 @@ class ChatSessionListResponse(BaseModel):
     total_count: int = Field(..., description="Total number of chat sessions")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "sessions": [
                     {
@@ -293,7 +294,7 @@ class ChatHistoryResponse(BaseModel):
     total_messages: int = Field(..., description="Total number of messages in the session")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "messages": [
                     {
@@ -332,7 +333,7 @@ class KeywordSuggestionRequest(BaseModel):
         return v.strip()
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "research_description": "I want to analyze sentiment about iPhone battery life issues and charging problems",
                 "max_keywords": 8
@@ -350,7 +351,7 @@ class KeywordSuggestionResponse(BaseModel):
     cost_estimate: float = Field(0.0, description="Estimated cost for this request")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "keywords": ["battery", "charging", "drain", "power", "life", "performance", "issue", "problem"],
                 "research_description": "I want to analyze sentiment about iPhone battery life issues and charging problems",
@@ -371,7 +372,7 @@ class AIStatusResponse(BaseModel):
     embeddings_info: Dict[str, Any] = Field({}, description="Embeddings system status")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "ai_available": True,
                 "providers": {
@@ -402,6 +403,219 @@ class AIStatusResponse(BaseModel):
         }
 
 
+# ============================================================================
+# COLLECTION MANAGEMENT MODELS (NEW - STEP 5)
+# ============================================================================
+
+class CollectionParams(BaseModel):
+    """Collection parameters for Reddit data collection."""
+    sort_method: str = Field(..., description="Sort method for posts", pattern="^(hot|new|rising|top|controversial)$")
+    time_period: Optional[str] = Field(None, description="Time period for top/controversial", pattern="^(hour|day|week|month|year|all)$")
+    posts_count: int = Field(..., description="Number of posts to collect", ge=1, le=1000)
+    root_comments: int = Field(..., description="Max root comments per post", ge=0, le=100)
+    replies_per_root: int = Field(..., description="Max replies per root comment", ge=0, le=50)
+    min_upvotes: int = Field(..., description="Minimum upvotes for comments", ge=0)
+    
+    @validator('time_period')
+    def validate_time_period(cls, v, values):
+        """Validate time period is provided for top/controversial sorts."""
+        sort_method = values.get('sort_method')
+        if sort_method in ['top', 'controversial'] and not v:
+            raise ValueError(f"Time period is required for sort method '{sort_method}'")
+        if sort_method not in ['top', 'controversial'] and v:
+            raise ValueError(f"Time period should not be provided for sort method '{sort_method}'")
+        return v
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "sort_method": "hot",
+                "time_period": None,
+                "posts_count": 50,
+                "root_comments": 10,
+                "replies_per_root": 3,
+                "min_upvotes": 1
+            }
+        }
+
+
+class CollectionCreateRequest(BaseModel):
+    """Request to create one or more collections."""
+    subreddits: List[str] = Field(..., description="List of subreddit names (without r/)", min_items=1, max_items=10)
+    collection_params: CollectionParams = Field(..., description="Collection parameters to apply to all subreddits")
+    
+    @validator('subreddits')
+    def validate_subreddits(cls, v):
+        """Validate subreddit names."""
+        if not v:
+            raise ValueError("At least one subreddit is required")
+        
+        clean_subreddits = []
+        for subreddit in v:
+            subreddit = subreddit.strip()
+            if not subreddit:
+                raise ValueError("Subreddit names cannot be empty")
+            
+            # Remove r/ prefix if present
+            if subreddit.startswith('r/'):
+                subreddit = subreddit[2:]
+            
+            # Basic validation of subreddit name format
+            if not subreddit.replace('_', 'a').replace('-', 'a').isalnum():
+                raise ValueError(f"Invalid subreddit name format: {subreddit}")
+            
+            clean_subreddits.append(subreddit)
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_subreddits = []
+        for sub in clean_subreddits:
+            if sub.lower() not in seen:
+                seen.add(sub.lower())
+                unique_subreddits.append(sub)
+        
+        return unique_subreddits
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "subreddits": ["iphone", "apple", "ios"],
+                "collection_params": {
+                    "sort_method": "hot",
+                    "time_period": None,
+                    "posts_count": 50,
+                    "root_comments": 10,
+                    "replies_per_root": 3,
+                    "min_upvotes": 1
+                }
+            }
+        }
+
+
+class CollectionResponse(BaseModel):
+    """Individual collection metadata and status."""
+    id: str = Field(..., description="Unique collection identifier")
+    subreddit: str = Field(..., description="Subreddit name")
+    sort_method: str = Field(..., description="Sort method used")
+    time_period: Optional[str] = Field(None, description="Time period used (if applicable)")
+    posts_requested: int = Field(..., description="Number of posts requested")
+    posts_collected: int = Field(0, description="Number of posts actually collected")
+    comments_collected: int = Field(0, description="Number of comments collected")
+    status: str = Field(..., description="Collection status: running, completed, failed")
+    created_at: datetime = Field(..., description="When the collection was created")
+    error_message: Optional[str] = Field(None, description="Error message if collection failed")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+        
+        schema_extra = {
+            "example": {
+                "id": "collection-abc123",
+                "subreddit": "iphone",
+                "sort_method": "hot",
+                "time_period": None,
+                "posts_requested": 50,
+                "posts_collected": 47,
+                "comments_collected": 312,
+                "status": "completed",
+                "created_at": "2025-01-15T10:30:00Z",
+                "error_message": None
+            }
+        }
+
+
+class CollectionBatchResponse(BaseModel):
+    """Response from creating a batch of collections."""
+    batch_id: str = Field(..., description="Unique batch identifier for progress tracking")
+    collection_ids: List[str] = Field(..., description="List of individual collection IDs created")
+    subreddits: List[str] = Field(..., description="List of subreddits being collected")
+    status: str = Field(..., description="Batch status: started, running, completed, failed")
+    started_at: datetime = Field(..., description="When the batch collection started")
+    estimated_duration_minutes: int = Field(..., description="Estimated time to completion")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+        
+        schema_extra = {
+            "example": {
+                "batch_id": "batch-xyz789",
+                "collection_ids": ["collection-abc123", "collection-def456", "collection-ghi789"],
+                "subreddits": ["iphone", "apple", "ios"],
+                "status": "started",
+                "started_at": "2025-01-15T10:30:00Z",
+                "estimated_duration_minutes": 15
+            }
+        }
+
+
+class CollectionBatchStatusResponse(BaseModel):
+    """Response for collection batch progress tracking."""
+    batch_id: str = Field(..., description="Batch identifier")
+    status: str = Field(..., description="Overall batch status")
+    progress_percentage: int = Field(..., description="Overall completion percentage (0-100)")
+    current_subreddit: Optional[str] = Field(None, description="Currently processing subreddit")
+    completed_subreddits: List[str] = Field([], description="List of completed subreddits")
+    failed_subreddits: List[str] = Field([], description="List of failed subreddits")
+    collections: List[CollectionResponse] = Field(..., description="Individual collection statuses")
+    started_at: datetime = Field(..., description="When the batch started")
+    estimated_completion: Optional[datetime] = Field(None, description="Estimated completion time")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+        
+        schema_extra = {
+            "example": {
+                "batch_id": "batch-xyz789",
+                "status": "running",
+                "progress_percentage": 67,
+                "current_subreddit": "ios",
+                "completed_subreddits": ["iphone", "apple"],
+                "failed_subreddits": [],
+                "collections": [
+                    {
+                        "id": "collection-abc123",
+                        "subreddit": "iphone",
+                        "status": "completed",
+                        "posts_collected": 47,
+                        "comments_collected": 312
+                    }
+                ],
+                "started_at": "2025-01-15T10:30:00Z",
+                "estimated_completion": "2025-01-15T10:45:00Z"
+            }
+        }
+
+
+class CollectionListResponse(BaseModel):
+    """Response for listing collections."""
+    collections: List[CollectionResponse] = Field(..., description="List of collections")
+    total_count: int = Field(..., description="Total number of collections")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "collections": [
+                    {
+                        "id": "collection-abc123",
+                        "subreddit": "iphone",
+                        "sort_method": "hot",
+                        "posts_requested": 50,
+                        "posts_collected": 47,
+                        "status": "completed",
+                        "created_at": "2025-01-15T10:30:00Z"
+                    }
+                ],
+                "total_count": 15
+            }
+        }
+
+
 class APIError(BaseModel):
     """Standard error response format."""
     error: str = Field(..., description="Error type or category")
@@ -409,7 +623,7 @@ class APIError(BaseModel):
     details: Optional[Dict[str, Any]] = Field(None, description="Additional error details")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "error": "validation_error",
                 "message": "Project name cannot be empty",
