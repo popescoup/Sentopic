@@ -939,18 +939,7 @@ class CollectionService:
             
             # Create collection records for each subreddit
             collection_ids = []
-            for subreddit in request.subreddits:
-                collection_id = db.create_collection(
-                    subreddit=subreddit,
-                    sort_method=request.collection_params.sort_method,
-                    time_period=request.collection_params.time_period,
-                    posts_requested=request.collection_params.posts_count,
-                    root_comments_requested=request.collection_params.root_comments,
-                    replies_per_root=request.collection_params.replies_per_root,
-                    min_upvotes=request.collection_params.min_upvotes
-                )
-                collection_ids.append(collection_id)
-            
+
             # Initialize batch tracking
             _collection_batches[batch_id] = {
                 'subreddits': request.subreddits,
@@ -981,7 +970,7 @@ class CollectionService:
             
             return CollectionBatchResponse(
                 batch_id=batch_id,
-                collection_ids=collection_ids,
+                collection_ids=[],
                 subreddits=request.subreddits,
                 status='started',
                 started_at=datetime.utcnow(),
@@ -1013,22 +1002,28 @@ class CollectionService:
             # Get current collection statuses from database
             collections = []
             for collection_id in batch_info['collection_ids']:
-                collection_data = CollectionService._get_collection_response(collection_id)
-                if collection_data:
-                    collections.append(collection_data)
+                if collection_id:
+                    collection_data = CollectionService._get_collection_response(collection_id)
+                    if collection_data:
+                        collections.append(collection_data)
             
             # Calculate overall progress
             completed_count = len(batch_info['completed_subreddits'])
             failed_count = len(batch_info['failed_subreddits'])
             total_count = len(batch_info['subreddits'])
-            
+
+            # Handle the case where collections haven't been created yet
             if completed_count + failed_count >= total_count:
                 overall_status = 'completed'
                 progress_percentage = 100
                 current_subreddit = None
             elif batch_info['status'] == 'running':
                 overall_status = 'running'
-                progress_percentage = int((completed_count + failed_count) / total_count * 100)
+                # If no collections created yet, show minimal progress
+                if not any(batch_info['collection_ids']):
+                    progress_percentage = 5  # Show some progress to indicate it started
+                else:
+                    progress_percentage = int((completed_count + failed_count) / total_count * 100)
                 current_index = batch_info['current_index']
                 current_subreddit = batch_info['subreddits'][current_index] if current_index < len(batch_info['subreddits']) else None
             else:
@@ -1158,10 +1153,15 @@ class CollectionService:
                         min_upvotes=collection_params.min_upvotes
                     )
                     
-                    # Run collection using existing collector
-                    collection_id = collection_ids[i]
-                    collector.current_collection_id = collection_id
-                    collector.collect_data(params)
+                    # Let collector create collection record and return the ID
+                    collection_id = collector.collect_data(params)
+
+                    # Update batch tracking with the real collection ID
+                    if batch_id in _collection_batches:
+                        # Ensure collection_ids list is long enough
+                        while len(_collection_batches[batch_id]['collection_ids']) <= i:
+                            _collection_batches[batch_id]['collection_ids'].append(None)
+                        _collection_batches[batch_id]['collection_ids'][i] = collection_id
                     
                     # Mark as completed
                     if batch_id in _collection_batches:
@@ -1172,8 +1172,7 @@ class CollectionService:
                 except Exception as e:
                     print(f"❌ Failed to collect r/{subreddit}: {str(e)}")
                     
-                    # Mark collection as failed in database
-                    db.update_collection_status(collection_ids[i], 'failed')
+                    pass
                     
                     # Track failure in batch
                     if batch_id in _collection_batches:
