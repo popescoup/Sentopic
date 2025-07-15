@@ -254,7 +254,7 @@ class ChatSessionInfo(BaseModel):
             datetime: lambda v: v.isoformat()
         }
         
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "session_id": "chat_session_123",
                 "created_at": "2025-01-15T10:30:00Z",
@@ -510,7 +510,7 @@ class CollectionResponse(BaseModel):
             datetime: lambda v: v.isoformat()
         }
         
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": "collection-abc123",
                 "subreddit": "iphone",
@@ -540,7 +540,7 @@ class CollectionBatchResponse(BaseModel):
             datetime: lambda v: v.isoformat()
         }
         
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "batch_id": "batch-xyz789",
                 "collection_ids": ["collection-abc123", "collection-def456", "collection-ghi789"],
@@ -569,7 +569,7 @@ class CollectionBatchStatusResponse(BaseModel):
             datetime: lambda v: v.isoformat()
         }
         
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "batch_id": "batch-xyz789",
                 "status": "running",

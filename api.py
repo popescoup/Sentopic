@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from typing import Union
 
 # Import your service layer and models
 from src.api.services import ProjectService, CollectionService
@@ -847,54 +848,144 @@ async def list_collections() -> CollectionListResponse:
         )
 
 @app.delete("/collections/{collection_id}",
-            status_code=204,
             responses={
-                404: {"model": APIError, "description": "Collection not found"},
+                200: {"description": "Multiple collections deleted"},
+                204: {"description": "Single collection deleted"},
+                400: {"model": APIError, "description": "Validation error"},
+                404: {"model": APIError, "description": "Collection(s) not found"},
                 500: {"model": APIError, "description": "Server error"}
             },
             tags=["collections"],
-            summary="Delete Collection",
-            description="Delete a Reddit data collection")
-async def delete_collection(collection_id: str):
+            summary="Delete Collection(s)",
+            description="Delete one or multiple Reddit data collections")
+async def delete_collection(
+    collection_id: str, 
+    additional_ids: Optional[str] = Query(None, description="Comma-separated additional collection IDs to delete")
+) -> Union[None, Dict[str, Any]]:
     """
-    **Delete Reddit Data Collection**
+    **Delete Reddit Data Collection(s)**
     
-    Permanently deletes a Reddit data collection and all associated posts and comments.
+    Supports both single and multiple collection deletion in one endpoint:
     
-    **⚠️ Warning**: This operation cannot be undone. If this collection is being
-    used by any research projects, those projects will need to be updated or
-    deleted as well.
+    **Single Collection Deletion:**
+    ```
+    DELETE /collections/collection-abc123
+    ```
     
-    **What Gets Deleted**:
-    * Collection metadata and configuration
-    * All Reddit posts collected for this subreddit/configuration
-    * All comments collected for those posts
-    * Related indexing and embeddings data
+    **Multiple Collection Deletion:**
+    ```
+    DELETE /collections/collection-abc123?additional_ids=collection-def456,collection-ghi789
+    ```
     
-    **Use Case**: Called from Collection Manager when user wants to clean up
-    old or unwanted data collections to free up storage space.
+    **How It Works:**
+    * If only `collection_id` is provided → deletes single collection (HTTP 204)
+    * If `additional_ids` query parameter is provided → deletes multiple collections (HTTP 200 with results)
+    * For multiple deletions, continues processing even if some fail
+    * Returns detailed results showing which succeeded and failed
     
-    **Path Parameters**:
-    * **collection_id**: Unique identifier of the collection to delete
+    **⚠️ Warning**: This operation cannot be undone. If any collections are being
+    used by research projects, those projects will need to be updated or deleted.
     
-    **Response**: HTTP 204 (No Content) on successful deletion
+    **Path Parameters:**
+    * **collection_id**: Primary collection ID to delete
+    
+    **Query Parameters:**
+    * **additional_ids**: Comma-separated list of additional collection IDs (optional)
+    
+    **Response:**
+    * Single deletion: HTTP 204 (No Content)
+    * Multiple deletion: HTTP 200 with detailed results
     """
     try:
-        success = await CollectionService.delete_collection(collection_id)
+        # Determine if this is single or multiple deletion
+        if additional_ids is None:
+            # Single collection deletion (existing behavior)
+            success = await CollectionService.delete_collection(collection_id)
+            
+            if not success:
+                raise HTTPException(
+                    status_code=404,
+                    detail={
+                        "error": "collection_not_found",
+                        "message": f"Collection with ID '{collection_id}' not found",
+                        "details": {"collection_id": collection_id}
+                    }
+                )
+            
+            # Return 204 No Content for single deletion (existing behavior)
+            return
         
-        if not success:
-            raise HTTPException(
-                status_code=404,
-                detail={
-                    "error": "collection_not_found",
-                    "message": f"Collection with ID '{collection_id}' not found",
-                    "details": {"collection_id": collection_id}
-                }
-            )
-        
-        # Return 204 No Content (FastAPI handles this automatically when no return value)
-        return
-        
+        else:
+            # Multiple collection deletion
+            # Parse additional IDs and combine with primary ID
+            additional_id_list = [id.strip() for id in additional_ids.split(',') if id.strip()]
+            all_collection_ids = [collection_id] + additional_id_list
+            
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_ids = []
+            for id in all_collection_ids:
+                if id not in seen:
+                    seen.add(id)
+                    unique_ids.append(id)
+            
+            if len(unique_ids) == 1:
+                # Only one unique ID, treat as single deletion
+                success = await CollectionService.delete_collection(unique_ids[0])
+                
+                if not success:
+                    raise HTTPException(
+                        status_code=404,
+                        detail={
+                            "error": "collection_not_found",
+                            "message": f"Collection with ID '{unique_ids[0]}' not found",
+                            "details": {"collection_id": unique_ids[0]}
+                        }
+                    )
+                
+                return
+            
+            # Process multiple deletions
+            results = []
+            successful_deletions = 0
+            failed_deletions = 0
+            
+            for cid in unique_ids:
+                try:
+                    success = await CollectionService.delete_collection(cid)
+                    
+                    if success:
+                        results.append({
+                            "collection_id": cid,
+                            "success": True,
+                            "error_message": None
+                        })
+                        successful_deletions += 1
+                    else:
+                        results.append({
+                            "collection_id": cid,
+                            "success": False,
+                            "error_message": "Collection not found"
+                        })
+                        failed_deletions += 1
+                        
+                except Exception as e:
+                    results.append({
+                        "collection_id": cid,
+                        "success": False,
+                        "error_message": str(e)
+                    })
+                    failed_deletions += 1
+            
+            # Return detailed results for multiple deletions
+            return {
+                "total_requested": len(unique_ids),
+                "successful_deletions": successful_deletions,
+                "failed_deletions": failed_deletions,
+                "results": results,
+                "message": f"Processed {len(unique_ids)} collections: {successful_deletions} succeeded, {failed_deletions} failed"
+            }
+            
     except HTTPException:
         # Re-raise HTTP exceptions (like 404)
         raise
@@ -916,7 +1007,7 @@ async def delete_collection(collection_id: str):
             status_code=500,
             detail={
                 "error": "server_error",
-                "message": "An unexpected error occurred while deleting the collection",
+                "message": "An unexpected error occurred while deleting collection(s)",
                 "details": {"collection_id": collection_id}
             }
         )
