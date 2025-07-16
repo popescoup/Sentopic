@@ -1,0 +1,173 @@
+/* Global Styles - Sentopic */
+
+/* Import design system variables */
+@import './variables.css';
+
+/* Import Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+/* Base Styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  height: 100%;
+  font-size: 16px;
+}
+
+body {
+  height: 100%;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+}
+
+/* Typography Utilities */
+.font-page-title {
+  font-size: var(--font-size-page-title);
+  font-weight: 600;
+  line-height: var(--line-height-headings);
+  letter-spacing: var(--letter-spacing-page-title);
+}
+
+.font-section-header {
+  font-size: var(--font-size-section-header);
+  font-weight: 600;
+  line-height: var(--line-height-headings);
+  letter-spacing: var(--letter-spacing-section-header);
+}
+
+.font-subsection {
+  font-size: var(--font-size-subsection);
+  font-weight: 600;
+  line-height: var(--line-height-headings);
+}
+
+.font-body {
+  font-size: var(--font-size-body);
+  font-weight: 400;
+  line-height: var(--line-height-body);
+}
+
+.font-small {
+  font-size: var(--font-size-small);
+  font-weight: 400;
+  line-height: var(--line-height-technical);
+}
+
+.font-technical {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-technical);
+  font-weight: 400;
+  line-height: var(--line-height-technical);
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus styles for accessibility */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Selection styles */
+::selection {
+  background-color: var(--color-hover-blue);
+  color: var(--color-text-primary);
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-panel);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-secondary);
+  border-radius: var(--border-radius-input);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-emphasis);
+}
+
+/* Professional loading animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Sophisticated fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s var(--transition-sophisticated);
+}
+
+/* Professional card hover effect */
+@keyframes cardLift {
+  from {
+    transform: translateY(0);
+    box-shadow: var(--shadow-card);
+  }
+  to {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-card-hover);
+  }
+}
+
+.hover-lift:hover {
+  animation: cardLift 0.15s var(--transition-sophisticated) forwards;
+}

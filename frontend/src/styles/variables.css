@@ -1,0 +1,86 @@
+/* Design System Variables - Sentopic */
+
+:root {
+    /* Primary Colors */
+    --color-background: #f5f6f7;
+    --color-content: #ffffff;
+    --color-panel: #fafbfc;
+    
+    /* Border Colors */
+    --color-border-primary: #e1e4e8;
+    --color-border-secondary: #d1d5da;
+    --color-border-emphasis: #c6cbd1;
+    
+    /* Text Colors */
+    --color-text-primary: #24292e;
+    --color-text-secondary: #586069;
+    --color-text-tertiary: #6a737d;
+    
+    /* Accent Colors */
+    --color-accent: #0366d6;
+    --color-success: #28a745;
+    --color-warning: #ffd33d;
+    --color-danger: #d73a49;
+    --color-info: #17a2b8;
+    
+    /* Hover States */
+    --color-hover-blue: rgba(3, 102, 214, 0.08);
+    --color-hover-green: rgba(40, 167, 69, 0.08);
+    
+    /* Typography */
+    --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    --font-family-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Consolas', monospace;
+    
+    /* Font Sizes */
+    --font-size-page-title: 32px;
+    --font-size-section-header: 20px;
+    --font-size-subsection: 16px;
+    --font-size-body: 14px;
+    --font-size-small: 12px;
+    --font-size-technical: 13px;
+    
+    /* Line Heights */
+    --line-height-headings: 1.2;
+    --line-height-body: 1.5;
+    --line-height-technical: 1.4;
+    
+    /* Letter Spacing */
+    --letter-spacing-page-title: -0.02em;
+    --letter-spacing-section-header: -0.01em;
+    
+    /* Spacing (4px base unit) */
+    --spacing-1: 4px;
+    --spacing-2: 8px;
+    --spacing-3: 12px;
+    --spacing-4: 16px;
+    --spacing-5: 20px;
+    --spacing-6: 24px;
+    --spacing-8: 32px;
+    --spacing-10: 40px;
+    --spacing-12: 48px;
+    --spacing-16: 64px;
+    
+    /* Border Radius */
+    --border-radius-default: 6px;
+    --border-radius-input: 4px;
+    
+    /* Shadows */
+    --shadow-card: 0 1px 3px rgba(27, 31, 35, 0.12), 0 1px 0 rgba(255, 255, 255, 0.02);
+    --shadow-card-hover: 0 2px 8px rgba(27, 31, 35, 0.15), 0 1px 0 rgba(255, 255, 255, 0.02);
+    --shadow-modal: 0 16px 64px rgba(27, 31, 35, 0.15), 0 0 0 1px rgba(27, 31, 35, 0.1);
+    --shadow-focus: 0 0 0 3px rgba(3, 102, 214, 0.3);
+    
+    /* Gradients */
+    --gradient-panel: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+    --gradient-header: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+    --gradient-subtle: linear-gradient(180deg, #fafbfc 0%, #f6f8fa 100%);
+    
+    /* Transitions */
+    --transition-sophisticated: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Z-Index Scale */
+    --z-modal: 1000;
+    --z-header: 100;
+    --z-dropdown: 200;
+    --z-tooltip: 300;
+  }
