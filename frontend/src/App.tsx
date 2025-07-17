@@ -8,11 +8,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import MainLayout from '@/components/layout/MainLayout';
-
-// Import page components (will be implemented in future phases)
 import ProjectsDashboard from '@/pages/ProjectsDashboard';
 import ProjectWorkspace from '@/pages/ProjectWorkspace';
 import CollectionManager from '@/pages/CollectionManager';
+import ProjectSetupWizard from '@/pages/ProjectSetupWizard';
 
 // Create QueryClient for TanStack Query
 const queryClient = new QueryClient({
@@ -56,23 +55,26 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <Router>
           <div className="App">
-            <Routes>
-              {/* Main dashboard route */}
-              <Route path="/" element={<ProjectsDashboard />} />
-              
-              {/* Project workspace route */}
-              <Route path="/project/:projectId" element={<ProjectWorkspace />} />
-              
-              {/* Collection manager route */}
-              <Route path="/collections" element={<CollectionManager />} />
-              
-              {/* Redirect old paths */}
-              <Route path="/dashboard" element={<Navigate to="/" replace />} />
-              <Route path="/projects" element={<Navigate to="/" replace />} />
-              
-              {/* 404 page */}
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
+          <Routes>
+            {/* Main dashboard route */}
+            <Route path="/" element={<ProjectsDashboard />} />
+  
+            {/* Project setup wizard route */}
+            <Route path="/projects/new" element={<ProjectSetupWizard />} />
+  
+            {/* Project workspace route */}
+            <Route path="/project/:projectId" element={<ProjectWorkspace />} />
+  
+            {/* Collection manager route */}
+            <Route path="/collections" element={<CollectionManager />} />
+  
+            {/* Redirect old paths */}
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
+            <Route path="/projects" element={<Navigate to="/" replace />} />
+  
+            {/* 404 page */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
           </div>
         </Router>
       </QueryClientProvider>

@@ -72,16 +72,42 @@ export const useCreateProject = () => {
 };
 
 export const useDeleteProject = () => {
-  const queryClient = useQueryClient();
+    const queryClient = useQueryClient();
+    
+    return useMutation({
+      mutationFn: (projectId: string) => api.deleteProject(projectId),
+      onMutate: async (projectId: string) => {
+        // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+        await queryClient.cancelQueries({ queryKey: queryKeys.projects });
   
-  return useMutation({
-    mutationFn: (projectId: string) => api.deleteProject(projectId),
-    onSuccess: () => {
-      // Invalidate projects list to refetch
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects });
-    },
-  });
-};
+        // Snapshot the previous value
+        const previousProjects = queryClient.getQueryData(queryKeys.projects);
+  
+        // Optimistically update to remove the project
+        queryClient.setQueryData(queryKeys.projects, (old: any) => {
+          if (!old?.projects) return old;
+          return {
+            ...old,
+            projects: old.projects.filter((project: any) => project.id !== projectId),
+            total_count: old.total_count - 1
+          };
+        });
+  
+        // Return a context object with the snapshotted value
+        return { previousProjects };
+      },
+      onError: (error, projectId, context) => {
+        // If the mutation fails, use the context returned from onMutate to roll back
+        if (context?.previousProjects) {
+          queryClient.setQueryData(queryKeys.projects, context.previousProjects);
+        }
+      },
+      onSettled: () => {
+        // Always refetch after error or success to ensure server state sync
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+      },
+    });
+  };
 
 // ============================================================================
 // ANALYSIS HOOKS
