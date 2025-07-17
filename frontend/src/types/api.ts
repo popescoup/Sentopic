@@ -227,3 +227,8 @@ export interface ProjectStats {
     components?: Record<string, string>;
     error?: string;
   }
+
+  export interface AnalysisStartResponse {
+    status: string;
+    message: string;
+  }

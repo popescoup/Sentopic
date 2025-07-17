@@ -3,7 +3,7 @@
  * Tag-style keyword management component with validation
  */
 
-import React, { useState, useRef, useKeyboardEvent } from 'react';
+import React, { useState, useRef } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { isValidKeyword, sanitizeKeyword } from '@/utils/wizardValidation';

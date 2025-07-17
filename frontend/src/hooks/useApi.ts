@@ -12,7 +12,8 @@ import type {
   CollectionListResponse,
   AIStatusResponse,
   AnalysisStatusResponse,
-  HealthCheckResponse
+  HealthCheckResponse,
+  AnalysisStartResponse
 } from '@/types/api';
 
 // Query keys for consistent cache management
@@ -72,23 +73,23 @@ export const useCreateProject = () => {
 };
 
 export const useCreateProjectWithAnalysis = () => {
-    const queryClient = useQueryClient();
-    
-    return useMutation({
-      mutationFn: async (projectData: ProjectCreate) => {
-        // Create project first
-        const newProject = await api.createProject(projectData);
-        
-        // Start analysis immediately
-        await api.startAnalysis(newProject.id);
-        
-        return newProject;
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: queryKeys.projects });
-      },
-    });
-  };
+  const queryClient = useQueryClient();
+  
+  return useMutation<ProjectResponse, Error, ProjectCreate>({
+    mutationFn: async (projectData: ProjectCreate) => {
+      // Create project first
+      const newProject = await api.createProject(projectData);
+      
+      // Start analysis immediately
+      await api.startAnalysis(newProject.id);
+      
+      return newProject;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+    },
+  });
+};
 
 export const useDeleteProject = () => {
     const queryClient = useQueryClient();
@@ -135,10 +136,9 @@ export const useDeleteProject = () => {
 export const useStartAnalysis = () => {
   const queryClient = useQueryClient();
   
-  return useMutation({
+  return useMutation<AnalysisStartResponse, Error, string>({
     mutationFn: (projectId: string) => api.startAnalysis(projectId),
     onSuccess: (_, projectId) => {
-      // Invalidate project and analysis status to trigger refetch
       queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.analysisStatus(projectId) });
     },

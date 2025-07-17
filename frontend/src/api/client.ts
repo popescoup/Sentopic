@@ -21,7 +21,8 @@ import type {
   AIStatusResponse,
   AnalysisStatusResponse,
   HealthCheckResponse,
-  APIError
+  APIError,
+  AnalysisStartResponse
 } from '@/types/api';
 
 // Create axios instance with base configuration
@@ -126,8 +127,8 @@ export class SentopicAPI {
   // ANALYSIS WORKFLOW ENDPOINTS
   // ============================================================================
 
-  async startAnalysis(projectId: string): Promise<{ status: string; message: string; [key: string]: any }> {
-    const response = await this.client.post(`/projects/${projectId}/analysis/start`);
+  async startAnalysis(projectId: string): Promise<AnalysisStartResponse> {
+    const response = await this.client.post<AnalysisStartResponse>(`/projects/${projectId}/analysis/start`);
     return response.data;
   }
 
