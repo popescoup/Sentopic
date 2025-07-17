@@ -71,6 +71,25 @@ export const useCreateProject = () => {
   });
 };
 
+export const useCreateProjectWithAnalysis = () => {
+    const queryClient = useQueryClient();
+    
+    return useMutation({
+      mutationFn: async (projectData: ProjectCreate) => {
+        // Create project first
+        const newProject = await api.createProject(projectData);
+        
+        // Start analysis immediately
+        await api.startAnalysis(newProject.id);
+        
+        return newProject;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+      },
+    });
+  };
+
 export const useDeleteProject = () => {
     const queryClient = useQueryClient();
     

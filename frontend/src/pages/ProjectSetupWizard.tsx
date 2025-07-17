@@ -1,18 +1,131 @@
 /**
  * Project Setup Wizard Page
- * Guided project creation flow
+ * Comprehensive 4-step guided wizard for project creation
  * 
- * Phase 2.1: Placeholder implementation
  * Phase 2.2: Full multi-step wizard with form validation
  */
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
-import Card from '@/components/ui/Card';
+import WizardLayout from '@/components/wizard/WizardLayout';
+import ResearchQuestionStep from '@/pages/wizard-steps/ResearchQuestionStep';
+import KeywordsStep from '@/pages/wizard-steps/KeywordsStep';
+import CollectionsStep from '@/pages/wizard-steps/CollectionsStep';
+import ConfigurationStep from '@/pages/wizard-steps/ConfigurationStep';
+import { useWizardState } from '@/hooks/useWizardState';
+import { useCreateProject, useStartAnalysis } from '@/hooks/useApi';
+import { validateStep } from '@/utils/wizardValidation';
+import { getErrorMessage } from '@/api/client';
 import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
 
 const ProjectSetupWizard: React.FC = () => {
+  const navigate = useNavigate();
+  const createProjectMutation = useCreateProject();
+  const startAnalysisMutation = useStartAnalysis();
+
+  const {
+    currentStep,
+    formData,
+    updateFormData,
+    goToStep,
+    canGoBack,
+    canGoNext,
+    isStepComplete,
+    resetWizard
+  } = useWizardState();
+
+  // Step configuration
+  const steps = [
+    {
+      id: 1,
+      title: 'Research Question',
+      component: ResearchQuestionStep,
+      description: 'Define your research focus'
+    },
+    {
+      id: 2,
+      title: 'Keywords',
+      component: KeywordsStep,
+      description: 'Select relevant keywords'
+    },
+    {
+      id: 3,
+      title: 'Collections',
+      component: CollectionsStep,
+      description: 'Choose data sources'
+    },
+    {
+      id: 4,
+      title: 'Configuration',
+      component: ConfigurationStep,
+      description: 'Review and configure'
+    }
+  ];
+
+  const currentStepConfig = steps.find(step => step.id === currentStep);
+  const CurrentStepComponent = currentStepConfig?.component;
+
+  // Navigation handlers
+  const handlePrevious = () => {
+    if (canGoBack) {
+      goToStep(currentStep - 1);
+    }
+  };
+
+  const handleNext = async () => {
+    // Validate current step
+    const validation = validateStep(currentStep, formData);
+    if (!validation.isValid) {
+      // Handle validation errors (will be implemented with validation utils)
+      console.error('Validation failed:', validation.errors);
+      return;
+    }
+
+    if (currentStep < steps.length) {
+      goToStep(currentStep + 1);
+    } else {
+      // Final step - submit project
+      await handleSubmit();
+    }
+  };
+
+  const handleCancel = () => {
+    resetWizard();
+    navigate('/');
+  };
+
+  // Project submission
+  const handleSubmit = async () => {
+    try {
+      // Create project
+      const projectData = {
+        name: formData.projectName || `Project ${new Date().toLocaleDateString()}`,
+        research_question: formData.researchQuestion || undefined,
+        keywords: formData.keywords,
+        collection_ids: formData.selectedCollections,
+        partial_matching: formData.partialMatching,
+        context_window_words: formData.contextWindow,
+        generate_summary: formData.generateSummary
+      };
+
+      const newProject = await createProjectMutation.mutateAsync(projectData);
+
+      // Start analysis
+      await startAnalysisMutation.mutateAsync(newProject.id);
+
+      // Navigate to analysis progress
+      navigate(`/projects/${newProject.id}/progress`);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      // Error handling will be enhanced with proper error UI
+    }
+  };
+
+  // Loading state
+  const isSubmitting = createProjectMutation.isLoading || startAnalysisMutation.isLoading;
+
   return (
     <MainLayout title="Create New Project">
       {/* Breadcrumb Navigation */}
@@ -35,121 +148,80 @@ const ProjectSetupWizard: React.FC = () => {
           Create New Project
         </h1>
         <p className="font-body text-text-secondary max-w-2xl">
-          Set up a new research project to analyze Reddit discussions. Define your research 
-          question, select keywords, and choose data collections to uncover insights.
+          Set up a new research project to analyze Reddit discussions. Follow the guided 
+          steps to define your research question, select keywords, and choose data collections.
         </p>
       </div>
 
-      {/* Placeholder Content */}
-      <Card className="max-w-2xl mx-auto text-center py-16">
-        <div className="text-accent mb-6">
-          <svg
-            className="h-16 w-16 mx-auto"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+      {/* Wizard Container */}
+      <div className="max-w-4xl mx-auto">
+        <WizardLayout
+          steps={steps}
+          currentStep={currentStep}
+          onStepClick={goToStep}
+          canGoBack={canGoBack}
+          canGoNext={canGoNext && isStepComplete(currentStep)}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          onCancel={handleCancel}
+          isSubmitting={isSubmitting}
+          submitText={currentStep === steps.length ? 'Create Project' : 'Next'}
+        >
+          {/* Step Content */}
+          {CurrentStepComponent && (
+            <CurrentStepComponent
+              formData={formData}
+              updateFormData={updateFormData}
+              errors={validateStep(currentStep, formData).errors}
             />
-          </svg>
-        </div>
-        
-        <h2 className="font-section-header text-text-primary mb-3">
-          Project Setup Wizard
-        </h2>
-        
-        <p className="font-body text-text-secondary mb-8 max-w-lg mx-auto">
-          The comprehensive project creation wizard will be implemented in Phase 2.2. 
-          This will include research question input, AI keyword suggestions, collection 
-          selection, and analysis configuration.
-        </p>
-        
-        {/* Planned Features Preview */}
-        <div className="bg-panel rounded-default p-6 mb-8 text-left">
-          <h3 className="font-subsection text-text-primary mb-4 text-center">
-            Coming in Phase 2.2:
-          </h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <h4 className="font-subsection text-text-primary mb-2">
-                ✨ Smart Setup Process
-              </h4>
-              <ul className="font-body text-text-secondary space-y-1 text-sm">
-                <li>• Multi-step guided wizard</li>
-                <li>• Research question input</li>
-                <li>• AI-powered keyword suggestions</li>
-                <li>• Form validation and error handling</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-subsection text-text-primary mb-2">
-                🔧 Configuration Options
-              </h4>
-              <ul className="font-body text-text-secondary space-y-1 text-sm">
-                <li>• Collection selection interface</li>
-                <li>• Analysis settings configuration</li>
-                <li>• Partial matching options</li>
-                <li>• AI summary preferences</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        
-        {/* Navigation */}
-          <div className="flex justify-center space-x-3">
-            <Link
-              to="/"
-              className="inline-flex items-center px-4 py-2 bg-panel text-text-primary border border-border-primary rounded-default hover:bg-gray-100 hover:border-border-secondary transition-colors duration-150 font-medium"
-            >
-              ← Back to Projects
-            </Link>
-            <Link
-              to="/collections"
-              className="inline-flex items-center px-4 py-2 bg-transparent text-accent border border-accent rounded-default hover:bg-hover-blue transition-colors duration-150 font-medium"
-            >
-              Manage Collections
-            </Link>
-          </div>
-      </Card>
+          )}
+        </WizardLayout>
+      </div>
 
-      {/* Development Info */}
+      {/* Error Display */}
+      {(createProjectMutation.error || startAnalysisMutation.error) && (
+        <div className="mt-6 max-w-4xl mx-auto">
+          <Card className="border-danger bg-red-50">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="font-subsection text-danger">
+                  Project Creation Failed
+                </h3>
+                <p className="font-body text-text-secondary mt-1">
+                  {getErrorMessage(createProjectMutation.error) || getErrorMessage(startAnalysisMutation.error) || 'An unexpected error occurred'}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Development Info - Remove in production */}
       <div className="mt-12 bg-panel rounded-default p-6 border border-border-primary max-w-4xl mx-auto">
         <h2 className="font-section-header text-text-primary mb-3">
-          Phase 2.2 Implementation Plan
+          Phase 2.2 Development Status
         </h2>
-        
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <h3 className="font-subsection text-text-primary mb-2">
-              Setup Wizard Features
+              Current Step Data
             </h3>
-            <ul className="font-body text-text-secondary space-y-1">
-              <li>• Step 1: Research question input with validation</li>
-              <li>• Step 2: Keywords with AI suggestions and manual editing</li>
-              <li>• Step 3: Collection selection from available data</li>
-              <li>• Step 4: Analysis configuration and preferences</li>
-              <li>• Progress indicator and step navigation</li>
-              <li>• Real-time form validation and error handling</li>
-            </ul>
+            <pre className="font-technical text-text-secondary bg-content p-3 rounded-default border border-border-secondary text-xs overflow-auto">
+              {JSON.stringify({ currentStep, formData }, null, 2)}
+            </pre>
           </div>
-          
           <div>
             <h3 className="font-subsection text-text-primary mb-2">
-              Backend Integration
+              Step Validation
             </h3>
-            <ul className="font-body text-text-secondary space-y-1">
-              <li>• GET /collections for data source selection</li>
-              <li>• POST /ai/keywords/suggest for AI assistance</li>
-              <li>• POST /projects for project creation</li>
-              <li>• POST /projects/&#123;id&#125;/analysis/start for analysis</li>
-              <li>• Real-time validation and error handling</li>
-              <li>• Navigation to progress screen after creation</li>
-            </ul>
+            <pre className="font-technical text-text-secondary bg-content p-3 rounded-default border border-border-secondary text-xs overflow-auto">
+              {JSON.stringify(validateStep(currentStep, formData), null, 2)}
+            </pre>
           </div>
         </div>
       </div>
