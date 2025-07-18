@@ -3,7 +3,7 @@
  * Multi-select interface for choosing Reddit data collections
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCollections } from '@/hooks/useApi';
 import Button from '@/components/ui/Button';
@@ -32,28 +32,38 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
   className = ''
 }) => {
   const { data: collectionsData, isLoading, error: fetchError } = useCollections();
-  const [selectAll, setSelectAll] = useState(false);
 
   const collections = collectionsData?.collections || [];
   const availableCollections = collections.filter(c => c.status === 'completed');
 
+  // Compute selectAll state based on actual selection
+  const selectAll = availableCollections.length > 0 && 
+                   selectedCollections.length === availableCollections.length &&
+                   availableCollections.every(c => selectedCollections.includes(c.id));
+
   // Handle individual collection selection
   const handleCollectionToggle = (collectionId: string) => {
+    console.log('Toggling collection:', collectionId); // Debug log
+    
     if (selectedCollections.includes(collectionId)) {
-      onSelectionChange(selectedCollections.filter(id => id !== collectionId));
+      const newSelection = selectedCollections.filter(id => id !== collectionId);
+      console.log('Removing collection. New selection:', newSelection); // Debug log
+      onSelectionChange(newSelection);
     } else {
-      onSelectionChange([...selectedCollections, collectionId]);
+      const newSelection = [...selectedCollections, collectionId];
+      console.log('Adding collection. New selection:', newSelection); // Debug log
+      onSelectionChange(newSelection);
     }
   };
 
   // Handle select all toggle
   const handleSelectAllToggle = () => {
     if (selectAll) {
+      console.log('Deselecting all collections'); // Debug log
       onSelectionChange([]);
-      setSelectAll(false);
     } else {
+      console.log('Selecting all collections'); // Debug log
       onSelectionChange(availableCollections.map(c => c.id));
-      setSelectAll(true);
     }
   };
 
@@ -211,15 +221,24 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
           return (
             <Card
               key={collection.id}
+              clickable={!disabled}
+              hover={!disabled}
               className={`
-                cursor-pointer transition-all duration-150 hover-lift
+                transition-all duration-150
                 ${isSelected 
                   ? 'border-accent bg-hover-blue shadow-card-hover' 
                   : 'border-border-primary hover:border-border-emphasis'
                 }
                 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
               `}
-              onClick={() => !disabled && handleCollectionToggle(collection.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Card clicked:', collection.id, 'disabled:', disabled); // Debug log
+                if (!disabled) {
+                  handleCollectionToggle(collection.id);
+                }
+              }}
             >
               {/* Collection Header */}
               <div className="flex items-start justify-between mb-3">

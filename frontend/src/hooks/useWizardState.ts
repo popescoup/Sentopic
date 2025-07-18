@@ -66,14 +66,7 @@ export const useWizardState = () => {
     }));
   }, []);
 
-  // Navigation helpers
-  const canGoBack = useMemo(() => state.currentStep > 1, [state.currentStep]);
-  
-  const canGoNext = useMemo(() => {
-    return state.currentStep < 4 && isStepComplete(state.currentStep);
-  }, [state.currentStep, state.formData]);
-
-  // Step completion validation
+  // Step completion validation (must be defined before canGoNext)
   const isStepComplete = useCallback((step: number): boolean => {
     const { formData } = state;
     
@@ -94,6 +87,19 @@ export const useWizardState = () => {
         return false;
     }
   }, [state.formData]);
+
+  // Navigation helpers
+  const canGoBack = useMemo(() => state.currentStep > 1, [state.currentStep]);
+  
+  // FIXED: Updated logic to handle final step correctly
+  const canGoNext = useMemo(() => {
+    // For steps 1-3, check if we can advance to next step
+    // For step 4 (final), check if current step is complete for submission
+    if (state.currentStep === 4) {
+      return isStepComplete(state.currentStep); // Can submit if step 4 is complete
+    }
+    return state.currentStep < 4 && isStepComplete(state.currentStep); // Can advance if not final step and current step complete
+  }, [state.currentStep, isStepComplete]);
 
   // Mark step as complete
   const markStepComplete = useCallback((step: number, isComplete: boolean) => {
