@@ -51,11 +51,11 @@ export const useProjects = () => {
   });
 };
 
-export const useProject = (projectId: string | undefined) => {
+export const useProject = (projectId: string | undefined, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: queryKeys.project(projectId!),
     queryFn: () => api.getProject(projectId!),
-    enabled: !!projectId,
+    enabled: options?.enabled !== undefined ? (!!projectId && options.enabled) : !!projectId,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };

@@ -112,11 +112,17 @@ const ProjectSetupWizard: React.FC = () => {
 
       const newProject = await createProjectMutation.mutateAsync(projectData);
 
-      // Start analysis
-      await startAnalysisMutation.mutateAsync(newProject.id);
+      // Navigate to analysis progress screen with project data
+      navigate(`/analysis/${newProject.id}`, { 
+        state: { 
+          projectData: newProject,
+          collectionCount: formData.selectedCollections.length,
+          generateSummary: formData.generateSummary
+        }
+      });
 
-      // Navigate to project workspace
-      navigate(`/project/${newProject.id}`);
+      // Start analysis (don't await it!)
+      startAnalysisMutation.mutate(newProject.id);
     } catch (error) {
       console.error('Failed to create project:', error);
       // Error handling will be enhanced with proper error UI

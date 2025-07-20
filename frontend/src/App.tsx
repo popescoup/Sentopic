@@ -12,6 +12,7 @@ import ProjectsDashboard from '@/pages/ProjectsDashboard';
 import ProjectWorkspace from '@/pages/ProjectWorkspace';
 import CollectionManager from '@/pages/CollectionManager';
 import ProjectSetupWizard from '@/pages/ProjectSetupWizard';
+import AnalysisProgress from '@/pages/AnalysisProgress';
 
 // Create QueryClient for TanStack Query
 const queryClient = new QueryClient({
@@ -61,6 +62,9 @@ function App() {
   
             {/* Project setup wizard route */}
             <Route path="/projects/new" element={<ProjectSetupWizard />} />
+  
+            {/* Analysis progress route */}
+            <Route path="/analysis/:projectId" element={<AnalysisProgress />} />
   
             {/* Project workspace route */}
             <Route path="/project/:projectId" element={<ProjectWorkspace />} />
