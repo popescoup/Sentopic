@@ -90,6 +90,11 @@ class ProjectResponse(ProjectBase):
     # Collection metadata for frontend display
     collections_metadata: List[Dict[str, Any]] = Field([], description="Metadata about analyzed collections")
     
+    # Analysis insights for dashboard cards (only present if analysis completed)
+    cooccurrences: Optional[List[Dict[str, Any]]] = Field(None, description="Top keyword co-occurrences")
+    trend_summaries: Optional[Dict[str, Dict[str, str]]] = Field(None, description="Trend direction summaries by keyword")
+    sample_contexts: Optional[List[Dict[str, Any]]] = Field(None, description="Sample discussion contexts")
+    
     class Config:
         """Pydantic configuration."""
         # Allow datetime serialization

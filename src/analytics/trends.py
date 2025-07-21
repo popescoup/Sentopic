@@ -17,7 +17,7 @@ class TrendsAnalyzer:
         pass
     
     def get_trends_data(self, session_id: str, keywords: List[str], 
-                       time_period: str = 'daily') -> Dict[str, Any]:
+                       time_period: str = 'weekly') -> Dict[str, Any]:
         """
         Get trends data for specified keywords from an analysis session.
         

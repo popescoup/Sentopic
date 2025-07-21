@@ -775,19 +775,19 @@ Return only the keywords, separated by commas, with no additional explanation.""
         # Parse JSON fields from database
         keywords = json.loads(session.keywords)
         collection_ids = json.loads(session.collection_ids)
-        
+    
         # Create enhanced stats object with results data
         stats = ProjectService._calculate_enhanced_project_stats(session, session_results, keywords, collection_ids)
-        
+    
         # Get AI summary if it exists
         summary = await ProjectService._get_project_summary(session.id)
-        
+    
         # Get collections metadata
         collections_metadata = ProjectService._get_collections_metadata(collection_ids)
-        
+    
         # Convert created_at timestamp to datetime
         created_at = datetime.fromtimestamp(session.created_at)
-        
+    
         return ProjectResponse(
             id=session.id,
             name=session.name,
@@ -800,7 +800,10 @@ Return only the keywords, separated by commas, with no additional explanation.""
             context_window_words=session.context_window_words,
             stats=stats,
             summary=summary,
-            collections_metadata=collections_metadata
+            collections_metadata=collections_metadata,
+            cooccurrences=session_results.get('cooccurrences'),
+            trend_summaries=session_results.get('trend_summaries'),
+            sample_contexts=session_results.get('sample_contexts')
         )
     
     @staticmethod

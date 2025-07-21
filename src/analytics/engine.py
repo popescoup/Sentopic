@@ -260,21 +260,66 @@ class AnalyticsEngine:
     def get_session_results_with_summary(self, session_id: str) -> Dict[str, Any]:
         """
         Get comprehensive results for an analysis session including summary if available.
-        
+    
         Args:
             session_id: Session ID to get results for
-        
+    
         Returns:
             Dictionary with complete session results and summary
         """
         # Get standard session results
         results = self.get_session_results(session_id)
-        
+    
         # Add summary if available
         summary = self.get_session_summary(session_id)
         if summary:
             results['summary'] = summary
+    
+        # Add analysis insights for dashboard cards
+        if results.get('status') == 'completed':
+            # Get co-occurrence data (all pairs)
+            session = db.get_session()
+            try:
+                from .database import KeywordCooccurrence
+                cooccurrences = session.query(KeywordCooccurrence).filter(
+                    KeywordCooccurrence.analysis_session_id == session_id
+                ).order_by(KeywordCooccurrence.cooccurrence_count.desc()).all()
+            
+                results['cooccurrences'] = []
+                for cooc in cooccurrences:
+                    results['cooccurrences'].append({
+                        'keyword1': cooc.keyword1,
+                        'keyword2': cooc.keyword2,
+                        'cooccurrence_count': cooc.cooccurrence_count,
+                        'in_posts': cooc.in_posts,
+                        'in_comments': cooc.in_comments
+                    })
+            finally:
+                session.close()
         
+            # Get trend summaries for all keywords
+            keywords = json.loads(results.get('keywords', '[]'))
+            if keywords:
+                trend_data = trends_analyzer.get_trends_data(session_id, keywords, 'monthly')
+                trend_summary = trends_analyzer.get_trend_summary(trend_data)
+                results['trend_summaries'] = {}
+                for keyword, summary_info in trend_summary.items():
+                    results['trend_summaries'][keyword] = {
+                        'trend_direction': summary_info['trend_direction'],
+                        'total_mentions': summary_info['total_mentions']
+                    }
+        
+            # Get sample contexts (5 most recent across all keywords)
+            if keywords:
+                all_contexts = []
+                for keyword in keywords[:3]:  # Limit to top 3 keywords to avoid too many contexts
+                    contexts = self.get_context_instances(session_id, keyword, limit=2)
+                    all_contexts.extend(contexts.get('contexts', []))
+            
+                # Sort by created_utc descending and take top 5
+                all_contexts.sort(key=lambda x: x['created_utc'], reverse=True)
+                results['sample_contexts'] = all_contexts[:5]
+    
         return results
     
     def get_session_results(self, session_id: str) -> Dict[str, Any]:
@@ -385,7 +430,7 @@ class AnalyticsEngine:
         finally:
             session.close()
     
-    def get_trends(self, session_id: str, keywords: List[str], time_period: str = 'daily') -> Dict[str, Any]:
+    def get_trends(self, session_id: str, keywords: List[str], time_period: str = 'weekly') -> Dict[str, Any]:
         """
         Get trend analysis for specified keywords.
         
