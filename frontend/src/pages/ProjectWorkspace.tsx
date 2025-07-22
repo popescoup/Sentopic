@@ -7,18 +7,22 @@
 
 import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import MainLayout from '@/components/layout/MainLayout';
 import { LoadingState } from '@/components/layout/LoadingSpinner';
 import Card, { InsightCard } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { useProject } from '@/hooks/useApi';
-import { getErrorMessage } from '@/api/client';
+import { api, getErrorMessage } from '@/api/client';
 import { getInsightData } from '@/utils/insightProcessing';
 
 const ProjectWorkspace: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { data: project, isLoading, error } = useProject(projectId);
+  const { data: project, isLoading, error } = useQuery({
+    queryKey: ['project-results', projectId],
+    queryFn: () => api.getAnalysisResults(projectId!),
+    enabled: !!projectId && projectId.length > 0
+  });
 
   // Format date for display
   const formatDate = (dateString: string) => {

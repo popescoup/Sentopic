@@ -263,25 +263,42 @@ class ProjectService:
     
     @staticmethod
     async def get_analysis_results(project_id: str) -> ProjectResponse:
-        """Get complete analysis results for a project."""
         try:
             # Get analysis session
             analysis_session = db.get_analysis_session(project_id)
             if not analysis_session:
                 raise ValueError(f"Project not found: {project_id}")
-            
+        
             # Check if analysis is completed
             if analysis_session.status != 'completed':
                 raise ValueError(f"Analysis not completed for project: {project_id}. Current status: {analysis_session.status}")
-            
+        
+            print("🔍 About to get session results with summary...")
             # Get comprehensive results using existing backend
             session_results = analytics_engine.get_session_results_with_summary(project_id)
-            
+            print(f"🔍 Session results keys: {session_results.keys()}")
+            print(f"🔍 Session results types: {[(k, type(v).__name__) for k, v in session_results.items()]}")
+        
+            print("🔍 About to transform to project response...")
             # Transform to ProjectResponse format with enhanced results
             project = await ProjectService._transform_session_to_project_with_results(
                 analysis_session, session_results
             )
-            
+            print("🔍 Project transformation completed successfully")
+            print(f"🔍 Project type: {type(project).__name__}")
+        
+            # Try to serialize to catch serialization issues
+            print("🔍 Testing serialization...")
+            try:
+                import json
+                # Test if the project can be serialized
+                test_dict = project.dict()
+                json.dumps(test_dict, default=str)  # Use default=str to handle datetime objects
+                print("🔍 Serialization test passed")
+            except Exception as e:
+                print(f"🔍 Serialization test failed: {e}")
+                print(f"🔍 Problematic field types: {[(k, type(v).__name__) for k, v in test_dict.items()]}")
+        
             return project
             
         except ValueError as e:
@@ -772,39 +789,72 @@ Return only the keywords, separated by commas, with no additional explanation.""
     @staticmethod
     async def _transform_session_to_project_with_results(session, session_results: Dict[str, Any]) -> ProjectResponse:
         """Transform an AnalysisSession with results into a ProjectResponse."""
-        # Parse JSON fields from database
-        keywords = json.loads(session.keywords)
-        collection_ids = json.loads(session.collection_ids)
-    
-        # Create enhanced stats object with results data
-        stats = ProjectService._calculate_enhanced_project_stats(session, session_results, keywords, collection_ids)
-    
-        # Get AI summary if it exists
-        summary = await ProjectService._get_project_summary(session.id)
-    
-        # Get collections metadata
-        collections_metadata = ProjectService._get_collections_metadata(collection_ids)
-    
-        # Convert created_at timestamp to datetime
-        created_at = datetime.fromtimestamp(session.created_at)
-    
-        return ProjectResponse(
-            id=session.id,
-            name=session.name,
-            research_question=None,
-            keywords=keywords,
-            collection_ids=collection_ids,
-            status=session.status,
-            created_at=created_at,
-            partial_matching=session.partial_matching,
-            context_window_words=session.context_window_words,
-            stats=stats,
-            summary=summary,
-            collections_metadata=collections_metadata,
-            cooccurrences=session_results.get('cooccurrences'),
-            trend_summaries=session_results.get('trend_summaries'),
-            sample_contexts=session_results.get('sample_contexts')
-        )
+        try:
+            print("🔍 Starting transformation...")
+        
+            # Parse JSON fields from database
+            print("🔍 Parsing keywords and collection_ids...")
+            keywords = json.loads(session.keywords)
+            collection_ids = json.loads(session.collection_ids)
+            print(f"🔍 Keywords parsed: {len(keywords)} items")
+            print(f"🔍 Collection IDs parsed: {len(collection_ids)} items")
+
+            # Create enhanced stats object with results data
+            print("🔍 Creating enhanced stats...")
+            stats = ProjectService._calculate_enhanced_project_stats(session, session_results, keywords, collection_ids)
+            print(f"🔍 Stats created: {type(stats).__name__}")
+
+            # Get AI summary if it exists
+            print("🔍 Getting AI summary...")
+            summary = await ProjectService._get_project_summary(session.id)
+            print(f"🔍 Summary: {type(summary).__name__ if summary else 'None'}")
+
+            # Get collections metadata
+            print("🔍 Getting collections metadata...")
+            collections_metadata = ProjectService._get_collections_metadata(collection_ids)
+            print(f"🔍 Collections metadata: {len(collections_metadata)} items")
+
+            # Convert created_at timestamp to datetime
+            print("🔍 Converting created_at timestamp...")
+            created_at = datetime.fromtimestamp(session.created_at)
+            print(f"🔍 Created at: {created_at}")
+
+            print("🔍 Preparing cooccurrences...")
+            cooccurrences = session_results.get('cooccurrences')
+            print(f"🔍 Cooccurrences: {len(cooccurrences) if cooccurrences else 0} items")
+
+            print("🔍 Preparing trend_summaries...")
+            trend_summaries = session_results.get('trend_summaries')
+            print(f"🔍 Trend summaries: {len(trend_summaries) if trend_summaries else 0} items")
+
+            print("🔍 Preparing sample_contexts...")
+            sample_contexts = session_results.get('sample_contexts')
+            print(f"🔍 Sample contexts: {len(sample_contexts) if sample_contexts else 0} items")
+
+            print("🔍 Creating ProjectResponse object...")
+            return ProjectResponse(
+                id=session.id,
+                name=session.name,
+                research_question=None,
+                keywords=keywords,
+                collection_ids=collection_ids,
+                status=session.status,
+                created_at=created_at,
+                partial_matching=session.partial_matching,
+                context_window_words=session.context_window_words,
+                stats=stats,
+                summary=summary,
+                collections_metadata=collections_metadata,
+                cooccurrences=cooccurrences,
+                trend_summaries=trend_summaries,
+                sample_contexts=sample_contexts
+            )
+        except Exception as e:
+            print(f"🔍 Error in transformation: {e}")
+            print(f"🔍 Error type: {type(e).__name__}")
+            import traceback
+            print(f"🔍 Traceback: {traceback.format_exc()}")
+            raise e
     
     @staticmethod
     def _calculate_project_stats(session, keywords: List[str], collection_ids: List[str]) -> ProjectStats:

@@ -92,7 +92,7 @@ class ProjectResponse(ProjectBase):
     
     # Analysis insights for dashboard cards (only present if analysis completed)
     cooccurrences: Optional[List[Dict[str, Any]]] = Field(None, description="Top keyword co-occurrences")
-    trend_summaries: Optional[Dict[str, Dict[str, str]]] = Field(None, description="Trend direction summaries by keyword")
+    trend_summaries: Optional[Dict[str, Dict[str, Any]]] = Field(None, description="Trend direction summaries by keyword")
     sample_contexts: Optional[List[Dict[str, Any]]] = Field(None, description="Sample discussion contexts")
     
     class Config:

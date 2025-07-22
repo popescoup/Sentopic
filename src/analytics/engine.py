@@ -165,7 +165,23 @@ class AnalyticsEngine:
             cooccurrence_data = cooccurrence_detector.process_content_for_cooccurrences(
                 all_posts, all_comments, keywords, analysis_session.partial_matching
             )
+
+            # DEBUG: Check what co-occurrence data was generated
+            print(f"🔍 Co-occurrence data processed: {len(cooccurrence_data.get('pairs', {}))} pairs found")
+            for pair, stats in list(cooccurrence_data.get('pairs', {}).items())[:3]:
+                print(f"    {pair}: {stats['total_count']} occurrences")
+
             self._save_cooccurrences_batch(session_id, cooccurrence_data)
+
+            # DEBUG: Verify data was saved to database
+            test_session = db.get_session()
+            try:
+                saved_count = test_session.query(KeywordCooccurrence).filter(
+                    KeywordCooccurrence.analysis_session_id == session_id
+                ).count()
+                print(f"🔍 Co-occurrences saved to database: {saved_count}")
+            finally:
+                test_session.close()
             
             # Update session with overall statistics
             total_mentions = len(all_keyword_mentions)
@@ -280,11 +296,15 @@ class AnalyticsEngine:
             # Get co-occurrence data (all pairs)
             session = db.get_session()
             try:
-                from .database import KeywordCooccurrence
                 cooccurrences = session.query(KeywordCooccurrence).filter(
                     KeywordCooccurrence.analysis_session_id == session_id
                 ).order_by(KeywordCooccurrence.cooccurrence_count.desc()).all()
-            
+
+                # DEBUG: Check retrieval
+                print(f"🔍 Co-occurrences retrieved from database: {len(cooccurrences)}")
+                for cooc in cooccurrences[:3]:
+                    print(f"    {cooc.keyword1} + {cooc.keyword2}: {cooc.cooccurrence_count}")
+
                 results['cooccurrences'] = []
                 for cooc in cooccurrences:
                     results['cooccurrences'].append({
@@ -294,20 +314,33 @@ class AnalyticsEngine:
                         'in_posts': cooc.in_posts,
                         'in_comments': cooc.in_comments
                     })
+    
+                # DEBUG: Check what we're adding to results
+                print(f"🔍 Co-occurrences added to results: {len(results['cooccurrences'])}")
+    
             finally:
                 session.close()
         
             # Get trend summaries for all keywords
-            keywords = json.loads(results.get('keywords', '[]'))
+            keywords = results.get('keywords', [])
+            print(f"🔍 Processing trends for {len(keywords)} keywords: {keywords}")
+
             if keywords:
                 trend_data = trends_analyzer.get_trends_data(session_id, keywords, 'monthly')
+                print(f"🔍 Trend data keys: {trend_data.get('trends', {}).keys()}")
+    
                 trend_summary = trends_analyzer.get_trend_summary(trend_data)
+                print(f"🔍 Trend summary computed for: {list(trend_summary.keys())}")
+    
                 results['trend_summaries'] = {}
                 for keyword, summary_info in trend_summary.items():
+                    print(f"    {keyword}: {summary_info.get('trend_direction', 'unknown')} ({summary_info.get('total_mentions', 0)} mentions)")
                     results['trend_summaries'][keyword] = {
                         'trend_direction': summary_info['trend_direction'],
                         'total_mentions': summary_info['total_mentions']
                     }
+    
+                print(f"🔍 Trend summaries added to results: {len(results['trend_summaries'])}")
         
             # Get sample contexts (5 most recent across all keywords)
             if keywords:
