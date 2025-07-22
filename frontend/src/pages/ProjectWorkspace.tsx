@@ -13,6 +13,7 @@ import Card, { InsightCard } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useProject } from '@/hooks/useApi';
 import { getErrorMessage } from '@/api/client';
+import { getInsightData } from '@/utils/insightProcessing';
 
 const ProjectWorkspace: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -93,6 +94,9 @@ const ProjectWorkspace: React.FC = () => {
   const collectionsText = project.collections_metadata
     .map(c => `r/${c.subreddit}`)
     .join(', ');
+
+  // Format insights data using the new utility functions
+  const insightData = getInsightData(project);
 
   return (
     <MainLayout title={`${project.name} - Project Workspace`}>
@@ -201,25 +205,26 @@ const ProjectWorkspace: React.FC = () => {
           {project.status === 'completed' && (
             <div className="grid gap-6 md:grid-cols-3 mb-8">
               <InsightCard
-                title="Total Mentions"
-                value={project.stats.total_mentions.toLocaleString()}
-                description="Keyword matches found"
-                onClick={() => handleComingSoon('Keywords Overview')}
+                title="Keyword Overview"
+                value={insightData.overview.totalMentions.toLocaleString()}
+                description={insightData.overview.description}
+                onClick={() => handleComingSoon('Keyword Overview')}
               />
               
               <InsightCard
-                title="Average Sentiment"
-                value={project.stats.avg_sentiment >= 0 ? `+${project.stats.avg_sentiment.toFixed(2)}` : project.stats.avg_sentiment.toFixed(2)}
-                description={project.stats.avg_sentiment >= 0 ? 'Positive sentiment' : 'Negative sentiment'}
-                trend={project.stats.avg_sentiment >= 0 ? 'up' : 'down'}
-                onClick={() => handleComingSoon('Sentiment Analysis')}
+                title="Keyword Relationships"
+                value={insightData.relationships?.count.toLocaleString() || 'No data'}
+                description={insightData.relationships?.description || 'No co-occurrence data available'}
+                onClick={() => handleComingSoon('Keyword Relationships')}
               />
               
               <InsightCard
-                title="Collections Analyzed"
-                value={project.stats.collections_count.toString()}
-                description={`${project.stats.posts_analyzed + project.stats.comments_analyzed} total items`}
-                onClick={() => handleComingSoon('Collection Details')}
+                title="Keyword Trends"
+                value={insightData.trends.arrow}
+                description={insightData.trends.description}
+                trend={insightData.trends.direction}
+                isArrowCard={true}
+                onClick={() => handleComingSoon('Keyword Trends')}
               />
             </div>
           )}

@@ -34,6 +34,9 @@ export interface ProjectStats {
     stats: ProjectStats;
     summary?: ProjectSummary;
     collections_metadata: CollectionMetadata[];
+    cooccurrences?: KeywordCooccurrence[];
+    trend_summaries?: Record<string, TrendSummary>;
+    sample_contexts?: ContextInstance[];
   }
   
   export interface ProjectCreate {
@@ -232,3 +235,25 @@ export interface ProjectStats {
     status: string;
     message: string;
   }
+
+export interface KeywordCooccurrence {
+  keyword1: string;
+  keyword2: string;
+  cooccurrence_count: number;
+  in_posts: number;
+  in_comments: number;
+}
+
+export interface TrendSummary {
+  trend_direction: 'rising' | 'falling' | 'stable' | 'insufficient_data';
+  total_mentions: number;
+}
+
+export interface ContextInstance {
+  content_type: 'post' | 'comment';
+  content_reddit_id: string;
+  context: string;
+  sentiment_score: number;
+  created_utc: number;
+  collection_id: string;
+}

@@ -152,7 +152,7 @@ export const CardFooter: React.FC<{
   </div>
 );
 
-// Insight Card - specialized card for analytics insights
+// Insight Card
 export const InsightCard: React.FC<{
   title: string;
   value: string | number;
@@ -161,6 +161,7 @@ export const InsightCard: React.FC<{
   trendValue?: string;
   onClick?: () => void;
   className?: string;
+  isArrowCard?: boolean; // New prop for arrow-based cards
 }> = ({ 
   title, 
   value, 
@@ -168,7 +169,8 @@ export const InsightCard: React.FC<{
   trend, 
   trendValue, 
   onClick,
-  className = ''
+  className = '',
+  isArrowCard = false
 }) => {
   const trendColors = {
     up: 'text-success',
@@ -196,31 +198,47 @@ export const InsightCard: React.FC<{
         </h4>
       </div>
 
-      {/* Primary value */}
+      {/* Primary value - either number or arrow */}
       <div className="mb-2">
-        <span 
-          className="text-2xl font-semibold text-text-primary tracking-tight"
-          style={{ fontSize: '28px', letterSpacing: '-0.01em' }}
-        >
-          {value}
-        </span>
+        {isArrowCard ? (
+          <div className="flex items-center">
+            <span 
+              className={`text-4xl font-semibold tracking-tight ${
+                trend ? trendColors[trend] : 'text-text-primary'
+              }`}
+              style={{ fontSize: '48px', lineHeight: '1' }}
+            >
+              {value}
+            </span>
+          </div>
+        ) : (
+          <span 
+            className="text-2xl font-semibold text-text-primary tracking-tight"
+            style={{ fontSize: '28px', letterSpacing: '-0.01em' }}
+          >
+            {typeof value === 'number' ? value.toLocaleString() : value}
+          </span>
+        )}
       </div>
 
-      {/* Description and trend */}
-      <div className="flex items-center justify-between">
+      {/* Description */}
+      <div className="mb-2">
         {description && (
-          <p className="font-body text-text-secondary">
+          <p className="font-body text-text-secondary leading-relaxed">
             {description}
           </p>
         )}
-        
-        {trend && trendValue && (
+      </div>
+
+      {/* Legacy trend display (for backwards compatibility) */}
+      {!isArrowCard && trend && trendValue && (
+        <div className="flex items-center justify-between">
           <div className={`font-small ${trendColors[trend]} flex items-center`}>
             <span className="mr-1">{trendIcons[trend]}</span>
             {trendValue}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Click indicator */}
       {onClick && (
