@@ -1,6 +1,7 @@
 /**
  * Text Processing Utilities
- * Functions for keyword highlighting, text truncation, and safe HTML processing
+ * Core text utilities for cleaning, truncation, and basic processing
+ * Complex highlighting and windowing moved to dedicated modules
  */
 
 /**
@@ -13,36 +14,8 @@ export const escapeHtml = (text: string): string => {
   };
   
   /**
-   * Highlights keywords in text with HTML markup
-   * @param text - The text to search for keywords
-   * @param keywords - Array of keywords to highlight
-   * @returns HTML string with highlighted keywords
-   */
-  export const highlightKeywords = (text: string, keywords: string[]): string => {
-    if (!text || !keywords || keywords.length === 0) {
-      return escapeHtml(text);
-    }
-  
-    // Escape HTML first to prevent XSS
-    let escapedText = escapeHtml(text);
-    
-    // Create a regex pattern for all keywords (case-insensitive, word boundaries)
-    const keywordPattern = keywords
-      .map(keyword => keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) // Escape special regex chars
-      .join('|');
-    
-    // Create regex with word boundaries to match whole words only
-    const regex = new RegExp(`\\b(${keywordPattern})\\b`, 'gi');
-    
-    // Replace keywords with highlighted versions
-    return escapedText.replace(regex, (match) => {
-      return `<mark class="bg-accent text-white px-1 py-0.5 rounded font-medium">${match}</mark>`;
-    });
-  };
-  
-  /**
    * Truncates text to a specified length, preserving word boundaries
-   * @param text - The text to truncate (can contain HTML)
+   * @param text - The text to truncate (plain text only)
    * @param maxLength - Maximum number of characters
    * @param suffix - Suffix to add when truncated (default: '...')
    * @returns Truncated text
@@ -52,27 +25,10 @@ export const escapeHtml = (text: string): string => {
       return text;
     }
   
-    // Handle HTML content - we need to count text content, not HTML tags
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = text;
-    const textContent = tempDiv.textContent || tempDiv.innerText || '';
-    
-    if (textContent.length <= maxLength) {
-      return text;
-    }
-  
     // Find the last space within the character limit to avoid cutting words
-    const truncateAt = textContent.lastIndexOf(' ', maxLength - suffix.length);
+    const truncateAt = text.lastIndexOf(' ', maxLength - suffix.length);
     const cutPoint = truncateAt > 0 ? truncateAt : maxLength - suffix.length;
     
-    // If the original text contains HTML, we need to reconstruct it carefully
-    if (text !== textContent) {
-      // For simplicity with HTML content, truncate the text content and re-highlight
-      const truncatedTextContent = textContent.substring(0, cutPoint).trim() + suffix;
-      return truncatedTextContent;
-    }
-    
-    // For plain text, simple truncation
     return text.substring(0, cutPoint).trim() + suffix;
   };
   
@@ -130,11 +86,11 @@ export const escapeHtml = (text: string): string => {
   };
   
   /**
- * Counts words in text (excluding HTML tags)
- * @param text - Text to count words in
- * @returns Number of words
- */
-export const countWords = (text: string): number => {
+   * Counts words in text (excluding HTML tags)
+   * @param text - Text to count words in
+   * @returns Number of words
+   */
+  export const countWords = (text: string): number => {
     if (!text) return 0;
     
     // Remove HTML tags and count words
@@ -146,119 +102,64 @@ export const countWords = (text: string): number => {
   };
   
   /**
-   * Intelligently extracts the best snippet with keyword highlighting
-   * @param text - The text to process
-   * @param keywords - Array of keywords to highlight and use for windowing
-   * @param maxLength - Maximum character length for the snippet
-   * @returns Object with displayText and windowing information
+   * Strips HTML tags from text, leaving only plain text
+   * @param html - HTML string to clean
+   * @returns Plain text content
    */
-  export const getOptimalSnippetWithHighlights = (
-    text: string, 
-    keywords: string[], 
-    maxLength: number
-  ): { displayText: string; isWindowed: boolean; windowType: 'beginning' | 'middle' | 'full' } => {
-    if (!text || !keywords || keywords.length === 0) {
-      const truncated = truncateText(escapeHtml(text), maxLength);
-      return {
-        displayText: truncated,
-        isWindowed: truncated.length < text.length,
-        windowType: truncated.length < text.length ? 'beginning' : 'full'
-      };
-    }
-  
-    // Clean text for analysis (remove Reddit markdown for keyword finding)
-    const cleanText = cleanRedditMarkdown(text);
+  export const stripHtmlTags = (html: string): string => {
+    if (!html) return '';
     
-    // If text is already short enough, show everything with highlights
-    if (cleanText.length <= maxLength) {
-      return {
-        displayText: highlightKeywords(cleanText, keywords),
-        isWindowed: false,
-        windowType: 'full'
-      };
-    }
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  };
   
-    // Find all keyword positions in the clean text
-    const keywordPositions: Array<{ keyword: string; start: number; end: number }> = [];
+  /**
+   * Normalizes whitespace in text (removes extra spaces, newlines, etc.)
+   * @param text - Text to normalize
+   * @returns Text with normalized whitespace
+   */
+  export const normalizeWhitespace = (text: string): string => {
+    if (!text) return '';
     
-    keywords.forEach(keyword => {
-      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'gi');
-      let match;
-      
-      while ((match = regex.exec(cleanText)) !== null) {
-        keywordPositions.push({
-          keyword: match[0],
-          start: match.index,
-          end: match.index + match[0].length
-        });
-      }
-    });
+    return text
+      .replace(/\s+/g, ' ')
+      .replace(/\n\s*\n/g, '\n')
+      .trim();
+  };
   
-    // If no keywords found in clean text, fall back to beginning truncation
-    if (keywordPositions.length === 0) {
-      const truncated = truncateText(highlightKeywords(text, keywords), maxLength);
-      return {
-        displayText: truncated,
-        isWindowed: true,
-        windowType: 'beginning'
-      };
-    }
+  /**
+   * Checks if text appears to be primarily ASCII (for formatting decisions)
+   * @param text - Text to check
+   * @returns True if text is mostly ASCII characters
+   */
+  export const isAsciiText = (text: string): boolean => {
+    if (!text) return true;
+    
+    const asciiCount = text.split('').filter(char => char.charCodeAt(0) < 128).length;
+    return (asciiCount / text.length) > 0.9;
+  };
   
-    // Find the earliest keyword position
-    const earliestKeyword = keywordPositions.reduce((earliest, current) => 
-      current.start < earliest.start ? current : earliest
-    );
-  
-    // If the earliest keyword is close to the beginning, show from start
-    const contextPadding = 50; // Characters of context around keywords
-    if (earliestKeyword.start <= contextPadding) {
-      const truncated = truncateText(highlightKeywords(text, keywords), maxLength);
-      return {
-        displayText: truncated,
-        isWindowed: true,
-        windowType: 'beginning'
-      };
-    }
-  
-    // Calculate optimal window around the earliest keyword
-    const windowStart = Math.max(0, earliestKeyword.start - contextPadding);
-    const windowEnd = Math.min(cleanText.length, windowStart + maxLength - 3); // -3 for "..."
-  
-    // Find a good break point to start the window (try to start at word boundary)
-    let actualStart = windowStart;
-    if (windowStart > 0) {
-      // Look for space within 20 characters before our calculated start
-      const searchStart = Math.max(0, windowStart - 20);
-      const spaceIndex = cleanText.lastIndexOf(' ', windowStart);
-      if (spaceIndex > searchStart) {
-        actualStart = spaceIndex + 1;
+  /**
+   * Gets a safe substring that doesn't break in the middle of words
+   * @param text - Text to substring
+   * @param start - Start position
+   * @param maxLength - Maximum length from start
+   * @returns Safe substring
+   */
+  export const safeSubstring = (text: string, start: number, maxLength: number): string => {
+    if (!text || start >= text.length) return '';
+    
+    const end = Math.min(start + maxLength, text.length);
+    let substring = text.substring(start, end);
+    
+    // If we didn't reach the end and we're in the middle of a word, trim to last space
+    if (end < text.length && substring.length > 0) {
+      const lastSpaceIndex = substring.lastIndexOf(' ');
+      if (lastSpaceIndex > substring.length - 20) { // Only trim if space is reasonably close to end
+        substring = substring.substring(0, lastSpaceIndex);
       }
     }
-  
-    // Extract the window text
-    let windowText = cleanText.substring(actualStart, windowEnd).trim();
     
-    // Ensure we end at a reasonable break point
-    if (windowEnd < cleanText.length) {
-      const lastSpaceIndex = windowText.lastIndexOf(' ');
-      if (lastSpaceIndex > windowText.length - 50) { // Only trim if space is reasonably close to end
-        windowText = windowText.substring(0, lastSpaceIndex);
-      }
-      windowText += '...';
-    }
-  
-    // Add leading ellipsis if we started in the middle
-    if (actualStart > 0) {
-      windowText = '...' + windowText;
-    }
-  
-    // Apply keyword highlighting to the windowed text
-    const highlightedText = highlightKeywords(windowText, keywords);
-  
-    return {
-      displayText: highlightedText,
-      isWindowed: true,
-      windowType: 'middle'
-    };
+    return substring.trim();
   };

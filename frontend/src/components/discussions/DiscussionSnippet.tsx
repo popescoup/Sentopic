@@ -5,7 +5,9 @@
  */
 
 import React from 'react';
-import { getOptimalSnippetWithHighlights } from '@/utils/textProcessing';
+import { cleanRedditMarkdown } from '@/utils/textProcessing';
+import { createOptimalWindow } from '@/utils/textWindowing';
+import { highlightKeywords } from '@/utils/keywordHighlighting';
 import { formatRelativeTime } from '@/utils/dateFormatting';
 import type { ContextInstance, CollectionMetadata } from '@/types/api';
 
@@ -30,15 +32,15 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
   const collection = collectionsMetadata.find(c => c.id === context.collection_id);
   const subreddit = collection?.subreddit || 'unknown';
 
-  // Format the discussion text with smart windowing and keyword highlighting
-  const { displayText, isWindowed, windowType } = getOptimalSnippetWithHighlights(
-    context.context, 
-    keywords, 
-    280
-  );
+  // Format the discussion text with new pipeline: clean → window → highlight
+  const cleanedText = cleanRedditMarkdown(context.context);
+  const textWindow = createOptimalWindow(cleanedText, keywords, { maxLength: 280 });
+  const displayText = highlightKeywords(textWindow.text, keywords, {
+    matchWordVariations: true // Enable word variations for better matching
+  });
   
   // Determine if we should show windowing indicator
-  const showWindowIndicator = isWindowed && windowType === 'middle';
+  const showWindowIndicator = textWindow.isWindowed && textWindow.windowType === 'middle';
   
   // Format the timestamp
   const relativeTime = formatRelativeTime(context.created_utc);
