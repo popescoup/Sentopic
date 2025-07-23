@@ -8,7 +8,7 @@ import React from 'react';
 import { cleanRedditMarkdown } from '@/utils/textProcessing';
 import { createOptimalWindow } from '@/utils/textWindowing';
 import { highlightKeywords } from '@/utils/keywordHighlighting';
-import { formatRelativeTime } from '@/utils/dateFormatting';
+import { formatDate, formatDateTime } from '@/utils/dateFormatting'; // Import both options
 import type { ContextInstance, CollectionMetadata } from '@/types/api';
 
 interface DiscussionSnippetProps {
@@ -42,8 +42,20 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
   // Determine if we should show windowing indicator
   const showWindowIndicator = textWindow.isWindowed && textWindow.windowType === 'middle';
   
-  // Format the timestamp
-  const relativeTime = formatRelativeTime(context.created_utc);
+  // CHANGED: Format the timestamp to show actual date instead of relative time
+  // Option 1: Just the date (e.g., "Oct 15, 2024")
+  const displayDate = formatDate(context.created_utc);
+  
+  // Option 2: Date + time (uncomment to use instead)
+  // const displayDate = formatDateTime(context.created_utc);
+  
+  // Option 3: Custom format with more control
+  // const displayDate = formatDate(context.created_utc, {
+  //   year: 'numeric',
+  //   month: 'short',
+  //   day: 'numeric',
+  //   weekday: 'short'  // Adds day of week like "Mon, Oct 15, 2024"
+  // });
   
   // Determine sentiment styling
   const getSentimentStyling = (score: number) => {
@@ -92,7 +104,7 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
             </span>
             <span className="text-text-tertiary">•</span>
             <span className="font-small text-text-tertiary">
-              {relativeTime}
+              {displayDate}
             </span>
           </div>
         </div>
