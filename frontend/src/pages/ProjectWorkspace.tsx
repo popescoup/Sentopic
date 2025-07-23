@@ -12,6 +12,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { LoadingState } from '@/components/layout/LoadingSpinner';
 import Card, { InsightCard } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import { DiscussionSnippet } from '@/components/discussions';
 import { api, getErrorMessage } from '@/api/client';
 import { getInsightData } from '@/utils/insightProcessing';
 
@@ -240,39 +241,57 @@ const ProjectWorkspace: React.FC = () => {
                 Recent Discussions
               </h3>
               <p className="font-body text-text-secondary">
-                Representative discussions containing your keywords will appear here when analysis is complete.
+                Representative discussions containing your keywords from your analysis results.
               </p>
             </div>
-            
+  
             {project.status === 'completed' ? (
               <>
-                <div className="space-y-4 mb-6">
-                  {/* Placeholder discussion snippets */}
-                  <div className="p-4 bg-panel rounded-input border border-border-primary">
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="font-small text-text-tertiary">
-                        {collectionsText.split(', ')[0]} • Analysis Results
-                      </span>
-                      <span className={project.stats.avg_sentiment >= 0 ? 'text-success' : 'text-danger'}>
-                        {project.stats.avg_sentiment >= 0 ? 'Positive' : 'Negative'}
-                      </span>
+                {project.sample_contexts && project.sample_contexts.length > 0 ? (
+                  <>
+                    <div className="space-y-4 mb-6">
+                      {project.sample_contexts.slice(0, 3).map((context, index) => (
+                        <DiscussionSnippet
+                          key={`${context.content_reddit_id}-${index}`}
+                          context={context}
+                          keywords={project.keywords}
+                          collectionsMetadata={project.collections_metadata}
+                        />
+                      ))}
                     </div>
-                    <p className="font-body text-text-secondary">
-                      Discussion snippets with keyword highlighting will be displayed here. 
-                      Click "Full Context Explorer" to browse all {project.stats.total_mentions.toLocaleString()} mentions found.
+          
+                    <div className="pt-4 border-t border-border-primary">
+                      <Button 
+                        variant="outline" 
+                        fullWidth
+                        onClick={() => handleComingSoon('Context Explorer')}
+                      >
+                        Explore All {project.stats.total_mentions.toLocaleString()} Mentions →
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-text-tertiary mb-4">
+                      <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <h4 className="font-subsection text-text-primary mb-2">
+                      No Discussions Found
+                    </h4>
+                    <p className="font-body text-text-secondary mb-4 max-w-md mx-auto">
+                      No discussions containing your keywords were found in the selected collections. 
+                      Try expanding your keyword list or selecting additional collections.
                     </p>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleComingSoon('Edit Project')}
+                    >
+                      Refine Keywords
+                    </Button>
                   </div>
-                </div>
-                
-                <div className="pt-4 border-t border-border-primary">
-                  <Button 
-                    variant="outline" 
-                    fullWidth
-                    onClick={() => handleComingSoon('Context Explorer')}
-                  >
-                    Full Context Explorer →
-                  </Button>
-                </div>
+                )}
               </>
             ) : (
               <div className="text-center py-8">
