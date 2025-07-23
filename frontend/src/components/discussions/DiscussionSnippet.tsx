@@ -35,8 +35,20 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
   // Format the discussion text with new pipeline: clean → window → highlight
   const cleanedText = cleanRedditMarkdown(context.context);
   const textWindow = createOptimalWindow(cleanedText, keywords, { maxLength: 280 });
+  // Create sentiment-based highlight classes
+const getSentimentHighlightClasses = (score: number) => {
+    if (score > 0.1) {
+      return 'bg-green-200 text-green-800 px-1 py-0.5 rounded font-medium border border-green-300';
+    } else if (score < -0.1) {
+      return 'bg-red-200 text-red-800 px-1 py-0.5 rounded font-medium border border-red-300';
+    } else {
+      return 'bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-medium border border-gray-300';
+    }
+  };
+  
   const displayText = highlightKeywords(textWindow.text, keywords, {
-    matchWordVariations: true // Enable word variations for better matching
+    matchWordVariations: true, // Enable word variations for better matching
+    highlightClasses: getSentimentHighlightClasses(context.sentiment_score)
   });
   
   // Determine if we should show windowing indicator
@@ -107,11 +119,6 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
               {displayDate}
             </span>
           </div>
-        </div>
-        
-        {/* Sentiment indicator */}
-        <div className={`inline-flex items-center px-2 py-1 rounded-input text-xs font-medium border ${sentimentStyle.bgColor} ${sentimentStyle.color} ${sentimentStyle.borderColor}`}>
-          {sentimentStyle.label}
         </div>
       </div>
 
