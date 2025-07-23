@@ -130,11 +130,11 @@ export const escapeHtml = (text: string): string => {
   };
   
   /**
-   * Counts words in text (excluding HTML tags)
-   * @param text - Text to count words in
-   * @returns Number of words
-   */
-  export const countWords = (text: string): number => {
+ * Counts words in text (excluding HTML tags)
+ * @param text - Text to count words in
+ * @returns Number of words
+ */
+export const countWords = (text: string): number => {
     if (!text) return 0;
     
     // Remove HTML tags and count words
@@ -143,4 +143,122 @@ export const escapeHtml = (text: string): string => {
     const textContent = tempDiv.textContent || tempDiv.innerText || '';
     
     return textContent.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+  
+  /**
+   * Intelligently extracts the best snippet with keyword highlighting
+   * @param text - The text to process
+   * @param keywords - Array of keywords to highlight and use for windowing
+   * @param maxLength - Maximum character length for the snippet
+   * @returns Object with displayText and windowing information
+   */
+  export const getOptimalSnippetWithHighlights = (
+    text: string, 
+    keywords: string[], 
+    maxLength: number
+  ): { displayText: string; isWindowed: boolean; windowType: 'beginning' | 'middle' | 'full' } => {
+    if (!text || !keywords || keywords.length === 0) {
+      const truncated = truncateText(escapeHtml(text), maxLength);
+      return {
+        displayText: truncated,
+        isWindowed: truncated.length < text.length,
+        windowType: truncated.length < text.length ? 'beginning' : 'full'
+      };
+    }
+  
+    // Clean text for analysis (remove Reddit markdown for keyword finding)
+    const cleanText = cleanRedditMarkdown(text);
+    
+    // If text is already short enough, show everything with highlights
+    if (cleanText.length <= maxLength) {
+      return {
+        displayText: highlightKeywords(cleanText, keywords),
+        isWindowed: false,
+        windowType: 'full'
+      };
+    }
+  
+    // Find all keyword positions in the clean text
+    const keywordPositions: Array<{ keyword: string; start: number; end: number }> = [];
+    
+    keywords.forEach(keyword => {
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'gi');
+      let match;
+      
+      while ((match = regex.exec(cleanText)) !== null) {
+        keywordPositions.push({
+          keyword: match[0],
+          start: match.index,
+          end: match.index + match[0].length
+        });
+      }
+    });
+  
+    // If no keywords found in clean text, fall back to beginning truncation
+    if (keywordPositions.length === 0) {
+      const truncated = truncateText(highlightKeywords(text, keywords), maxLength);
+      return {
+        displayText: truncated,
+        isWindowed: true,
+        windowType: 'beginning'
+      };
+    }
+  
+    // Find the earliest keyword position
+    const earliestKeyword = keywordPositions.reduce((earliest, current) => 
+      current.start < earliest.start ? current : earliest
+    );
+  
+    // If the earliest keyword is close to the beginning, show from start
+    const contextPadding = 50; // Characters of context around keywords
+    if (earliestKeyword.start <= contextPadding) {
+      const truncated = truncateText(highlightKeywords(text, keywords), maxLength);
+      return {
+        displayText: truncated,
+        isWindowed: true,
+        windowType: 'beginning'
+      };
+    }
+  
+    // Calculate optimal window around the earliest keyword
+    const windowStart = Math.max(0, earliestKeyword.start - contextPadding);
+    const windowEnd = Math.min(cleanText.length, windowStart + maxLength - 3); // -3 for "..."
+  
+    // Find a good break point to start the window (try to start at word boundary)
+    let actualStart = windowStart;
+    if (windowStart > 0) {
+      // Look for space within 20 characters before our calculated start
+      const searchStart = Math.max(0, windowStart - 20);
+      const spaceIndex = cleanText.lastIndexOf(' ', windowStart);
+      if (spaceIndex > searchStart) {
+        actualStart = spaceIndex + 1;
+      }
+    }
+  
+    // Extract the window text
+    let windowText = cleanText.substring(actualStart, windowEnd).trim();
+    
+    // Ensure we end at a reasonable break point
+    if (windowEnd < cleanText.length) {
+      const lastSpaceIndex = windowText.lastIndexOf(' ');
+      if (lastSpaceIndex > windowText.length - 50) { // Only trim if space is reasonably close to end
+        windowText = windowText.substring(0, lastSpaceIndex);
+      }
+      windowText += '...';
+    }
+  
+    // Add leading ellipsis if we started in the middle
+    if (actualStart > 0) {
+      windowText = '...' + windowText;
+    }
+  
+    // Apply keyword highlighting to the windowed text
+    const highlightedText = highlightKeywords(windowText, keywords);
+  
+    return {
+      displayText: highlightedText,
+      isWindowed: true,
+      windowType: 'middle'
+    };
   };

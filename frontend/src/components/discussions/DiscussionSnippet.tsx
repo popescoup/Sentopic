@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { highlightKeywords, truncateText } from '@/utils/textProcessing';
+import { getOptimalSnippetWithHighlights } from '@/utils/textProcessing';
 import { formatRelativeTime } from '@/utils/dateFormatting';
 import type { ContextInstance, CollectionMetadata } from '@/types/api';
 
@@ -30,11 +30,15 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
   const collection = collectionsMetadata.find(c => c.id === context.collection_id);
   const subreddit = collection?.subreddit || 'unknown';
 
-  // Format the discussion text with keyword highlighting
-  const highlightedText = highlightKeywords(context.context, keywords);
+  // Format the discussion text with smart windowing and keyword highlighting
+  const { displayText, isWindowed, windowType } = getOptimalSnippetWithHighlights(
+    context.context, 
+    keywords, 
+    280
+  );
   
-  // Truncate if too long (keep it readable in the snippet view)
-  const displayText = truncateText(highlightedText, 280);
+  // Determine if we should show windowing indicator
+  const showWindowIndicator = isWindowed && windowType === 'middle';
   
   // Format the timestamp
   const relativeTime = formatRelativeTime(context.created_utc);
@@ -99,6 +103,11 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
 
       {/* Discussion content with keyword highlighting */}
       <div className="mb-3">
+        {showWindowIndicator && (
+          <div className="font-small text-text-tertiary mb-1 italic">
+            Showing relevant excerpt...
+          </div>
+        )}
         <div 
           className="font-body text-text-secondary leading-relaxed"
           dangerouslySetInnerHTML={{ __html: displayText }}
