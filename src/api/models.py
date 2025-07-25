@@ -409,6 +409,89 @@ class AIStatusResponse(BaseModel):
 
 
 # ============================================================================
+# INDEXING MODELS (NEW - FOR SEMANTIC SEARCH)
+# ============================================================================
+
+class IndexingRequest(BaseModel):
+    """Request to start content indexing for semantic search."""
+    provider_type: str = Field(..., description="Embedding provider to use", pattern="^(local|openai)$")
+    force_reindex: bool = Field(False, description="Force reindexing even if already indexed")
+    
+    @validator('provider_type')
+    def validate_provider_type(cls, v):
+        """Validate provider type options."""
+        valid_types = ["local", "openai"]
+        if v not in valid_types:
+            raise ValueError(f"Provider type must be one of: {valid_types}")
+        return v
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "provider_type": "local",
+                "force_reindex": False
+            }
+        }
+
+
+class IndexingResponse(BaseModel):
+    """Response from starting content indexing."""
+    status: str = Field(..., description="Indexing status: started, already_indexed")
+    message: str = Field(..., description="Human-readable status message")
+    provider_type: str = Field(..., description="Embedding provider being used")
+    estimated_duration_minutes: int = Field(..., description="Estimated time to completion")
+    total_content_items: int = Field(..., description="Total number of items to index")
+    started_at: datetime = Field(..., description="When indexing started")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+        
+        json_schema_extra = {
+            "example": {
+                "status": "started",
+                "message": "Indexing started successfully with local embeddings",
+                "provider_type": "local",
+                "estimated_duration_minutes": 5,
+                "total_content_items": 1247,
+                "started_at": "2025-01-15T10:30:00Z"
+            }
+        }
+
+
+class IndexingStatusResponse(BaseModel):
+    """Response for indexing status and search capabilities."""
+    indexing_status: Dict[str, str] = Field(..., description="Status of each indexing type")
+    search_capabilities: Dict[str, bool] = Field(..., description="Available search types")
+    total_content_items: int = Field(..., description="Total content items in project")
+    local_indexed: int = Field(0, description="Items indexed with local embeddings")
+    cloud_indexed: int = Field(0, description="Items indexed with cloud embeddings")
+    current_indexing: Optional[Dict[str, Any]] = Field(None, description="Currently running indexing job")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "indexing_status": {
+                    "local": "complete",
+                    "cloud": "none"
+                },
+                "search_capabilities": {
+                    "keyword": True,
+                    "local_semantic": True,
+                    "cloud_semantic": False,
+                    "analytics_driven": True
+                },
+                "total_content_items": 1247,
+                "local_indexed": 1247,
+                "cloud_indexed": 0,
+                "current_indexing": None
+            }
+        }
+
+
+
+# ============================================================================
 # COLLECTION MANAGEMENT MODELS (NEW - STEP 5)
 # ============================================================================
 

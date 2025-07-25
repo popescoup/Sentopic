@@ -28,7 +28,7 @@ from .models import (
     ChatHistoryResponse, ChatMessageCreate, KeywordSuggestionRequest,
     KeywordSuggestionResponse, AIStatusResponse, CollectionCreateRequest,
     CollectionResponse, CollectionBatchResponse, CollectionBatchStatusResponse,
-    CollectionListResponse
+    CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse
 )
 
 # Temporary in-memory storage for project preferences
@@ -634,6 +634,162 @@ Return only the keywords, separated by commas, with no additional explanation.""
                 default_provider=None,
                 embeddings_info={}
             )
+    
+    # ============================================================================
+    # INDEXING METHODS (NEW - FOR SEMANTIC SEARCH)
+    # ============================================================================
+    
+    @staticmethod
+    async def start_indexing(project_id: str, indexing_request: 'IndexingRequest', 
+                           background_tasks: BackgroundTasks) -> 'IndexingResponse':
+        """
+        Start content indexing for semantic search.
+        
+        Args:
+            project_id: Project ID to index content for
+            indexing_request: Indexing configuration
+            background_tasks: FastAPI background tasks
+            
+        Returns:
+            IndexingResponse with indexing status
+        """
+        try:
+            # Validate project exists and has completed analysis
+            analysis_session = db.get_analysis_session(project_id)
+            if not analysis_session:
+                raise ValueError(f"Project not found: {project_id}")
+            
+            if analysis_session.status != 'completed':
+                raise ValueError(f"Project analysis must be completed before indexing. Current status: {analysis_session.status}")
+            
+            # Import content indexer
+            from src.llm.embeddings.indexer import content_indexer
+            
+            # Check provider availability
+            if indexing_request.provider_type == 'openai':
+                from src.llm.config import llm_config
+                if not llm_config.is_enabled():
+                    raise ValueError("LLM features are not enabled. Cannot use OpenAI embeddings.")
+                
+                openai_config = llm_config.get_provider_config('openai')
+                if not openai_config or not openai_config.get('api_key'):
+                    raise ValueError("OpenAI is not configured. Cannot use OpenAI embeddings.")
+            
+            # Get current status to calculate content items
+            current_status = content_indexer.get_indexing_status(project_id)
+            total_content_items = current_status['total_content_items']
+            
+            if total_content_items == 0:
+                raise ValueError("No content found to index. Project must have collected Reddit data.")
+            
+            # Start background indexing task
+            background_tasks.add_task(
+                ProjectService._run_background_indexing,
+                project_id,
+                indexing_request.provider_type,
+                indexing_request.force_reindex
+            )
+            
+            # Estimate duration based on content size and provider
+            estimated_duration = ProjectService._estimate_indexing_duration(
+                total_content_items, indexing_request.provider_type
+            )
+            
+            return IndexingResponse(
+                status="started",
+                message=f"Indexing started successfully with {indexing_request.provider_type} embeddings",
+                provider_type=indexing_request.provider_type,
+                estimated_duration_minutes=estimated_duration,
+                total_content_items=total_content_items,
+                started_at=datetime.utcnow()
+            )
+            
+        except ValueError as e:
+            # Re-raise validation errors
+            raise e
+        except Exception as e:
+            print(f"Unexpected error in start_indexing: {e}")
+            raise ValueError(f"Failed to start indexing: {str(e)}")
+    
+    @staticmethod
+    async def get_indexing_status(project_id: str) -> 'IndexingStatusResponse':
+        """
+        Get current indexing status and search capabilities.
+        
+        Args:
+            project_id: Project ID to check status for
+            
+        Returns:
+            IndexingStatusResponse with current status
+        """
+        try:
+            # Validate project exists
+            analysis_session = db.get_analysis_session(project_id)
+            if not analysis_session:
+                raise ValueError(f"Project not found: {project_id}")
+            
+            # Import content indexer
+            from src.llm.embeddings.indexer import content_indexer
+            
+            # Get indexing status
+            status_info = content_indexer.get_indexing_status(project_id)
+            
+            return IndexingStatusResponse(
+                indexing_status=status_info['indexing_status'],
+                search_capabilities=status_info['search_capabilities'],
+                total_content_items=status_info['total_content_items'],
+                local_indexed=status_info['local_indexed'],
+                cloud_indexed=status_info['cloud_indexed'],
+                current_indexing=None  # TODO: Add tracking for currently running indexing jobs
+            )
+            
+        except ValueError as e:
+            # Re-raise validation errors
+            raise e
+        except Exception as e:
+            print(f"Error in get_indexing_status: {e}")
+            raise ValueError(f"Failed to get indexing status: {str(e)}")
+    
+    @staticmethod
+    async def _run_background_indexing(project_id: str, provider_type: str, force_reindex: bool):
+        """Run indexing in background task."""
+        try:
+            print(f"🔍 Starting background indexing for project: {project_id} with {provider_type} provider")
+            
+            # Import content indexer
+            from src.llm.embeddings.indexer import content_indexer
+            
+            # Run indexing
+            result = content_indexer.index_analysis_content(
+                analysis_session_id=project_id,
+                provider_type=provider_type,
+                force_reindex=force_reindex
+            )
+            
+            print(f"✅ Indexing completed for project: {project_id}")
+            print(f"   Status: {result['status']}")
+            print(f"   Embeddings generated: {result['embeddings_generated']}")
+            if result.get('cost_estimate', 0) > 0:
+                print(f"   Cost estimate: ${result['cost_estimate']:.4f}")
+            
+        except Exception as e:
+            print(f"❌ Indexing failed for project {project_id}: {str(e)}")
+    
+    @staticmethod
+    def _estimate_indexing_duration(total_content_items: int, provider_type: str) -> int:
+        """Estimate indexing duration in minutes."""
+        # Base estimation per item
+        if provider_type == 'local':
+            # Local embeddings: ~50-100 items per minute depending on hardware
+            minutes_per_item = 0.015
+        else:  # openai
+            # OpenAI API: ~200-500 items per minute depending on batch size and network
+            minutes_per_item = 0.005
+        
+        estimated_minutes = total_content_items * minutes_per_item
+        
+        # Minimum 1 minute, maximum 30 minutes for UI purposes
+        return max(1, min(30, int(estimated_minutes)))
     
     # ============================================================================
     # PRIVATE HELPER METHODS (EXISTING + ENHANCEMENTS)

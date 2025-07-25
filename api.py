@@ -11,7 +11,7 @@ from src.api.models import (
     ChatMessageCreate, ChatResponse, ChatSessionListResponse, ChatHistoryResponse,
     KeywordSuggestionRequest, KeywordSuggestionResponse, AIStatusResponse,
     CollectionCreateRequest, CollectionBatchResponse, CollectionBatchStatusResponse,
-    CollectionListResponse
+    CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse
 )
 
 # Initialize FastAPI application with enhanced documentation
@@ -659,6 +659,190 @@ async def get_analysis_results(project_id: str) -> ProjectResponse:
             detail={
                 "error": "server_error",
                 "message": "An unexpected error occurred while retrieving analysis results",
+                "details": {"project_id": project_id}
+            }
+        )
+
+@app.post("/projects/{project_id}/indexing",
+          response_model=IndexingResponse,
+          responses={
+              200: {"description": "Indexing started successfully"},
+              400: {"model": APIError, "description": "Invalid request or provider not configured"},
+              404: {"model": APIError, "description": "Project not found"},
+              409: {"model": APIError, "description": "Analysis not completed"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["analysis"],
+          summary="Start Content Indexing",
+          description="Start indexing project content for semantic search capabilities")
+async def start_indexing(project_id: str, indexing_request: IndexingRequest, 
+                         background_tasks: BackgroundTasks) -> IndexingResponse:
+    """
+    **Start Content Indexing for Semantic Search**
+    
+    Initiates background indexing of Reddit content to enable semantic search capabilities including:
+    
+    * **Local Semantic Search**: Free, privacy-focused search using local sentence-transformers
+    * **Cloud Semantic Search**: Advanced search using OpenAI embeddings (requires API key)
+    * **Enhanced Chat Experience**: Better AI responses with semantic understanding
+    * **Conceptual Queries**: Find discussions by meaning, not just keywords
+    
+    **Indexing Process**:
+    1. Validates project exists and analysis is completed
+    2. Generates vector embeddings for all posts and comments
+    3. Stores embeddings for fast similarity search
+    4. Enables semantic search in chat and direct queries
+    
+    **Provider Options**:
+    * **local**: Free offline embeddings using sentence-transformers (recommended for privacy)
+    * **openai**: Advanced cloud embeddings using OpenAI API (requires API key and costs tokens)
+    
+    **Use Case**: Called when user wants to enable semantic search capabilities
+    for more sophisticated AI chat interactions and conceptual content discovery.
+    
+    **Path Parameters**:
+    * **project_id**: Unique identifier of the project to index
+    
+    **Request Body**:
+    * **provider_type**: Either "local" (free) or "openai" (paid API)
+    * **force_reindex**: Whether to reindex if already indexed (default: false)
+    
+    **Response**: Immediate confirmation with estimated completion time
+    """
+    try:
+        # Start indexing using service layer
+        result = await ProjectService.start_indexing(project_id, indexing_request, background_tasks)
+        
+        return result
+        
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "project_not_found",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        elif "not completed" in error_message:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "analysis_not_completed",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        elif "not enabled" in error_message or "not configured" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "provider_not_available",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "indexing_error",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in start_indexing endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while starting indexing",
+                "details": {"project_id": project_id}
+            }
+        )
+
+@app.get("/projects/{project_id}/indexing/status",
+         response_model=IndexingStatusResponse,
+         responses={
+             200: {"description": "Indexing status retrieved successfully"},
+             404: {"model": APIError, "description": "Project not found"},
+             500: {"model": APIError, "description": "Server error"}
+         },
+         tags=["analysis"],
+         summary="Get Indexing Status",
+         description="Get current indexing status and available search capabilities")
+async def get_indexing_status(project_id: str) -> IndexingStatusResponse:
+    """
+    **Get Indexing Status and Search Capabilities**
+    
+    Returns comprehensive information about content indexing status and available search capabilities:
+    
+    * **Indexing Status**: Current state of local and cloud embeddings
+    * **Search Capabilities**: Which search types are available for the AI chat
+    * **Content Metrics**: How much content is indexed vs. total available
+    * **Indexing Progress**: Real-time status if indexing is currently running
+    
+    **Indexing States**:
+    * `none` - No indexing has been performed
+    * `partial` - Some content is indexed (interrupted or partial completion)
+    * `complete` - All content is fully indexed and ready for semantic search
+    
+    **Search Capabilities Returned**:
+    * **keyword**: Always available - traditional keyword-based search
+    * **local_semantic**: Available if local embeddings are indexed
+    * **cloud_semantic**: Available if OpenAI embeddings are indexed
+    * **analytics_driven**: Available if project analysis is completed
+    
+    **Use Case**: 
+    * Frontend checks capabilities before showing search options in chat UI
+    * Determines whether to show "Enable Semantic Search" prompts
+    * Monitors indexing progress during background processing
+    * Helps users understand what search features are available
+    
+    **Path Parameters**:
+    * **project_id**: Unique identifier of the project to check
+    
+    **Response**: Complete indexing status with search capability matrix
+    """
+    try:
+        status = await ProjectService.get_indexing_status(project_id)
+        
+        return status
+        
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "project_not_found",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "status_error",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in get_indexing_status endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while retrieving indexing status",
                 "details": {"project_id": project_id}
             }
         )
