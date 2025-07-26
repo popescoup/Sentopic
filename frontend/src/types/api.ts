@@ -194,6 +194,29 @@ export interface ProjectStats {
     default_provider?: string;
     embeddings_info: Record<string, any>;
   }
+
+export interface IndexingRequest {
+  provider_type: 'local' | 'openai';
+  force_reindex?: boolean;
+}
+
+export interface IndexingResponse {
+  status: string;
+  message: string;
+  provider_type: string;
+  estimated_duration_minutes: number;
+  total_content_items: number;
+  started_at: string;
+}
+
+export interface IndexingStatusResponse {
+  indexing_status: Record<string, string>;
+  search_capabilities: Record<string, boolean>;
+  total_content_items: number;
+  local_indexed: number;
+  cloud_indexed: number;
+  current_indexing?: Record<string, any> | null;
+}
   
   // Analysis workflow interfaces
   export interface AnalysisStatusResponse {

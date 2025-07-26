@@ -22,7 +22,10 @@ import type {
   AnalysisStatusResponse,
   HealthCheckResponse,
   APIError,
-  AnalysisStartResponse
+  AnalysisStartResponse,
+  IndexingRequest,
+  IndexingResponse,
+  IndexingStatusResponse
 } from '@/types/api';
 
 // Create axios instance with base configuration
@@ -139,6 +142,16 @@ export class SentopicAPI {
 
   async getAnalysisResults(projectId: string): Promise<ProjectResponse> {
     const response = await this.client.get<ProjectResponse>(`/projects/${projectId}/analysis/results`);
+    return response.data;
+  }
+
+  async startIndexing(projectId: string, request: IndexingRequest): Promise<IndexingResponse> {
+    const response = await this.client.post<IndexingResponse>(`/projects/${projectId}/indexing`, request);
+    return response.data;
+  }
+
+  async getIndexingStatus(projectId: string): Promise<IndexingStatusResponse> {
+    const response = await this.client.get<IndexingStatusResponse>(`/projects/${projectId}/indexing/status`);
     return response.data;
   }
 

@@ -13,7 +13,14 @@ import type {
   AIStatusResponse,
   AnalysisStatusResponse,
   HealthCheckResponse,
-  AnalysisStartResponse
+  AnalysisStartResponse,
+  ChatSessionListResponse,
+  ChatMessageCreate,
+  ChatResponse,
+  ChatHistoryResponse,
+  IndexingRequest,
+  IndexingResponse,
+  IndexingStatusResponse
 } from '@/types/api';
 
 // Query keys for consistent cache management
@@ -24,6 +31,9 @@ export const queryKeys = {
   analysisStatus: (id: string) => ['projects', id, 'analysis', 'status'] as const,
   collections: ['collections'] as const,
   aiStatus: ['ai', 'status'] as const,
+  chatSessions: (projectId: string) => ['projects', projectId, 'chat', 'sessions'] as const,
+  chatHistory: (sessionId: string) => ['chat', sessionId, 'history'] as const,
+  indexingStatus: (projectId: string) => ['projects', projectId, 'indexing', 'status'] as const,
 } as const;
 
 // ============================================================================
@@ -184,6 +194,77 @@ export const useAIStatus = () => {
 };
 
 // ============================================================================
+// CHAT HOOKS
+// ============================================================================
+
+export const useChatSessions = (projectId: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.chatSessions(projectId!),
+    queryFn: () => api.getChatSessions(projectId!),
+    enabled: !!projectId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+};
+
+export const useStartChatSession = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (projectId: string) => api.startChatSession(projectId),
+    onSuccess: (_, projectId) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.chatSessions(projectId) });
+    },
+  });
+};
+
+export const useSendChatMessage = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ sessionId, message }: { sessionId: string; message: ChatMessageCreate }) => 
+      api.sendChatMessage(sessionId, message),
+    onSuccess: (_, { sessionId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.chatHistory(sessionId) });
+    },
+  });
+};
+
+export const useChatHistory = (sessionId: string | undefined, limit = 50) => {
+  return useQuery({
+    queryKey: queryKeys.chatHistory(sessionId!),
+    queryFn: () => api.getChatHistory(sessionId!, limit),
+    enabled: !!sessionId,
+    staleTime: 1 * 60 * 1000, // 1 minute
+  });
+};
+
+// ============================================================================
+// INDEXING HOOKS
+// ============================================================================
+
+export const useIndexingStatus = (projectId: string | undefined) => {
+  return useQuery({
+    queryKey: queryKeys.indexingStatus(projectId!),
+    queryFn: () => api.getIndexingStatus(projectId!),
+    enabled: !!projectId,
+    staleTime: 30 * 1000, // 30 seconds
+    retry: 1,
+  });
+};
+
+export const useStartIndexing = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ projectId, request }: { projectId: string; request: IndexingRequest }) => 
+      api.startIndexing(projectId, request),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.indexingStatus(projectId) });
+    },
+  });
+};
+
+// ============================================================================
 // UTILITY HOOKS
 // ============================================================================
 
@@ -218,6 +299,26 @@ export const useAnalysisPolling = (projectId: string | undefined, isRunning: boo
       if (data.status === 'completed' || data.status === 'failed') {
         // Invalidate project data to get updated results
         queryClient.invalidateQueries({ queryKey: queryKeys.project(projectId!) });
+      }
+    },
+  });
+};
+
+/**
+ * Hook for polling indexing progress
+ */
+export const useIndexingPolling = (projectId: string | undefined, isIndexing: boolean) => {
+  const queryClient = useQueryClient();
+  
+  return useQuery({
+    queryKey: queryKeys.indexingStatus(projectId!),
+    queryFn: () => api.getIndexingStatus(projectId!),
+    enabled: !!projectId && isIndexing,
+    refetchInterval: 3000, // Poll every 3 seconds
+    onSuccess: (data) => {
+      // Stop polling when indexing completes
+      if (!data.current_indexing) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.indexingStatus(projectId!) });
       }
     },
   });

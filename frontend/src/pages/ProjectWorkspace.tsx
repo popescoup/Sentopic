@@ -2,7 +2,7 @@
  * Project Workspace Page
  * Main interface for exploring analysis results
  * 
- * Phase 3.1: Core Workspace Implementation
+ * Phase 4.2: AI Q&A Integration
  */
 
 import React from 'react';
@@ -13,6 +13,7 @@ import { LoadingState } from '@/components/layout/LoadingSpinner';
 import Card, { InsightCard } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { DiscussionSnippet } from '@/components/discussions';
+import AIQuestionPanel from '@/components/ai/AIQuestionPanel';
 import { api, getErrorMessage } from '@/api/client';
 import { getInsightData } from '@/utils/insightProcessing';
 
@@ -303,35 +304,31 @@ const ProjectWorkspace: React.FC = () => {
           </Card>
         </div>
 
-        {/* AI Sidebar Space */}
+        {/* AI Q&A Sidebar */}
         <div className="lg:col-span-1">
-          <Card className="bg-gradient-subtle">
-            <div className="mb-4">
-              <h3 className="font-section-header text-text-primary mb-2">
-                AI Assistant
-              </h3>
-              <div className="flex items-center text-small text-text-tertiary">
-                <div className="w-2 h-2 bg-text-tertiary rounded-full mr-2"></div>
-                Coming in Phase 4
+          {project.status === 'completed' ? (
+            <AIQuestionPanel projectId={projectId!} />
+          ) : (
+            <Card className="bg-gradient-subtle">
+              <div className="mb-4">
+                <h3 className="font-section-header text-text-primary mb-2">
+                  AI Assistant
+                </h3>
+                <div className="flex items-center text-small text-text-tertiary">
+                  <div className="w-2 h-2 bg-text-tertiary rounded-full mr-2"></div>
+                  Waiting for analysis
+                </div>
               </div>
-            </div>
-            
-            <div className="mb-4 p-3 bg-content rounded-input border border-border-primary">
-              <p className="font-body text-text-secondary text-sm">
-                Interactive AI chat will be implemented in Phase 4. Ask questions about 
-                patterns, get explanations of sentiment trends, and explore your data 
-                through natural language conversations.
-              </p>
-            </div>
-            
-            <Button 
-              variant="outline" 
-              fullWidth
-              onClick={() => handleComingSoon('AI Chat')}
-            >
-              Start Chat Session
-            </Button>
-          </Card>
+              
+              <div className="mb-4 p-3 bg-content rounded-input border border-border-primary">
+                <p className="font-body text-text-secondary text-sm">
+                  AI Q&A will be available once your project analysis is complete. 
+                  Ask questions about patterns, sentiment trends, and explore your data 
+                  through natural language conversations.
+                </p>
+              </div>
+            </Card>
+          )}
 
           {/* Project Stats Card */}
           <Card className="mt-6">
@@ -412,34 +409,35 @@ const ProjectWorkspace: React.FC = () => {
       {/* Phase Information */}
       <div className="mt-12 bg-panel rounded-default p-6 border border-border-primary">
         <h2 className="font-section-header text-text-primary mb-3">
-          Project Workspace - Phase 3.1 Implementation
+          Project Workspace - Phase 4.2 Implementation
         </h2>
         
         <div className="grid gap-4 md:grid-cols-3">
           <div>
             <h3 className="font-subsection text-text-primary mb-2">
-              ✅ Implemented in Phase 3.1
+              ✅ Implemented in Phase 4.2
             </h3>
             <ul className="font-body text-text-secondary space-y-1 text-sm">
-              <li>• Real project data integration</li>
-              <li>• Professional two-column layout</li>
-              <li>• Functional insight cards (clickable)</li>
-              <li>• Research context display</li>
-              <li>• Loading and error states</li>
-              <li>• Project status handling</li>
+              <li>• AI Q&A sidebar with search type selection</li>
+              <li>• Semantic search setup and embedding generation</li>
+              <li>• Question-answer interface with context independence</li>
+              <li>• Interactive search type dropdown</li>
+              <li>• Cost information for cloud embeddings</li>
+              <li>• Real-time indexing progress tracking</li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-subsection text-text-primary mb-2">
-              🔄 Coming in Phase 4
+              🔄 Enhanced from Phase 3.1
             </h3>
             <ul className="font-body text-text-secondary space-y-1 text-sm">
-              <li>• Interactive AI chat sidebar</li>
-              <li>• Natural language querying</li>
-              <li>• Context-aware AI responses</li>
-              <li>• Chat session management</li>
-              <li>• AI status integration</li>
+              <li>• Professional two-column layout maintained</li>
+              <li>• Real project data integration</li>
+              <li>• Functional insight cards (clickable)</li>
+              <li>• Research context display</li>
+              <li>• Loading and error states</li>
+              <li>• Project status handling</li>
             </ul>
           </div>
           
