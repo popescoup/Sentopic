@@ -1,22 +1,34 @@
 /**
  * Answer Message Component
  * Displays AI responses with sources and analytics insights
+ * Fixed to handle undefined response (for historical messages)
  */
 
 import React, { useState } from 'react';
 import type { ChatResponse } from '@/types/api';
 
 interface AnswerMessageProps {
-  response: ChatResponse;
+  response?: ChatResponse; // Made optional to handle historical messages
   timestamp: string;
+  content?: string; // Add content prop for fallback when response is undefined
 }
 
 const AnswerMessage: React.FC<AnswerMessageProps> = ({
   response,
-  timestamp
+  timestamp,
+  content
 }) => {
   const [showSources, setShowSources] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+
+  // Handle case where response is undefined (historical messages)
+  const messageContent = response?.message || content || 'Message content unavailable';
+  const sources = response?.sources || [];
+  const analyticsInsights = response?.analytics_insights || {};
+  const searchType = response?.search_type || 'unknown';
+  const discussionsFound = response?.discussions_found || 0;
+  const tokensUsed = response?.tokens_used || 0;
+  const costEstimate = response?.cost_estimate || 0;
 
   // Format timestamp for display
   const formatTime = (timestamp: string) => {
@@ -45,12 +57,14 @@ const AnswerMessage: React.FC<AnswerMessageProps> = ({
         return 'Semantic (Cloud)';
       case 'analytics_driven':
         return 'Analytics Search';
+      case 'unknown':
+        return 'Legacy Message';
       default:
         return 'Auto Search';
     }
   };
 
-  const hasAdditionalInfo = response.sources.length > 0 || Object.keys(response.analytics_insights).length > 0;
+  const hasAdditionalInfo = sources.length > 0 || Object.keys(analyticsInsights).length > 0;
 
   return (
     <div className="mb-4">
@@ -69,33 +83,37 @@ const AnswerMessage: React.FC<AnswerMessageProps> = ({
               {/* Response Content */}
               <div className="bg-panel border border-border-primary px-4 py-3 rounded-input rounded-tl-sm">
                 <p className="font-body text-sm text-text-primary leading-relaxed whitespace-pre-wrap">
-                  {response.message}
+                  {messageContent}
                 </p>
               </div>
 
               {/* Metadata and Actions */}
               <div className="flex items-center justify-between mt-1">
                 <div className="flex items-center space-x-2 text-xs text-text-tertiary">
-                  <span>{getSearchTypeDisplay(response.search_type)}</span>
-                  <span>•</span>
-                  <span>{response.discussions_found} discussions found</span>
+                  <span>{getSearchTypeDisplay(searchType)}</span>
+                  {response && (
+                    <>
+                      <span>•</span>
+                      <span>{discussionsFound} discussions found</span>
+                    </>
+                  )}
                   <span>•</span>
                   <span>{formatTime(timestamp)}</span>
                 </div>
 
-                {/* Additional Info Toggles */}
-                {hasAdditionalInfo && (
+                {/* Additional Info Toggles - only show if we have response data */}
+                {response && hasAdditionalInfo && (
                   <div className="flex items-center space-x-1">
-                    {response.sources.length > 0 && (
+                    {sources.length > 0 && (
                       <button
                         onClick={() => setShowSources(!showSources)}
                         className="text-xs text-accent hover:text-blue-700 transition-colors duration-150 px-2 py-1 rounded hover:bg-hover-blue"
                       >
-                        {showSources ? 'Hide' : 'Show'} Sources ({response.sources.length})
+                        {showSources ? 'Hide' : 'Show'} Sources ({sources.length})
                       </button>
                     )}
                     
-                    {Object.keys(response.analytics_insights).length > 0 && (
+                    {Object.keys(analyticsInsights).length > 0 && (
                       <button
                         onClick={() => setShowInsights(!showInsights)}
                         className="text-xs text-accent hover:text-blue-700 transition-colors duration-150 px-2 py-1 rounded hover:bg-hover-blue"
@@ -108,11 +126,11 @@ const AnswerMessage: React.FC<AnswerMessageProps> = ({
               </div>
 
               {/* Sources Expansion */}
-              {showSources && response.sources.length > 0 && (
+              {response && showSources && sources.length > 0 && (
                 <div className="mt-3 p-3 bg-content border border-border-primary rounded-input">
                   <h5 className="font-medium text-text-primary text-xs mb-2">Sources:</h5>
                   <div className="space-y-2">
-                    {response.sources.slice(0, 3).map((source, index) => (
+                    {sources.slice(0, 3).map((source, index) => (
                       <div key={index} className="text-xs">
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-text-primary">
@@ -131,9 +149,9 @@ const AnswerMessage: React.FC<AnswerMessageProps> = ({
                         )}
                       </div>
                     ))}
-                    {response.sources.length > 3 && (
+                    {sources.length > 3 && (
                       <p className="text-xs text-text-tertiary">
-                        + {response.sources.length - 3} more sources
+                        + {sources.length - 3} more sources
                       </p>
                     )}
                   </div>
@@ -141,11 +159,11 @@ const AnswerMessage: React.FC<AnswerMessageProps> = ({
               )}
 
               {/* Analytics Insights Expansion */}
-              {showInsights && Object.keys(response.analytics_insights).length > 0 && (
+              {response && showInsights && Object.keys(analyticsInsights).length > 0 && (
                 <div className="mt-3 p-3 bg-content border border-border-primary rounded-input">
                   <h5 className="font-medium text-text-primary text-xs mb-2">Analytics Data:</h5>
                   <div className="space-y-2">
-                    {Object.entries(response.analytics_insights).map(([key, value], index) => (
+                    {Object.entries(analyticsInsights).map(([key, value], index) => (
                       <div key={index} className="text-xs">
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-text-primary capitalize">
@@ -162,9 +180,16 @@ const AnswerMessage: React.FC<AnswerMessageProps> = ({
               )}
 
               {/* Cost Information (if available) */}
-              {response.cost_estimate > 0 && (
+              {response && costEstimate > 0 && (
                 <div className="mt-2 text-xs text-text-tertiary">
-                  Cost: ${response.cost_estimate.toFixed(4)} • Tokens: {response.tokens_used}
+                  Cost: ${costEstimate.toFixed(4)} • Tokens: {tokensUsed}
+                </div>
+              )}
+
+              {/* Historical Message Notice */}
+              {!response && (
+                <div className="mt-2 text-xs text-text-tertiary">
+                  Historical message (limited metadata available)
                 </div>
               )}
             </div>

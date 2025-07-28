@@ -1,6 +1,7 @@
 /**
  * Message List Component
  * Container for Q&A history with proper scrolling and loading states
+ * Fixed to handle messages without response data
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -63,7 +64,8 @@ const MessageList: React.FC<MessageListProps> = ({
         ) : (
           <AnswerMessage
             key={message.id}
-            response={message.response}
+            response={message.response} // This might be undefined for historical messages
+            content={message.content}   // Pass content as fallback
             timestamp={message.timestamp}
           />
         )
