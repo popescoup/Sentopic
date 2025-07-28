@@ -36,40 +36,76 @@ export const useQASession = (projectId: string): UseQASessionReturn => {
   const [error, setError] = useState<string | null>(null);
   const messageIdCounter = useRef(1);
 
-  // Initialize a new chat session
-  const initializeSession = useCallback(async () => {
+  // Initialize or resume a chat session
+const initializeSession = useCallback(async () => {
     try {
       setError(null);
-      const response = await api.startChatSession(projectId);
-      setSessionId(response.session_id);
+      console.log(`🔍 Initializing session for project: ${projectId}`);
       
-      // Load existing chat history if any
-      if (response.session_id) {
-        try {
-          const history = await api.getChatHistory(response.session_id);
-          const formattedMessages: QAMessage[] = history.messages.map((msg: ChatMessage) => ({
-            id: msg.id,
-            role: msg.role,
-            content: msg.content,
-            timestamp: msg.timestamp,
-            // Note: We don't have access to original response data or searchType from history
-            // This is a limitation of the current backend design
-          }));
-          setMessages(formattedMessages);
-          
-          // Update counter to avoid ID conflicts
-          if (formattedMessages.length > 0) {
-            messageIdCounter.current = Math.max(...formattedMessages.map(m => m.id)) + 1;
-          }
-        } catch (historyError) {
-          console.warn('Failed to load chat history:', historyError);
-          // Continue without history - not critical
-        }
+      // First, check if any existing chat sessions exist for this project
+      console.log('🔍 Checking for existing chat sessions...');
+      const existingSessions = await api.getChatSessions(projectId);
+      console.log('🔍 Existing sessions response:', existingSessions);
+      console.log('🔍 Number of existing sessions:', existingSessions.sessions.length);
+      
+      let selectedSessionId: string;
+      
+      if (existingSessions.sessions.length > 0) {
+        // Use the most recent session (by last_active timestamp)
+        console.log('🔍 Found existing sessions, selecting most recent...');
+        const mostRecentSession = existingSessions.sessions.reduce((latest, current) => {
+          const latestTime = new Date(latest.last_active).getTime();
+          const currentTime = new Date(current.last_active).getTime();
+          console.log(`🔍 Comparing sessions: ${current.session_id} (${currentTime}) vs ${latest.session_id} (${latestTime})`);
+          return currentTime > latestTime ? current : latest;
+        });
+        
+        selectedSessionId = mostRecentSession.session_id;
+        console.log(`✅ Resuming existing chat session: ${selectedSessionId}`);
+        console.log('🔍 Selected session details:', mostRecentSession);
+      } else {
+        // No existing sessions, create a new one
+        console.log('🔍 No existing sessions found, creating new session...');
+        const response = await api.startChatSession(projectId);
+        selectedSessionId = response.session_id;
+        console.log(`✅ Created new chat session: ${selectedSessionId}`);
       }
+      
+      // Set the session ID
+      setSessionId(selectedSessionId);
+      
+      // Load chat history from the selected session
+      try {
+        console.log(`🔍 Loading chat history for session: ${selectedSessionId}`);
+        const history = await api.getChatHistory(selectedSessionId);
+        console.log('🔍 Chat history response:', history);
+        console.log('🔍 Number of messages in history:', history.messages.length);
+        
+        const formattedMessages: QAMessage[] = history.messages.map((msg: ChatMessage) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp,
+          // Note: We don't have access to original response data or searchType from history
+          // This is a limitation of the current backend design
+        }));
+        setMessages(formattedMessages);
+        
+        // Update counter to avoid ID conflicts
+        if (formattedMessages.length > 0) {
+          messageIdCounter.current = Math.max(...formattedMessages.map(m => m.id)) + 1;
+        }
+        
+        console.log(`✅ Loaded ${formattedMessages.length} messages from chat history`);
+      } catch (historyError) {
+        console.warn('Failed to load chat history:', historyError);
+        // Continue without history - not critical for UX
+      }
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to initialize session';
       setError(errorMessage);
-      console.error('Failed to initialize Q&A session:', err);
+      console.error('❌ Failed to initialize Q&A session:', err);
     }
   }, [projectId]);
 
