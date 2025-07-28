@@ -98,12 +98,12 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
     // Keep current search type
   };
 
-  // Handle Enter key in input
-  const handleKeyPress = (event: React.KeyboardEvent) => {
+  const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleSubmitQuestion();
     }
+    // Allow Shift+Enter for new lines (default behavior)
   };
 
   // Check if AI is available
@@ -164,14 +164,25 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
 
         {/* Question Input */}
         <div className="space-y-3">
-          <Input
+        <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder="Ask a question about your analysis..."
             disabled={isLoading}
-            fullWidth
-          />
+            className="w-full min-h-[2.5rem] max-h-32 px-3 py-2 text-sm border border-border-secondary rounded-input bg-content text-text-primary placeholder-text-tertiary resize-none overflow-hidden focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent focus:ring-opacity-20 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+                height: 'auto',
+                minHeight: '2.5rem'
+            }}
+            ref={(textarea) => {
+                if (textarea) {
+                // Auto-resize functionality
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px'; // 128px = max-h-32
+                }
+            }}
+            />
           
           <Button
             onClick={handleSubmitQuestion}

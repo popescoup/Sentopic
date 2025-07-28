@@ -73,7 +73,13 @@ class RAGEngine:
         # Handle different approaches with graceful fallbacks
         if classification.query_type == 'command':
             return self._handle_command_query(question, classification, collection_ids)
-        
+
+        # NEW: If user explicitly selected a search type, use it instead of classification
+        elif search_type != 'auto':
+            return self._handle_explicit_search_type(
+                question, classification, collection_ids, search_type, max_results, search_strategy, available_keywords
+            )
+
         elif classification.suggested_approach in ['analytics_driven_search', 'analytics_with_examples']:
             return self._handle_analytics_query_enhanced(
                 question, classification, collection_ids, max_results, search_strategy, analysis_session_id
@@ -93,6 +99,91 @@ class RAGEngine:
             # Intelligent search - let the system figure out the best approach
             return self._handle_intelligent_search(
                 question, classification, collection_ids, search_type, max_results, search_strategy
+            )
+        
+    def _handle_explicit_search_type(self, question: str, classification, 
+                               collection_ids: List[str], search_type: str, max_results: int,
+                               search_strategy: Dict[str, Any], available_keywords: List[str]) -> RAGResponse:
+        """Handle queries where user explicitly selected a search type."""
+    
+        try:
+            # Use the search engine factory to get the requested search type
+            from .search_engine import SearchEngineFactory
+        
+            search_engine = SearchEngineFactory.create_engine(search_type)
+            search_results = search_engine.search(question, collection_ids, limit=max_results)
+        
+            # Build discussion contexts
+            discussions = self._build_discussion_contexts_from_traditional(search_results)
+        
+            # Get any available analytics context
+            analytics_insights = {}
+            if classification.target_keywords:
+                for keyword in classification.target_keywords:
+                    if keyword in available_keywords:
+                        keyword_overview = analytics_search_engine.get_keyword_overview(keyword, collection_ids)
+                        if keyword_overview.get('found'):
+                            analytics_insights[keyword] = keyword_overview
+        
+            # Generate response appropriate to the search type
+            llm_response = self._generate_intelligent_answer(
+                question, discussions, analytics_insights, classification
+            )
+        
+            # Format sources
+            sources = self._format_traditional_sources(search_results, discussions)
+        
+            return RAGResponse(
+                answer=llm_response['content'],
+                sources=sources,
+                analytics_insights=analytics_insights,
+                search_type=search_type,  # IMPORTANT: Return the actual search type used
+                search_results_count=len(search_results),
+                discussions_used=len(discussions),
+                tokens_used=llm_response['tokens_used'],
+                cost_estimate=llm_response['cost_estimate'],
+                query_classification={
+                    'type': classification.query_type,
+                    'confidence': classification.confidence,
+                    'approach': f'explicit_{search_type}',
+                    'keywords_extracted': classification.target_keywords
+                },
+                fallback_info={'method': f'explicit_{search_type}_selection'}
+            )
+        
+        except Exception as e:
+            # If the requested search type fails, fall back to keyword search
+            # but still return the originally requested search_type in the response
+            search_engine = SearchEngineFactory.create_engine('keyword')
+            search_results = search_engine.search(question, collection_ids, limit=max_results)
+        
+            discussions = self._build_discussion_contexts_from_traditional(search_results)
+        
+            llm_response = self._generate_intelligent_answer(
+                question, discussions, {}, classification
+            )
+        
+            sources = self._format_traditional_sources(search_results, discussions)
+        
+            return RAGResponse(
+                answer=llm_response['content'],
+                sources=sources,
+                analytics_insights={},
+                search_type=search_type,  # Still return the requested type
+                search_results_count=len(search_results),
+                discussions_used=len(discussions),
+                tokens_used=llm_response['tokens_used'],
+                cost_estimate=llm_response['cost_estimate'],
+                query_classification={
+                    'type': classification.query_type,
+                    'confidence': classification.confidence,
+                    'approach': f'explicit_{search_type}_with_fallback',
+                    'keywords_extracted': classification.target_keywords
+                },
+                fallback_info={
+                    'method': f'explicit_{search_type}_selection',
+                    'fallback_reason': f'Failed to use {search_type}, fell back to keyword search: {str(e)}'
+                }
             )
     
     def _handle_analytics_query_enhanced(self, question: str, classification, 

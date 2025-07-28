@@ -32,22 +32,6 @@ const QuestionMessage: React.FC<QuestionMessageProps> = ({
     }
   };
 
-  // Get search type display label
-  const getSearchTypeLabel = (type: string) => {
-    switch (type) {
-      case 'keyword':
-        return 'Keyword';
-      case 'local_semantic':
-        return 'Semantic (Local)';
-      case 'cloud_semantic':
-        return 'Semantic (Cloud)';
-      case 'analytics_driven':
-        return 'Analytics';
-      default:
-        return 'Auto';
-    }
-  };
-
   return (
     <div className="mb-4">
       {/* Question Bubble */}
@@ -59,13 +43,6 @@ const QuestionMessage: React.FC<QuestionMessageProps> = ({
             </p>
           </div>
           
-          {/* Metadata */}
-          <div className="flex items-center justify-end mt-1 space-x-2 text-xs text-text-tertiary">
-            <span className="px-2 py-0.5 bg-panel rounded-sm border border-border-primary">
-              {getSearchTypeLabel(searchType)}
-            </span>
-            <span>{formatTime(timestamp)}</span>
-          </div>
         </div>
       </div>
     </div>

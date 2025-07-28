@@ -27,14 +27,18 @@ const MessageList: React.FC<MessageListProps> = ({
   isLoading
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom when new messages arrive
+  
+  // Modified to only scroll within the chat container, not the entire page
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'nearest',  // Don't scroll the page, just the nearest scrollable container
+      inline: 'nearest'
+    });
   }, [messages, isLoading]);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-3">
       {/* Empty State */}
       {messages.length === 0 && !isLoading && (
         <div className="text-center py-8">
@@ -78,10 +82,8 @@ const MessageList: React.FC<MessageListProps> = ({
             <div className="max-w-[85%]">
               <div className="flex items-start space-x-3">
                 {/* AI Avatar */}
-                <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-                  </svg>
+                <div className="flex-shrink-0 w-6 h-6 bg-text-primary rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold text-white">AI</span>
                 </div>
 
                 <div className="flex-1">
