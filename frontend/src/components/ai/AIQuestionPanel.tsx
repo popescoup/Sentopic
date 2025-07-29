@@ -79,11 +79,11 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
   };
 
   // Handle semantic search modal confirmation
-  const handleSemanticConfirm = async (searchType: SearchType) => { // Updated type
+  const handleSemanticConfirm = async (searchType: SearchType) => {
     try {
       await startIndexing(searchType === 'cloud_semantic' ? 'openai' : 'local');
       setSearchType(searchType);
-      setShowSemanticModal(false);
+      // Don't close modal here - let the modal handle its own closing
       setPendingSearchType(null);
     } catch (error) {
       console.error('Failed to start indexing:', error);
@@ -216,7 +216,9 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
         onConfirm={() => handleSemanticConfirm(pendingSearchType!)}
         searchType={pendingSearchType || 'local_semantic'}
         projectId={projectId}
-      />
+        indexingStatus={indexingStatus}
+        isIndexingInProgress={isIndexingInProgress}
+        />
     </>
   );
 };
