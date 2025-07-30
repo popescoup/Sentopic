@@ -41,6 +41,9 @@ export const useSearchType = (projectId: string): UseSearchTypeReturn => {
     retry: 1,
   });
 
+  console.log('🔍 useSearchType - indexingStatus from API:', indexingStatus);
+  console.log('🔍 useSearchType - isIndexingInProgress:', isIndexingInProgress);
+
   // Update indexing progress based on status
   useEffect(() => {
     if (indexingStatus?.current_indexing) {

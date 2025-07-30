@@ -458,37 +458,7 @@ class ChatAgent:
         available_search_types = rag_engine.get_available_search_types(collection_ids)
         available_methods = [name for name, info in available_search_types.items() if info['available']]
         
-        return f"""👋 Welcome to your **Intelligent Chat Session**!
-
-**Analysis:** {analysis_session.name}
-**Keywords:** {keywords_text}
-**Total Mentions:** {analysis_session.total_mentions:,}
-**Avg Sentiment:** {analysis_session.avg_sentiment:+.3f}
-**Top Keywords:** {top_keywords_text}
-
-🧠 **Enhanced Natural Language Understanding:** I now understand questions like:
-• "What can people tell me about how people discuss {keywords[0] if keywords else 'time'}?"
-• "Why is {keywords[0] if keywords else 'time'} mentioned so frequently?"
-• "Show me negative discussions about {keywords[1] if len(keywords) > 1 else 'garden'}"
-• "What are the main themes around {keywords[0] if keywords else 'time'}?"
-• "How do people feel about {keywords[1] if len(keywords) > 1 else 'space'}?"
-
-🔍 **Available Search Methods:** {', '.join(available_methods)}
-
-**Enhanced Features:**
-✅ **Smart Keyword Extraction** - I find the main topic from natural questions
-✅ **Intelligent Query Routing** - Analytics data + discussion examples automatically
-✅ **Graceful Fallbacks** - If a keyword isn't in your analysis, I'll still find discussions
-✅ **Natural Conversation** - Ask questions however feels natural to you
-
-**Example Questions You Can Ask:**
-• "What do people think about Harvard's admissions process?"
-• "How are people discussing climate change solutions?"
-• "Show me complaints about customer service"
-• "What positive things do people say about electric vehicles?"
-• "Why do people mention privacy so often?"
-
-Just ask naturally - I'll understand what you're looking for! 🚀💬"""
+        return f"""👋 Your AI Assistant is ready! I can analyze discussions, extract insights, and answer questions about your data using natural language. What would you like to explore?"""
     
     def _enhance_response_with_chat_context(self, rag_response, user_message: str, 
                                           chat_session_id: str):

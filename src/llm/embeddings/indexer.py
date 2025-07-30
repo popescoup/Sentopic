@@ -45,20 +45,21 @@ class ContentIndexer:
             raise ValueError(f"Analysis session not found: {analysis_session_id}")
         
         collection_ids = json.loads(analysis_session.collection_ids)
+
+        posts, comments = self._get_collection_content(collection_ids)
+        total_content = len(posts) + len(comments)
         
         # Check if already indexed
         if not force_reindex:
             existing_count = self._get_existing_embeddings_count(collection_ids, provider_type)
-            if existing_count > 0:
+            total_content = len(posts) + len(comments)  # We calculate this just below anyway
+            if existing_count >= total_content and total_content > 0:  # ← FIX: All content indexed = skip
                 return {
                     'status': 'already_indexed',
-                    'message': f'Content already indexed with {provider_type} provider ({existing_count} embeddings exist)',
+                    'message': f'Content already indexed with {provider_type} provider ({existing_count}/{total_content} embeddings exist)',
                     'embeddings_generated': 0,
                     'cost_estimate': 0.0
                 }
-        
-        # Get all content from collections
-        posts, comments = self._get_collection_content(collection_ids)
         
         total_content_items = len(posts) + len(comments)
         if total_content_items == 0:
@@ -229,10 +230,10 @@ class ContentIndexer:
     def get_indexing_status(self, analysis_session_id: str) -> Dict[str, Any]:
         """
         Get indexing status for an analysis session.
-        
+    
         Args:
             analysis_session_id: Analysis session ID
-        
+    
         Returns:
             Dictionary with indexing status
         """
@@ -240,39 +241,62 @@ class ContentIndexer:
         analysis_session = db.get_analysis_session(analysis_session_id)
         if not analysis_session:
             raise ValueError(f"Analysis session not found: {analysis_session_id}")
-        
+    
         collection_ids = json.loads(analysis_session.collection_ids)
-        
+    
         # Get embedding statistics
         stats = vector_storage.get_embedding_stats(collection_ids)
-        
+    
         # Count content items
         session = db.get_session()
         try:
             total_posts = session.query(Post).filter(
                 Post.collection_id.in_(collection_ids)
             ).count()
-            
+        
             total_comments = session.query(Comment).filter(
                 Comment.collection_id.in_(collection_ids)
             ).count()
-            
+        
             total_content = total_posts + total_comments
-            
+        
         finally:
             session.close()
-        
+    
         # Analyze indexing status
         local_indexed = 0
         cloud_indexed = 0
-        
+    
         for model_info in stats.get('by_model', []):
             if model_info.get('provider') == 'local':
                 local_indexed = model_info.get('count', 0)
             elif model_info.get('provider') == 'openai':
                 cloud_indexed = model_info.get('count', 0)
-        
-        return {
+    
+        # ADD DEBUG LOGGING HERE
+        print(f"🔍 FINAL STATUS CALCULATION FOR PROJECT: {analysis_session_id}")
+        print(f"   Collections: {collection_ids}")
+        print(f"   Total content: {total_content}")
+        print(f"   Local indexed: {local_indexed}")  
+        print(f"   Cloud indexed: {cloud_indexed}")
+        print(f"   Raw embedding stats: {stats}")
+    
+        # Calculate status
+        local_status = 'complete' if local_indexed >= total_content else 'partial' if local_indexed > 0 else 'none'
+        cloud_status = 'complete' if cloud_indexed >= total_content else 'partial' if cloud_indexed > 0 else 'none'
+    
+        print(f"   Calculated local status: {local_status}")
+        print(f"   Calculated cloud status: {cloud_status}")
+    
+        search_capabilities = {
+            'keyword': True,
+            'local_semantic': local_status == 'complete',  # ← FIX: Only if complete
+            'cloud_semantic': cloud_status == 'complete'   # ← FIX: Only if complete
+        }
+    
+        print(f"   Search capabilities: {search_capabilities}")
+    
+        result = {
             'total_content_items': total_content,
             'total_posts': total_posts,
             'total_comments': total_comments,
@@ -280,8 +304,8 @@ class ContentIndexer:
             'local_indexed': local_indexed,
             'cloud_indexed': cloud_indexed,
             'indexing_status': {
-                'local': 'complete' if local_indexed >= total_content else 'partial' if local_indexed > 0 else 'none',
-                'cloud': 'complete' if cloud_indexed >= total_content else 'partial' if cloud_indexed > 0 else 'none'
+                'local': local_status,
+                'cloud': cloud_status
             },
             'search_capabilities': {
                 'keyword': True,
@@ -289,6 +313,11 @@ class ContentIndexer:
                 'cloud_semantic': cloud_indexed > 0
             }
         }
+    
+        print(f"   Final API response: {result}")
+        print("🔍 END STATUS CALCULATION")
+    
+        return result
     
     def delete_embeddings(self, analysis_session_id: str, provider_type: Optional[str] = None) -> Dict[str, Any]:
         """
