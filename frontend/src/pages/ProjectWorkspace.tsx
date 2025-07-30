@@ -12,6 +12,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { LoadingState } from '@/components/layout/LoadingSpinner';
 import Card, { InsightCard } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
 import { DiscussionSnippet } from '@/components/discussions';
 import AIQuestionPanel from '@/components/ai/AIQuestionPanel';
 import { api, getErrorMessage } from '@/api/client';
@@ -20,6 +21,7 @@ import { getInsightData } from '@/utils/insightProcessing';
 const ProjectWorkspace: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = React.useState(false);
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project-results', projectId],
     queryFn: () => api.getAnalysisResults(projectId!),
@@ -140,12 +142,12 @@ const ProjectWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* Key Findings Section */}
+      {/* Analysis Summary Section */}
       {project.summary && (
         <Card className="mb-8 bg-gradient-panel">
           <div className="mb-4">
             <h2 className="font-section-header text-text-primary mb-2">
-              Key Findings
+              Analysis Summary
             </h2>
             <p className="font-body text-text-secondary">
               {project.summary.summary_preview}
@@ -154,7 +156,7 @@ const ProjectWorkspace: React.FC = () => {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => handleComingSoon('Full AI Summary')}
+            onClick={() => setIsSummaryModalOpen(true)}
           >
             View Full Summary →
           </Button>
@@ -454,9 +456,25 @@ const ProjectWorkspace: React.FC = () => {
             </ul>
           </div>
         </div>
-      </div>
-    </MainLayout>
-  );
+        </div>
+
+{/* AI Summary Modal */}
+{project.summary && (
+        <Modal
+          isOpen={isSummaryModalOpen}
+          onClose={() => setIsSummaryModalOpen(false)}
+          title="AI Analysis Summary"
+          size="lg"
+        >
+          <div className="max-h-96 overflow-y-auto">
+            <div className="font-body text-text-primary leading-relaxed whitespace-pre-wrap">
+              {project.summary.summary_text}
+            </div>
+          </div>
+        </Modal>
+      )}
+</MainLayout>
+);
 };
 
 export default ProjectWorkspace;
