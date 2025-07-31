@@ -718,3 +718,90 @@ class APIError(BaseModel):
                 "details": {"field": "name", "value": ""}
             }
         }
+
+# ============================================================================
+# CONTEXT FILTERING MODELS (NEW)
+# ============================================================================
+
+class ContextFilters(BaseModel):
+    """Request filters for context exploration."""
+    primary_keyword: str = Field(..., description="Primary keyword to filter by")
+    secondary_keyword: Optional[str] = Field(None, description="Secondary keyword for co-occurrence filtering")
+    min_sentiment: float = Field(-1.0, description="Minimum sentiment score", ge=-1.0, le=1.0)
+    max_sentiment: float = Field(1.0, description="Maximum sentiment score", ge=-1.0, le=1.0)
+    sort_by: str = Field("newest", description="Sort order: newest, oldest, sentiment_asc, sentiment_desc")
+    
+    @validator('max_sentiment')
+    def validate_sentiment_range(cls, v, values):
+        """Ensure max_sentiment >= min_sentiment."""
+        if 'min_sentiment' in values and v < values['min_sentiment']:
+            raise ValueError("max_sentiment must be greater than or equal to min_sentiment")
+        return v
+    
+    @validator('sort_by')
+    def validate_sort_by(cls, v):
+        """Validate sort_by options."""
+        valid_options = ["newest", "oldest", "sentiment_asc", "sentiment_desc"]
+        if v not in valid_options:
+            raise ValueError(f"sort_by must be one of: {valid_options}")
+        return v
+
+class ContextInstance(BaseModel):
+    """Individual context instance with full content."""
+    content_type: str = Field(..., description="Type of content: post or comment")
+    content_reddit_id: str = Field(..., description="Reddit ID of the content")
+    collection_id: str = Field(..., description="Collection ID the content belongs to")
+    full_content: str = Field(..., description="Full post/comment content")
+    title: Optional[str] = Field(None, description="Post title (only for posts)")
+    sentiment_score: float = Field(..., description="Sentiment score for this keyword mention")
+    created_utc: int = Field(..., description="Unix timestamp when content was created")
+    author: Optional[str] = Field(None, description="Content author")
+    score: int = Field(0, description="Reddit score (upvotes - downvotes)")
+
+class PaginationInfo(BaseModel):
+    """Pagination metadata."""
+    page: int = Field(..., description="Current page number")
+    limit: int = Field(..., description="Items per page")
+    total_count: int = Field(..., description="Total number of matching contexts")
+    total_pages: int = Field(..., description="Total number of pages")
+    has_next: bool = Field(..., description="Whether there are more pages")
+    has_previous: bool = Field(..., description="Whether there are previous pages")
+
+class FilteredContextsResponse(BaseModel):
+    """Response for filtered context exploration."""
+    contexts: List[ContextInstance] = Field(..., description="List of matching context instances")
+    pagination: PaginationInfo = Field(..., description="Pagination information")
+    filters_applied: Dict[str, Any] = Field(..., description="Filters that were applied")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "contexts": [
+                    {
+                        "content_type": "post",
+                        "content_reddit_id": "abc123",
+                        "collection_id": "collection-xyz",
+                        "full_content": "My iPhone battery drains so fast lately...",
+                        "title": "Battery issues getting worse",
+                        "sentiment_score": -0.65,
+                        "created_utc": 1640995200,
+                        "author": "user123",
+                        "score": 45
+                    }
+                ],
+                "pagination": {
+                    "page": 1,
+                    "limit": 20,
+                    "total_count": 156,
+                    "total_pages": 8,
+                    "has_next": True,
+                    "has_previous": False
+                },
+                "filters_applied": {
+                    "primary_keyword": "battery",
+                    "secondary_keyword": "drain",
+                    "sentiment_range": [-1.0, 1.0],
+                    "sort_by": "newest"
+                }
+            }
+        }

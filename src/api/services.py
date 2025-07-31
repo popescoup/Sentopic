@@ -28,7 +28,8 @@ from .models import (
     ChatHistoryResponse, ChatMessageCreate, KeywordSuggestionRequest,
     KeywordSuggestionResponse, AIStatusResponse, CollectionCreateRequest,
     CollectionResponse, CollectionBatchResponse, CollectionBatchStatusResponse,
-    CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse
+    CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse,
+    FilteredContextsResponse, ContextInstance, PaginationInfo
 )
 
 # Temporary in-memory storage for project preferences
@@ -790,6 +791,175 @@ Return only the keywords, separated by commas, with no additional explanation.""
         
         # Minimum 1 minute, maximum 30 minutes for UI purposes
         return max(1, min(30, int(estimated_minutes)))
+    
+    # ============================================================================
+    # CONTEXT FILTERING METHODS (NEW)
+    # ============================================================================
+    
+    @staticmethod
+    async def get_filtered_contexts(project_id: str, filters: Dict[str, Any]) -> FilteredContextsResponse:
+        """
+        Get filtered and paginated context instances for a project.
+        
+        Args:
+            project_id: Project ID to get contexts for
+            filters: Dictionary with filtering parameters
+            
+        Returns:
+            FilteredContextsResponse with contexts and pagination info
+        """
+        try:
+            # Validate project exists and is completed
+            analysis_session = db.get_analysis_session(project_id)
+            if not analysis_session:
+                raise ValueError(f"Project not found: {project_id}")
+            
+            if analysis_session.status != 'completed':
+                raise ValueError(f"Project analysis not completed. Current status: {analysis_session.status}")
+            
+            # Extract filter parameters
+            primary_keyword = filters['primary_keyword']
+            secondary_keyword = filters.get('secondary_keyword')
+            min_sentiment = filters['min_sentiment']
+            max_sentiment = filters['max_sentiment']
+            sort_by = filters['sort_by']
+            page = filters['page']
+            limit = filters['limit']
+            
+            # Calculate offset for pagination
+            offset = (page - 1) * limit
+            
+            # Build base query for keyword mentions
+            session = db.get_session()
+            try:
+                from src.database import KeywordMention, Post, Comment
+                
+                # Start with base query for primary keyword
+                base_query = session.query(KeywordMention).filter(
+                    KeywordMention.analysis_session_id == project_id,
+                    KeywordMention.keyword == primary_keyword,
+                    KeywordMention.sentiment_score >= min_sentiment,
+                    KeywordMention.sentiment_score <= max_sentiment
+                )
+                
+                # Add co-occurrence filtering if secondary keyword specified
+                if secondary_keyword:
+                    # Get content IDs that have the secondary keyword
+                    secondary_content = session.query(
+                        KeywordMention.content_reddit_id,
+                        KeywordMention.collection_id
+                    ).filter(
+                        KeywordMention.analysis_session_id == project_id,
+                        KeywordMention.keyword == secondary_keyword
+                    ).distinct().subquery()
+    
+                    # Filter primary keyword results to only include content that also has secondary keyword
+                    base_query = base_query.join(
+                        secondary_content,
+                        (KeywordMention.content_reddit_id == secondary_content.c.content_reddit_id) &
+                        (KeywordMention.collection_id == secondary_content.c.collection_id)
+                    )
+                
+                # Add sorting
+                if sort_by == "newest":
+                    base_query = base_query.order_by(KeywordMention.created_utc.desc())
+                elif sort_by == "oldest":
+                    base_query = base_query.order_by(KeywordMention.created_utc.asc())
+                elif sort_by == "sentiment_asc":
+                    base_query = base_query.order_by(KeywordMention.sentiment_score.asc(), KeywordMention.created_utc.desc())
+                elif sort_by == "sentiment_desc":
+                    base_query = base_query.order_by(KeywordMention.sentiment_score.desc(), KeywordMention.created_utc.desc())
+                
+                # Get total count for pagination
+                total_count = base_query.count()
+                
+                # Get the actual mentions with pagination
+                mentions = base_query.offset(offset).limit(limit).all()
+                
+                # Fetch full content for each mention
+                contexts = []
+                for mention in mentions:
+                    if mention.content_type == 'post':
+                        content_obj = session.query(Post).filter(
+                            Post.reddit_id == mention.content_reddit_id,
+                            Post.collection_id == mention.collection_id
+                        ).first()
+                        
+                        if content_obj:
+                            full_content = content_obj.title
+                            if content_obj.content:
+                                full_content += ' ' + content_obj.content
+                            
+                            context = ContextInstance(
+                                content_type='post',
+                                content_reddit_id=mention.content_reddit_id,
+                                collection_id=mention.collection_id,
+                                full_content=full_content,
+                                title=content_obj.title,
+                                sentiment_score=mention.sentiment_score,
+                                created_utc=mention.created_utc,
+                                author=content_obj.author,
+                                score=content_obj.score or 0
+                            )
+                            contexts.append(context)
+                    
+                    else:  # comment
+                        content_obj = session.query(Comment).filter(
+                            Comment.reddit_id == mention.content_reddit_id,
+                            Comment.collection_id == mention.collection_id
+                        ).first()
+                        
+                        if content_obj:
+                            context = ContextInstance(
+                                content_type='comment',
+                                content_reddit_id=mention.content_reddit_id,
+                                collection_id=mention.collection_id,
+                                full_content=content_obj.content,
+                                title=None,
+                                sentiment_score=mention.sentiment_score,
+                                created_utc=mention.created_utc,
+                                author=content_obj.author,
+                                score=content_obj.score or 0
+                            )
+                            contexts.append(context)
+                
+                # Calculate pagination info
+                total_pages = (total_count + limit - 1) // limit  # Ceiling division
+                has_next = page < total_pages
+                has_previous = page > 1
+                
+                pagination = PaginationInfo(
+                    page=page,
+                    limit=limit,
+                    total_count=total_count,
+                    total_pages=total_pages,
+                    has_next=has_next,
+                    has_previous=has_previous
+                )
+                
+                # Prepare filters applied info
+                filters_applied = {
+                    "primary_keyword": primary_keyword,
+                    "secondary_keyword": secondary_keyword,
+                    "sentiment_range": [min_sentiment, max_sentiment],
+                    "sort_by": sort_by
+                }
+                
+                return FilteredContextsResponse(
+                    contexts=contexts,
+                    pagination=pagination,
+                    filters_applied=filters_applied
+                )
+                
+            finally:
+                session.close()
+                
+        except ValueError as e:
+            # Re-raise validation errors
+            raise e
+        except Exception as e:
+            print(f"Error in ProjectService.get_filtered_contexts: {e}")
+            raise ValueError(f"Failed to get filtered contexts: {str(e)}")
     
     # ============================================================================
     # PRIVATE HELPER METHODS (EXISTING + ENHANCEMENTS)

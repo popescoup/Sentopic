@@ -11,7 +11,8 @@ from src.api.models import (
     ChatMessageCreate, ChatResponse, ChatSessionListResponse, ChatHistoryResponse,
     KeywordSuggestionRequest, KeywordSuggestionResponse, AIStatusResponse,
     CollectionCreateRequest, CollectionBatchResponse, CollectionBatchStatusResponse,
-    CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse
+    CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse,
+    FilteredContextsResponse
 )
 
 # Initialize FastAPI application with enhanced documentation
@@ -843,6 +844,109 @@ async def get_indexing_status(project_id: str) -> IndexingStatusResponse:
             detail={
                 "error": "server_error",
                 "message": "An unexpected error occurred while retrieving indexing status",
+                "details": {"project_id": project_id}
+            }
+        )
+    
+@app.get("/projects/{project_id}/contexts/filtered",
+         response_model=FilteredContextsResponse,
+         responses={
+             200: {"description": "Filtered contexts retrieved successfully"},
+             404: {"model": APIError, "description": "Project not found"},
+             400: {"model": APIError, "description": "Invalid filter parameters"},
+             500: {"model": APIError, "description": "Server error"}
+         },
+         tags=["analysis"],
+         summary="Get Filtered Contexts",
+         description="Get filtered and paginated context instances for a project")
+async def get_filtered_contexts(
+    project_id: str,
+    primary_keyword: str = Query(..., description="Primary keyword to filter by"),
+    secondary_keyword: Optional[str] = Query(None, description="Secondary keyword for co-occurrence filtering"),
+    min_sentiment: float = Query(-1.0, description="Minimum sentiment score", ge=-1.0, le=1.0),
+    max_sentiment: float = Query(1.0, description="Maximum sentiment score", ge=-1.0, le=1.0),
+    sort_by: str = Query("newest", description="Sort order: newest, oldest, sentiment_asc, sentiment_desc"),
+    page: int = Query(1, description="Page number", ge=1),
+    limit: int = Query(20, description="Items per page", ge=1, le=100)
+) -> FilteredContextsResponse:
+    """
+    **Get Filtered Context Instances**
+    
+    Retrieve filtered and paginated context instances where keywords appear in your project data.
+    Supports filtering by primary keyword, co-occurrence with secondary keywords, sentiment ranges,
+    and multiple sorting options.
+    
+    **Filtering Options**:
+    * **Primary Keyword**: Required - filter contexts containing this keyword
+    * **Secondary Keyword**: Optional - only show contexts where both keywords appear in the same post/comment
+    * **Sentiment Range**: Filter by sentiment score range (-1.0 to +1.0)
+    * **Sorting**: newest (default), oldest, sentiment_asc, sentiment_desc
+    
+    **Pagination**: Standard page/limit pagination with metadata about total results
+    
+    **Use Case**: Powers the Context Explorer modal with advanced filtering and navigation capabilities.
+    Allows users to drill down into specific keyword mentions and explore actual Reddit discussions
+    that contain their keywords of interest.
+    
+    **Path Parameters**:
+    * **project_id**: Unique identifier of the project
+    
+    **Query Parameters**:
+    * **primary_keyword**: Main keyword to search for (required)
+    * **secondary_keyword**: Additional keyword for co-occurrence filtering (optional)
+    * **min_sentiment/max_sentiment**: Sentiment score range filtering
+    * **sort_by**: Sorting method (newest/oldest/sentiment_asc/sentiment_desc)
+    * **page**: Page number for pagination (starts at 1)
+    * **limit**: Number of results per page (1-100, default 20)
+    
+    **Response**: Filtered contexts with full content, pagination info, and applied filters
+    """
+    try:
+        # Create filters object
+        filters = {
+            'primary_keyword': primary_keyword,
+            'secondary_keyword': secondary_keyword,
+            'min_sentiment': min_sentiment,
+            'max_sentiment': max_sentiment,
+            'sort_by': sort_by,
+            'page': page,
+            'limit': limit
+        }
+        
+        # Get filtered contexts using service layer
+        result = await ProjectService.get_filtered_contexts(project_id, filters)
+        
+        return result
+        
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "project_not_found",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "filter_error",
+                    "message": error_message,
+                    "details": {"project_id": project_id, "filters": filters}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in get_filtered_contexts endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while retrieving filtered contexts",
                 "details": {"project_id": project_id}
             }
         )

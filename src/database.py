@@ -210,6 +210,7 @@ class ChatMessage(Base):
 Index('idx_keyword_mentions_session', KeywordMention.analysis_session_id)
 Index('idx_keyword_mentions_keyword', KeywordMention.keyword)
 Index('idx_keyword_mentions_date', KeywordMention.created_utc)
+Index('idx_keyword_mentions_filtering', KeywordMention.analysis_session_id, KeywordMention.keyword, KeywordMention.sentiment_score, KeywordMention.created_utc)
 Index('idx_keyword_stats_session', KeywordStat.analysis_session_id)
 Index('idx_cooccurrences_session', KeywordCooccurrence.analysis_session_id)
 Index('idx_chat_messages_session', ChatMessage.chat_session_id)
