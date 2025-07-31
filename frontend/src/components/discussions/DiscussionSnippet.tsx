@@ -7,7 +7,7 @@
 import React from 'react';
 import { cleanRedditMarkdown } from '@/utils/textProcessing';
 import { createOptimalWindow } from '@/utils/textWindowing';
-import { highlightKeywords } from '@/utils/keywordHighlighting';
+import { highlightKeywords, highlightKeywordsByPosition } from '@/utils/keywordHighlighting';
 import { formatDate, formatDateTime } from '@/utils/dateFormatting'; // Import both options
 import type { ContextInstance, CollectionMetadata } from '@/types/api';
 
@@ -32,42 +32,63 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
   const collection = collectionsMetadata.find(c => c.id === context.collection_id);
   const subreddit = collection?.subreddit || 'unknown';
 
-  // Format the discussion text with new pipeline: clean → window → highlight
-  const cleanedText = cleanRedditMarkdown(context.context);
+  // Fuzzy position matching approach
+  const originalText = context.context;
+  const cleanedText = cleanRedditMarkdown(originalText);
   const textWindow = createOptimalWindow(cleanedText, keywords, { maxLength: 280 });
-  // Create sentiment-based highlight classes
-const getSentimentHighlightClasses = (score: number) => {
-    if (score > 0.1) {
-      return 'bg-green-200 text-green-800 px-1 py-0.5 rounded font-medium border border-green-300';
-    } else if (score < -0.1) {
-      return 'bg-red-200 text-red-800 px-1 py-0.5 rounded font-medium border border-red-300';
-    } else {
-      return 'bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-medium border border-gray-300';
-    }
-  };
   
-  const displayText = highlightKeywords(textWindow.text, keywords, {
-    matchWordVariations: true, // Enable word variations for better matching
-    highlightClasses: getSentimentHighlightClasses(context.sentiment_score)
-  });
+  // Apply fuzzy position-based highlighting with sentiment colors
+  let displayText: string;
+  
+  if (context.keyword_mentions && context.keyword_mentions.length > 0) {
+    const adjustedKeywordMentions = context.keyword_mentions.map(mention => {
+      // Start with the calculated position
+      let basePosition = mention.position_in_content - textWindow.originalStart;
+      
+      // Skip if way out of bounds
+      if (basePosition < -10 || basePosition > textWindow.text.length + 10) {
+        return null;
+      }
+      
+      const keyword = mention.keyword.toLowerCase();
+      const searchRadius = 5; // 5 character window as requested
+      
+      // Search within the fuzzy window around the base position
+      const searchStart = Math.max(0, basePosition - searchRadius);
+      const searchEnd = Math.min(textWindow.text.length - keyword.length + 1, basePosition + searchRadius + 1);
+      
+      for (let pos = searchStart; pos < searchEnd; pos++) {
+        const textAtPosition = textWindow.text.substring(pos, pos + keyword.length).toLowerCase();
+        if (textAtPosition === keyword) {
+          // Found exact match! Use this position
+          return {
+            ...mention,
+            position: pos
+          };
+        }
+      }
+      
+      // No exact match found within the fuzzy window
+      return null;
+    }).filter((mention): mention is NonNullable<typeof mention> => mention !== null);
+    
+    if (adjustedKeywordMentions.length > 0) {
+      displayText = highlightKeywordsByPosition(textWindow.text, adjustedKeywordMentions);
+    } else {
+      // No fuzzy matches found, use original text without highlighting
+      displayText = textWindow.text;
+    }
+  } else {
+    // No keyword mention data, use original text
+    displayText = textWindow.text;
+  }
   
   // Determine if we should show windowing indicator
   const showWindowIndicator = textWindow.isWindowed && textWindow.windowType === 'middle';
   
   // CHANGED: Format the timestamp to show actual date instead of relative time
-  // Option 1: Just the date (e.g., "Oct 15, 2024")
   const displayDate = formatDate(context.created_utc);
-  
-  // Option 2: Date + time (uncomment to use instead)
-  // const displayDate = formatDateTime(context.created_utc);
-  
-  // Option 3: Custom format with more control
-  // const displayDate = formatDate(context.created_utc, {
-  //   year: 'numeric',
-  //   month: 'short',
-  //   day: 'numeric',
-  //   weekday: 'short'  // Adds day of week like "Mon, Oct 15, 2024"
-  // });
+
   
   // Determine sentiment styling
   const getSentimentStyling = (score: number) => {
@@ -138,12 +159,12 @@ const getSentimentHighlightClasses = (score: number) => {
       {/* Footer with technical details */}
       <div className="flex items-center justify-between pt-3 border-t border-border-primary">
         <div className="flex items-center space-x-4">
-          <span className="font-small text-text-tertiary">
-            Sentiment Score: 
+        <span className="font-small text-text-tertiary">
+          {context.keyword_mentions && context.keyword_mentions.length > 1 ? 'Avg. Sentiment Score' : 'Sentiment Score'}: 
             <span className={`ml-1 font-technical ${sentimentStyle.color}`}>
-              {context.sentiment_score > 0 ? '+' : ''}{context.sentiment_score.toFixed(3)}
-            </span>
+            {context.sentiment_score > 0 ? '+' : ''}{context.sentiment_score.toFixed(3)}
           </span>
+        </span>
         </div>
         
         {/* Link indicator for Phase 5 context explorer */}

@@ -272,6 +272,12 @@ export interface TrendSummary {
   total_mentions: number;
 }
 
+export interface KeywordMentionDetail {
+  keyword: string;
+  position_in_content: number;
+  sentiment_score: number;
+}
+
 export interface ContextInstance {
   content_type: 'post' | 'comment';
   content_reddit_id: string;
@@ -279,4 +285,5 @@ export interface ContextInstance {
   sentiment_score: number;
   created_utc: number;
   collection_id: string;
+  keyword_mentions: KeywordMentionDetail[];
 }

@@ -342,16 +342,9 @@ class AnalyticsEngine:
     
                 print(f"🔍 Trend summaries added to results: {len(results['trend_summaries'])}")
         
-            # Get sample contexts (5 most recent across all keywords)
+            # Get enhanced sample contexts (5 most recent with all keyword mentions)
             if keywords:
-                all_contexts = []
-                for keyword in keywords[:3]:  # Limit to top 3 keywords to avoid too many contexts
-                    contexts = self.get_context_instances(session_id, keyword, limit=2)
-                    all_contexts.extend(contexts.get('contexts', []))
-            
-                # Sort by created_utc descending and take top 5
-                all_contexts.sort(key=lambda x: x['created_utc'], reverse=True)
-                results['sample_contexts'] = all_contexts[:5]
+                results['sample_contexts'] = self.get_enhanced_sample_contexts(session_id, limit=5)
     
         return results
     
@@ -519,12 +512,12 @@ class AnalyticsEngine:
     def get_context_instances(self, session_id: str, keyword: str, limit: int = 50) -> Dict[str, Any]:
         """
         Get context instances where a keyword appears.
-        
+    
         Args:
             session_id: Session ID
             keyword: Keyword to get contexts for
             limit: Maximum number of instances to return
-        
+    
         Returns:
             Dictionary with context instances
         """
@@ -535,7 +528,7 @@ class AnalyticsEngine:
                 KeywordMention.analysis_session_id == session_id,
                 KeywordMention.keyword == keyword
             ).order_by(KeywordMention.created_utc.desc()).limit(limit).all()
-            
+        
             # Get actual content for each mention
             contexts = []
             for mention in mentions:
@@ -545,7 +538,7 @@ class AnalyticsEngine:
                         Post.reddit_id == mention.content_reddit_id,
                         Post.collection_id == mention.collection_id
                     ).first()
-                    
+                
                     if content_obj:
                         full_text = content_obj.title
                         if content_obj.content:
@@ -555,16 +548,16 @@ class AnalyticsEngine:
                         Comment.reddit_id == mention.content_reddit_id,
                         Comment.collection_id == mention.collection_id
                     ).first()
-                    
+                
                     if content_obj:
                         full_text = content_obj.content
-                
+            
                 if content_obj and full_text:
                     # Extract context around the keyword
                     context = sentiment_analyzer.extract_context_window(
                         full_text, keyword, mention.position_in_content, 30  # Larger window for context view
                     )
-                    
+                
                     contexts.append({
                         'content_type': mention.content_type,
                         'content_reddit_id': mention.content_reddit_id,
@@ -573,13 +566,102 @@ class AnalyticsEngine:
                         'created_utc': mention.created_utc,
                         'collection_id': mention.collection_id
                     })
-            
+        
             return {
                 'keyword': keyword,
                 'total_contexts': len(contexts),
                 'contexts': contexts
             }
+    
+        finally:
+            session.close()
+
+    def get_enhanced_sample_contexts(self, session_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Get sample contexts with all keyword mentions for preview display.
+    
+        Args:
+            session_id: Session ID
+            limit: Maximum number of contexts to return
+    
+        Returns:
+            List of enhanced context instances with all keyword mentions
+        """
+        session = db.get_session()
+        try:
+            # Get all keyword mentions ordered by recency
+            all_mentions = session.query(KeywordMention).filter(
+                KeywordMention.analysis_session_id == session_id
+            ).order_by(KeywordMention.created_utc.desc()).all()
         
+            # Group mentions by content (same reddit_id + collection_id)
+            content_groups = defaultdict(list)
+            for mention in all_mentions:
+                content_key = (mention.content_reddit_id, mention.collection_id, mention.content_type)
+                content_groups[content_key].append(mention)
+        
+            # Get the most recent content pieces
+            recent_content_keys = list(content_groups.keys())[:limit * 2]  # Get extra to ensure we have enough after filtering
+        
+            enhanced_contexts = []
+            for content_key in recent_content_keys:
+                if len(enhanced_contexts) >= limit:
+                    break
+                
+                content_reddit_id, collection_id, content_type = content_key
+                mentions_for_content = content_groups[content_key]
+            
+                # Get the actual content
+                if content_type == 'post':
+                    content_obj = session.query(Post).filter(
+                        Post.reddit_id == content_reddit_id,
+                        Post.collection_id == collection_id
+                    ).first()
+                
+                    if content_obj:
+                        full_text = content_obj.title
+                        if content_obj.content:
+                            full_text += ' ' + content_obj.content
+                else:  # comment
+                    content_obj = session.query(Comment).filter(
+                        Comment.reddit_id == content_reddit_id,
+                        Comment.collection_id == collection_id
+                    ).first()
+                
+                    if content_obj:
+                        full_text = content_obj.content
+            
+                if content_obj and full_text:
+                    # Create enhanced context with all keyword mentions
+                    keyword_mentions = []
+                    sentiment_scores = []
+                
+                    for mention in mentions_for_content:
+                        keyword_mentions.append({
+                            'keyword': mention.keyword,
+                            'position_in_content': mention.position_in_content,
+                            'sentiment_score': mention.sentiment_score
+                        })
+                        sentiment_scores.append(mention.sentiment_score)
+                
+                    # Calculate average sentiment
+                    avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0.0
+                
+                    # Use the most recent mention for timestamp
+                    most_recent_mention = max(mentions_for_content, key=lambda m: m.created_utc)
+                
+                    enhanced_contexts.append({
+                        'content_type': content_type,
+                        'content_reddit_id': content_reddit_id,
+                        'collection_id': collection_id,
+                        'context': full_text,  # We'll handle windowing in the frontend
+                        'sentiment_score': avg_sentiment,
+                        'created_utc': most_recent_mention.created_utc,
+                        'keyword_mentions': keyword_mentions
+                    })
+        
+            return enhanced_contexts
+    
         finally:
             session.close()
     

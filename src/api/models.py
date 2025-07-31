@@ -746,17 +746,20 @@ class ContextFilters(BaseModel):
             raise ValueError(f"sort_by must be one of: {valid_options}")
         return v
 
+class KeywordMentionDetail(BaseModel):
+    """Individual keyword mention with position and sentiment."""
+    keyword: str = Field(..., description="The keyword that was found")
+    position_in_content: int = Field(..., description="Character position of keyword in content")
+    sentiment_score: float = Field(..., description="Sentiment score for this specific keyword mention")
+
 class ContextInstance(BaseModel):
-    """Individual context instance with full content."""
     content_type: str = Field(..., description="Type of content: post or comment")
     content_reddit_id: str = Field(..., description="Reddit ID of the content")
     collection_id: str = Field(..., description="Collection ID the content belongs to")
-    full_content: str = Field(..., description="Full post/comment content")
-    title: Optional[str] = Field(None, description="Post title (only for posts)")
-    sentiment_score: float = Field(..., description="Sentiment score for this keyword mention")
+    context: str = Field(..., description="Context text around keyword")
+    sentiment_score: float = Field(..., description="Average sentiment score across all keyword mentions")
     created_utc: int = Field(..., description="Unix timestamp when content was created")
-    author: Optional[str] = Field(None, description="Content author")
-    score: int = Field(0, description="Reddit score (upvotes - downvotes)")
+    keyword_mentions: List[KeywordMentionDetail] = Field(..., description="Individual keyword mentions with positions and sentiments")
 
 class PaginationInfo(BaseModel):
     """Pagination metadata."""

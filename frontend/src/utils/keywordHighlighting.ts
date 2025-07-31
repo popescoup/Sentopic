@@ -246,3 +246,74 @@ export const containsKeywords = (
 ): boolean => {
   return findFirstKeywordPosition(text, keywords, options) !== -1;
 };
+
+/**
+ * Interface for position-based keyword data
+ */
+export interface PositionBasedKeyword {
+  keyword: string;
+  position: number;
+  sentiment_score: number;
+}
+
+/**
+ * Apply highlighting based on exact positions and individual sentiment scores
+ * @param text - The original text
+ * @param positionKeywords - Array of keywords with positions and sentiment scores
+ * @param options - Highlighting options
+ * @returns HTML string with position-based highlighted keywords
+ */
+export const highlightKeywordsByPosition = (
+  text: string,
+  positionKeywords: PositionBasedKeyword[],
+  options: Partial<HighlightingOptions> = {}
+): string => {
+  if (!text || !positionKeywords || positionKeywords.length === 0) {
+    const opts = { ...DEFAULT_HIGHLIGHTING_OPTIONS, ...options };
+    return opts.escapeHtml ? escapeHtml(text) : text;
+  }
+
+  const opts = { ...DEFAULT_HIGHLIGHTING_OPTIONS, ...options };
+  let result = opts.escapeHtml ? escapeHtml(text) : text;
+  
+  // Sort by position in reverse order to maintain correct positions during replacement
+  const sortedKeywords = [...positionKeywords].sort((a, b) => b.position - a.position);
+  
+  // Apply highlighting for each keyword at its exact position
+  sortedKeywords.forEach(keywordData => {
+    const { keyword, position, sentiment_score } = keywordData;
+    
+    // Find the end position of the keyword
+    const endPosition = position + keyword.length;
+    
+    // Ensure the position is valid
+    if (position >= 0 && endPosition <= result.length) {
+      const beforeMatch = result.substring(0, position);
+      const matchText = result.substring(position, endPosition);
+      const afterMatch = result.substring(endPosition);
+      
+      // Generate sentiment-based highlight classes
+      const sentimentClasses = getSentimentHighlightClasses(sentiment_score);
+      const highlightedMatch = `<mark class="${sentimentClasses}" data-sentiment="${sentiment_score.toFixed(3)}">${matchText}</mark>`;
+      
+      result = beforeMatch + highlightedMatch + afterMatch;
+    }
+  });
+
+  return result;
+};
+
+/**
+ * Generate sentiment-based CSS classes for highlighting
+ * @param score - Sentiment score (-1 to +1)
+ * @returns CSS class string for highlighting
+ */
+const getSentimentHighlightClasses = (score: number): string => {
+  if (score > 0.1) {
+    return 'bg-green-200 text-green-800 px-1 py-0.5 rounded font-medium border border-green-300';
+  } else if (score < -0.1) {
+    return 'bg-red-200 text-red-800 px-1 py-0.5 rounded font-medium border border-red-300';
+  } else {
+    return 'bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-medium border border-gray-300';
+  }
+};
