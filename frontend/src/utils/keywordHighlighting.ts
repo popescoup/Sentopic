@@ -309,9 +309,9 @@ export const highlightKeywordsByPosition = (
  * @returns CSS class string for highlighting
  */
 const getSentimentHighlightClasses = (score: number): string => {
-  if (score > 0.1) {
+  if (score > 0.001) {
     return 'bg-green-200 text-green-800 px-1 py-0.5 rounded font-medium border border-green-300';
-  } else if (score < -0.1) {
+  } else if (score < -0.001) {
     return 'bg-red-200 text-red-800 px-1 py-0.5 rounded font-medium border border-red-300';
   } else {
     return 'bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-medium border border-gray-300';

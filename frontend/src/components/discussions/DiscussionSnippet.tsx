@@ -140,33 +140,82 @@ let displayText: string;
   const displayDate = formatDate(context.created_utc);
 
   
-  // Determine sentiment styling
-  const getSentimentStyling = (score: number) => {
-    if (score > 0.1) {
-      return {
-        color: 'text-success',
-        bgColor: 'bg-green-100',
-        borderColor: 'border-success',
-        label: 'Positive'
-      };
-    } else if (score < -0.1) {
-      return {
-        color: 'text-danger',
-        bgColor: 'bg-red-100',
-        borderColor: 'border-danger',
-        label: 'Negative'
-      };
-    } else {
-      return {
-        color: 'text-text-tertiary',
-        bgColor: 'bg-gray-100',
-        borderColor: 'border-border-secondary',
-        label: 'Neutral'
-      };
-    }
-  };
+  // Calculate sentiment for keywords visible in the preview window
+const calculateVisibleKeywordsSentiment = () => {
+  if (!context.keyword_mentions || context.keyword_mentions.length === 0) {
+    return {
+      score: context.sentiment_score,
+      label: 'Sentiment Score',
+      keywordCount: 0
+    };
+  }
 
-  const sentimentStyle = getSentimentStyling(context.sentiment_score);
+  // Find which keywords are actually visible in the windowed text
+  const visibleKeywordMentions = context.keyword_mentions.filter(mention => {
+    const adjustedPosition = mention.position_in_content - textWindow.originalStart;
+    // Check if the keyword position falls within our text window
+    return adjustedPosition >= -mention.keyword.length && 
+           adjustedPosition <= textWindow.text.length + mention.keyword.length;
+  });
+
+  if (visibleKeywordMentions.length === 0) {
+    // Fallback to overall sentiment if no keywords found in window
+    return {
+      score: context.sentiment_score,
+      label: 'Sentiment Score',
+      keywordCount: 0
+    };
+  }
+
+  if (visibleKeywordMentions.length === 1) {
+    // Single visible keyword - use its specific sentiment
+    return {
+      score: visibleKeywordMentions[0].sentiment_score,
+      label: 'Sentiment Score',
+      keywordCount: 1
+    };
+  }
+
+  // Multiple visible keywords - calculate average
+  const avgSentiment = visibleKeywordMentions.reduce((sum, mention) => 
+    sum + mention.sentiment_score, 0) / visibleKeywordMentions.length;
+  
+  return {
+    score: avgSentiment,
+    label: 'Avg. Sentiment Score',
+    keywordCount: visibleKeywordMentions.length
+  };
+};
+
+const visibleSentiment = calculateVisibleKeywordsSentiment();
+
+// Determine sentiment styling
+const getSentimentStyling = (score: number) => {
+  if (score > 0.001) {
+    return {
+      color: 'text-success',
+      bgColor: 'bg-green-100',
+      borderColor: 'border-success',
+      label: 'Positive'
+    };
+  } else if (score < -0.001) {
+    return {
+      color: 'text-danger',
+      bgColor: 'bg-red-100',
+      borderColor: 'border-danger',
+      label: 'Negative'
+    };
+  } else {
+    return {
+      color: 'text-text-tertiary',
+      bgColor: 'bg-gray-100',
+      borderColor: 'border-border-secondary',
+      label: 'Neutral'
+    };
+  }
+};
+
+const sentimentStyle = getSentimentStyling(visibleSentiment.score);
 
   // Format content type for display
   const contentTypeLabel = context.content_type === 'post' ? 'Post' : 'Comment';
@@ -210,9 +259,9 @@ let displayText: string;
       <div className="flex items-center justify-between pt-3 border-t border-border-primary">
         <div className="flex items-center space-x-4">
         <span className="font-small text-text-tertiary">
-          {context.keyword_mentions && context.keyword_mentions.length > 1 ? 'Avg. Sentiment Score' : 'Sentiment Score'}: 
-            <span className={`ml-1 font-technical ${sentimentStyle.color}`}>
-            {context.sentiment_score > 0 ? '+' : ''}{context.sentiment_score.toFixed(3)}
+          {visibleSentiment.label}: 
+          <span className={`ml-1 font-technical ${sentimentStyle.color}`}>
+            {visibleSentiment.score > 0 ? '+' : ''}{visibleSentiment.score.toFixed(3)}
           </span>
         </span>
         </div>
