@@ -32,13 +32,63 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
   const collection = collectionsMetadata.find(c => c.id === context.collection_id);
   const subreddit = collection?.subreddit || 'unknown';
 
-  // Fuzzy position matching approach
-  const originalText = context.context;
-  const cleanedText = cleanRedditMarkdown(originalText);
-  const textWindow = createOptimalWindow(cleanedText, keywords, { maxLength: 280 });
+  // Position-aware text windowing
+const originalText = context.context;
+const cleanedText = cleanRedditMarkdown(originalText);
+
+// Prepare known positions for windowing if available
+const knownPositions = context.keyword_mentions?.map(mention => ({
+  keyword: mention.keyword,
+  position: mention.position_in_content
+}));
+
+const textWindow = createOptimalWindow(
+  cleanedText, 
+  keywords, 
+  { maxLength: 280 }, 
+  knownPositions
+);
+
+// Re-add debug logging
+console.log('Window Debug (Updated):', {
+  originalTextLength: originalText.length,
+  cleanedTextLength: cleanedText.length,
+  windowText: textWindow.text,
+  windowType: textWindow.windowType,
+  keywordMentions: context.keyword_mentions,
+  knownPositions: knownPositions,
+  keywordsFoundInWindow: keywords.filter(k => 
+    textWindow.text.toLowerCase().includes(k.toLowerCase())
+  ),
+  windowStart: textWindow.originalStart,
+  windowEnd: textWindow.originalEnd
+});
+
+// NEW: Debug the highlighting pipeline
+if (context.keyword_mentions && context.keyword_mentions.length > 0) {
+  console.log('Highlighting Debug:', {
+    keywordMentions: context.keyword_mentions,
+    windowStart: textWindow.originalStart,
+    highlightingMethod: 'position-based'
+  });
   
-  // Apply fuzzy position-based highlighting with sentiment colors
-  let displayText: string;
+  context.keyword_mentions.forEach((mention, index) => {
+    let basePosition = mention.position_in_content - textWindow.originalStart;
+    console.log(`Mention ${index} (${mention.keyword}):`, {
+      originalPosition: mention.position_in_content,
+      windowStart: textWindow.originalStart,
+      adjustedPosition: basePosition,
+      isInBounds: basePosition >= -20 && basePosition <= textWindow.text.length + 20,
+      textAtPosition: textWindow.text.substring(
+        Math.max(0, basePosition - 5), 
+        Math.min(textWindow.text.length, basePosition + mention.keyword.length + 5)
+      )
+    });
+  });
+}
+
+// Apply fuzzy position-based highlighting with sentiment colors
+let displayText: string;
   
   if (context.keyword_mentions && context.keyword_mentions.length > 0) {
     const adjustedKeywordMentions = context.keyword_mentions.map(mention => {
@@ -51,7 +101,7 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
       }
       
       const keyword = mention.keyword.toLowerCase();
-      const searchRadius = 5; // 5 character window as requested
+      const searchRadius = Math.min(50, Math.max(20, keyword.length * 5));
       
       // Search within the fuzzy window around the base position
       const searchStart = Math.max(0, basePosition - searchRadius);
@@ -59,7 +109,7 @@ export const DiscussionSnippet: React.FC<DiscussionSnippetProps> = ({
       
       for (let pos = searchStart; pos < searchEnd; pos++) {
         const textAtPosition = textWindow.text.substring(pos, pos + keyword.length).toLowerCase();
-        if (textAtPosition === keyword) {
+        if (textAtPosition === keyword.toLowerCase()) {  // <-- Add .toLowerCase()
           // Found exact match! Use this position
           return {
             ...mention,

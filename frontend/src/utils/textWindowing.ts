@@ -42,17 +42,24 @@ const DEFAULT_WINDOWING_OPTIONS: WindowingOptions = {
   trailingEllipsis: '...'
 };
 
+export interface KnownPosition {
+  keyword: string;
+  position: number;
+}
+
 /**
  * Creates an optimal text window around keywords
  * @param text - The original text
  * @param keywords - Keywords to center the window around
  * @param options - Windowing options
+ * @param knownPositions - Optional precise keyword positions (if available)
  * @returns TextWindow object with windowed text and metadata
  */
 export const createOptimalWindow = (
   text: string,
   keywords: string[],
-  options: Partial<WindowingOptions> = {}
+  options: Partial<WindowingOptions> = {},
+  knownPositions?: KnownPosition[]
 ): TextWindow => {
   if (!text) {
     return {
@@ -82,7 +89,37 @@ export const createOptimalWindow = (
     return createBeginningWindow(text, opts);
   }
 
-  // Find keyword matches to determine optimal window position
+  // NEW: Use known positions if available
+  if (knownPositions && knownPositions.length > 0) {
+    // Filter positions that are within text bounds and match our keywords
+    const validPositions = knownPositions.filter(pos => 
+      pos.position >= 0 && 
+      pos.position < text.length &&
+      keywords.some(keyword => keyword.toLowerCase() === pos.keyword.toLowerCase())
+    );
+
+    if (validPositions.length > 0) {
+      // Find the earliest valid position
+      const earliestPosition = validPositions.reduce((earliest, current) => 
+        current.position < earliest.position ? current : earliest
+      );
+
+      // If the earliest keyword is close to the beginning, show from start
+      if (earliestPosition.position <= opts.contextPadding) {
+        return createBeginningWindow(text, opts);
+      }
+
+      // If the earliest keyword is close to the end, show ending
+      if (earliestPosition.position >= text.length - opts.maxLength + opts.contextPadding) {
+        return createEndingWindow(text, opts);
+      }
+
+      // Create a middle window centered around the earliest known position
+      return createMiddleWindow(text, earliestPosition.position, opts);
+    }
+  }
+
+  // FALLBACK: Use original pattern-matching approach
   const matches = findKeywordMatches(text, keywords, {
     strictWordBoundaries: true,
     caseInsensitive: true,
