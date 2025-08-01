@@ -17,6 +17,21 @@ import { DiscussionSnippet } from '@/components/discussions';
 import AIQuestionPanel from '@/components/ai/AIQuestionPanel';
 import { api, getErrorMessage } from '@/api/client';
 import { getInsightData } from '@/utils/insightProcessing';
+import type { ContextInstance } from '@/types/api';
+
+const getUniqueContexts = (contexts?: ContextInstance[]) => {
+  if (!contexts) return [];
+  
+  const seen = new Set<string>();
+  return contexts
+    .filter(context => {
+      const key = context.content_reddit_id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 3);
+};
 
 const ProjectWorkspace: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -27,6 +42,20 @@ const ProjectWorkspace: React.FC = () => {
     queryFn: () => api.getAnalysisResults(projectId!),
     enabled: !!projectId && projectId.length > 0
   });
+
+  // Quick verification log
+  React.useEffect(() => {
+    if (project?.sample_contexts) {
+      console.log('🔍 Raw sample_contexts from backend:', project.sample_contexts);
+      console.log('🔍 Sample contexts count:', project.sample_contexts.length);
+      console.log('🔍 Sample context IDs:', project.sample_contexts.map(c => c.content_reddit_id));
+    }
+  }, [project?.sample_contexts]);
+
+  // Deduplicate contexts at the top level to avoid hook ordering issues
+  const uniqueContexts = React.useMemo(() => {
+    return getUniqueContexts(project?.sample_contexts);
+  }, [project?.sample_contexts]);
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -250,19 +279,19 @@ const ProjectWorkspace: React.FC = () => {
   
             {project.status === 'completed' ? (
               <>
-                {project.sample_contexts && project.sample_contexts.length > 0 ? (
+                {uniqueContexts.length > 0 ? (
                   <>
                     <div className="space-y-4 mb-6">
-                      {project.sample_contexts.slice(0, 3).map((context, index) => (
+                      {uniqueContexts.map((context, index) => (
                         <DiscussionSnippet
-                          key={`${context.content_reddit_id}-${index}`}
+                          key={context.content_reddit_id}
                           context={context}
                           keywords={project.keywords}
                           collectionsMetadata={project.collections_metadata}
                         />
                       ))}
                     </div>
-          
+
                     <div className="pt-4 border-t border-border-primary">
                       <Button 
                         variant="outline" 

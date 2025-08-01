@@ -344,7 +344,7 @@ class AnalyticsEngine:
         
             # Get enhanced sample contexts (5 most recent with all keyword mentions)
             if keywords:
-                results['sample_contexts'] = self.get_enhanced_sample_contexts(session_id, limit=5)
+                results['sample_contexts'] = self.get_enhanced_sample_contexts(session_id, limit=8)
     
         return results
     
