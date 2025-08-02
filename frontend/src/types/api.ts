@@ -287,3 +287,34 @@ export interface ContextInstance {
   collection_id: string;
   keyword_mentions: KeywordMentionDetail[];
 }
+
+export interface AggregatedKeywordMention {
+  keyword: string;
+  position_in_content: number;
+  sentiment_score: number;
+}
+
+export interface FilteredContextInstance {
+  content_type: 'post' | 'comment';
+  content_reddit_id: string;
+  collection_id: string;
+  context: string;
+  avg_sentiment_score: number;
+  created_utc: number;
+  keyword_mentions: AggregatedKeywordMention[];
+}
+
+export interface AggregatedFilteredContextsResponse {
+  contexts: FilteredContextInstance[];
+  pagination: PaginationInfo;
+  filters_applied: Record<string, any>;
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total_count: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
+}

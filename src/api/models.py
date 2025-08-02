@@ -720,7 +720,7 @@ class APIError(BaseModel):
         }
 
 # ============================================================================
-# CONTEXT FILTERING MODELS (NEW)
+# CONTEXT FILTERING MODELS (UPDATED FOR CONTENT-CENTRIC AGGREGATION)
 # ============================================================================
 
 class ContextFilters(BaseModel):
@@ -753,13 +753,38 @@ class KeywordMentionDetail(BaseModel):
     sentiment_score: float = Field(..., description="Sentiment score for this specific keyword mention")
 
 class ContextInstance(BaseModel):
+    """Aggregated context instance with all keyword mentions consolidated."""
     content_type: str = Field(..., description="Type of content: post or comment")
     content_reddit_id: str = Field(..., description="Reddit ID of the content")
     collection_id: str = Field(..., description="Collection ID the content belongs to")
-    context: str = Field(..., description="Context text around keyword")
-    sentiment_score: float = Field(..., description="Average sentiment score across all keyword mentions")
+    context: str = Field(..., description="Full context text")
+    avg_sentiment_score: float = Field(..., description="Average sentiment score across filtered keywords")
     created_utc: int = Field(..., description="Unix timestamp when content was created")
-    keyword_mentions: List[KeywordMentionDetail] = Field(..., description="Individual keyword mentions with positions and sentiments")
+    keyword_mentions: List[KeywordMentionDetail] = Field(..., description="All keyword mentions in this content piece")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "content_type": "post",
+                "content_reddit_id": "abc123",
+                "collection_id": "collection-xyz",
+                "context": "My iPhone battery drains so fast when charging...",
+                "avg_sentiment_score": -0.65,
+                "created_utc": 1640995200,
+                "keyword_mentions": [
+                    {
+                        "keyword": "battery",
+                        "position_in_content": 10,
+                        "sentiment_score": -0.6
+                    },
+                    {
+                        "keyword": "charging",
+                        "position_in_content": 45,
+                        "sentiment_score": -0.7
+                    }
+                ]
+            }
+        }
 
 class PaginationInfo(BaseModel):
     """Pagination metadata."""
@@ -771,8 +796,8 @@ class PaginationInfo(BaseModel):
     has_previous: bool = Field(..., description="Whether there are previous pages")
 
 class FilteredContextsResponse(BaseModel):
-    """Response for filtered context exploration."""
-    contexts: List[ContextInstance] = Field(..., description="List of matching context instances")
+    """Response for filtered context exploration with content consolidation."""
+    contexts: List[ContextInstance] = Field(..., description="List of aggregated context instances")
     pagination: PaginationInfo = Field(..., description="Pagination information")
     filters_applied: Dict[str, Any] = Field(..., description="Filters that were applied")
     
@@ -784,12 +809,21 @@ class FilteredContextsResponse(BaseModel):
                         "content_type": "post",
                         "content_reddit_id": "abc123",
                         "collection_id": "collection-xyz",
-                        "full_content": "My iPhone battery drains so fast lately...",
-                        "title": "Battery issues getting worse",
-                        "sentiment_score": -0.65,
+                        "context": "My iPhone battery drains so fast when charging...",
+                        "avg_sentiment_score": -0.65,
                         "created_utc": 1640995200,
-                        "author": "user123",
-                        "score": 45
+                        "keyword_mentions": [
+                            {
+                                "keyword": "battery",
+                                "position_in_content": 10,
+                                "sentiment_score": -0.6
+                            },
+                            {
+                                "keyword": "charging",
+                                "position_in_content": 45,
+                                "sentiment_score": -0.7
+                            }
+                        ]
                     }
                 ],
                 "pagination": {
@@ -802,7 +836,7 @@ class FilteredContextsResponse(BaseModel):
                 },
                 "filters_applied": {
                     "primary_keyword": "battery",
-                    "secondary_keyword": "drain",
+                    "secondary_keyword": "charging",
                     "sentiment_range": [-1.0, 1.0],
                     "sort_by": "newest"
                 }

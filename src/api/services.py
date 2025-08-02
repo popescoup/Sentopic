@@ -799,14 +799,14 @@ Return only the keywords, separated by commas, with no additional explanation.""
     @staticmethod
     async def get_filtered_contexts(project_id: str, filters: Dict[str, Any]) -> FilteredContextsResponse:
         """
-        Get filtered and paginated context instances for a project.
+        Get filtered and paginated context instances for a project with content consolidation.
         
         Args:
             project_id: Project ID to get contexts for
             filters: Dictionary with filtering parameters
             
         Returns:
-            FilteredContextsResponse with contexts and pagination info
+            FilteredContextsResponse with consolidated contexts and pagination info
         """
         try:
             # Validate project exists and is completed
@@ -826,15 +826,13 @@ Return only the keywords, separated by commas, with no additional explanation.""
             page = filters['page']
             limit = filters['limit']
             
-            # Calculate offset for pagination
-            offset = (page - 1) * limit
-            
-            # Build base query for keyword mentions
+            # Build query to get all keyword mentions that match our filters
             session = db.get_session()
             try:
                 from src.database import KeywordMention, Post, Comment
+                from collections import defaultdict
                 
-                # Start with base query for primary keyword
+                # Step 1: Get all keyword mentions that match our filter criteria
                 base_query = session.query(KeywordMention).filter(
                     KeywordMention.analysis_session_id == project_id,
                     KeywordMention.keyword == primary_keyword,
@@ -852,7 +850,7 @@ Return only the keywords, separated by commas, with no additional explanation.""
                         KeywordMention.analysis_session_id == project_id,
                         KeywordMention.keyword == secondary_keyword
                     ).distinct().subquery()
-    
+
                     # Filter primary keyword results to only include content that also has secondary keyword
                     base_query = base_query.join(
                         secondary_content,
@@ -860,70 +858,114 @@ Return only the keywords, separated by commas, with no additional explanation.""
                         (KeywordMention.collection_id == secondary_content.c.collection_id)
                     )
                 
-                # Add sorting
+                # Get all matching keyword mentions
+                all_matching_mentions = base_query.all()
+                
+                # Step 2: Group mentions by unique content piece
+                content_groups = defaultdict(list)
+                for mention in all_matching_mentions:
+                    content_key = (mention.content_reddit_id, mention.collection_id, mention.content_type)
+                    content_groups[content_key].append(mention)
+                
+                # Step 3: Get only the filtered keyword mentions (not all keywords)
+                enhanced_content_groups = {}
+                for content_key, filtered_mentions in content_groups.items():
+                    content_reddit_id, collection_id, content_type = content_key
+                    
+                    # Use only the filtered mentions
+                    all_mentions_for_content = filtered_mentions
+                    
+                    # If secondary keyword is specified, also include those mentions WITH sentiment filtering
+                    if secondary_keyword:
+                        secondary_mentions = session.query(KeywordMention).filter(
+                            KeywordMention.analysis_session_id == project_id,
+                            KeywordMention.content_reddit_id == content_reddit_id,
+                            KeywordMention.collection_id == collection_id,
+                            KeywordMention.content_type == content_type,
+                            KeywordMention.keyword == secondary_keyword,
+                            KeywordMention.sentiment_score >= min_sentiment,  # Add sentiment filtering
+                            KeywordMention.sentiment_score <= max_sentiment   # Add sentiment filtering
+                        ).all()
+                        all_mentions_for_content = filtered_mentions + secondary_mentions
+                        
+                    # Calculate average sentiment across filtered keywords only
+                    filtered_sentiments = [m.sentiment_score for m in filtered_mentions]
+                    avg_sentiment = sum(filtered_sentiments) / len(filtered_sentiments)
+                    
+                    # Use the most recent mention for sorting timestamp
+                    most_recent_mention = max(filtered_mentions, key=lambda m: m.created_utc)
+                    
+                    enhanced_content_groups[content_key] = {
+                        'all_mentions': all_mentions_for_content,
+                        'filtered_mentions': filtered_mentions,
+                        'avg_sentiment': avg_sentiment,
+                        'created_utc': most_recent_mention.created_utc
+                    }
+                
+                # Step 4: Sort the content groups
+                sorted_content_items = list(enhanced_content_groups.items())
                 if sort_by == "newest":
-                    base_query = base_query.order_by(KeywordMention.created_utc.desc())
+                    sorted_content_items.sort(key=lambda x: x[1]['created_utc'], reverse=True)
                 elif sort_by == "oldest":
-                    base_query = base_query.order_by(KeywordMention.created_utc.asc())
+                    sorted_content_items.sort(key=lambda x: x[1]['created_utc'])
                 elif sort_by == "sentiment_asc":
-                    base_query = base_query.order_by(KeywordMention.sentiment_score.asc(), KeywordMention.created_utc.desc())
+                    sorted_content_items.sort(key=lambda x: (x[1]['avg_sentiment'], -x[1]['created_utc']))
                 elif sort_by == "sentiment_desc":
-                    base_query = base_query.order_by(KeywordMention.sentiment_score.desc(), KeywordMention.created_utc.desc())
+                    sorted_content_items.sort(key=lambda x: (-x[1]['avg_sentiment'], -x[1]['created_utc']))
                 
-                # Get total count for pagination
-                total_count = base_query.count()
+                # Step 5: Apply pagination
+                total_count = len(sorted_content_items)
+                offset = (page - 1) * limit
+                paginated_items = sorted_content_items[offset:offset + limit]
                 
-                # Get the actual mentions with pagination
-                mentions = base_query.offset(offset).limit(limit).all()
-                
-                # Fetch full content for each mention
+                # Step 6: Fetch full content and build response
                 contexts = []
-                for mention in mentions:
-                    if mention.content_type == 'post':
+                for content_key, content_data in paginated_items:
+                    content_reddit_id, collection_id, content_type = content_key
+                    
+                    # Get the actual content from database
+                    if content_type == 'post':
                         content_obj = session.query(Post).filter(
-                            Post.reddit_id == mention.content_reddit_id,
-                            Post.collection_id == mention.collection_id
+                            Post.reddit_id == content_reddit_id,
+                            Post.collection_id == collection_id
                         ).first()
                         
                         if content_obj:
-                            full_content = content_obj.title
+                            full_text = content_obj.title
                             if content_obj.content:
-                                full_content += ' ' + content_obj.content
-                            
-                            context = ContextInstance(
-                                content_type='post',
-                                content_reddit_id=mention.content_reddit_id,
-                                collection_id=mention.collection_id,
-                                full_content=full_content,
-                                title=content_obj.title,
-                                sentiment_score=mention.sentiment_score,
-                                created_utc=mention.created_utc,
-                                author=content_obj.author,
-                                score=content_obj.score or 0
-                            )
-                            contexts.append(context)
-                    
+                                full_text += ' ' + content_obj.content
                     else:  # comment
                         content_obj = session.query(Comment).filter(
-                            Comment.reddit_id == mention.content_reddit_id,
-                            Comment.collection_id == mention.collection_id
+                            Comment.reddit_id == content_reddit_id,
+                            Comment.collection_id == collection_id
                         ).first()
                         
                         if content_obj:
-                            context = ContextInstance(
-                                content_type='comment',
-                                content_reddit_id=mention.content_reddit_id,
-                                collection_id=mention.collection_id,
-                                full_content=content_obj.content,
-                                title=None,
-                                sentiment_score=mention.sentiment_score,
-                                created_utc=mention.created_utc,
-                                author=content_obj.author,
-                                score=content_obj.score or 0
-                            )
-                            contexts.append(context)
+                            full_text = content_obj.content
+                    
+                    if content_obj and full_text:
+                        # Build keyword mentions list
+                        keyword_mentions = []
+                        for mention in content_data['all_mentions']:
+                            keyword_mentions.append({
+                                'keyword': mention.keyword,
+                                'position_in_content': mention.position_in_content,
+                                'sentiment_score': mention.sentiment_score
+                            })
+                        
+                        # Create the aggregated context instance
+                        context = ContextInstance(
+                            content_type=content_type,
+                            content_reddit_id=content_reddit_id,
+                            collection_id=collection_id,
+                            context=full_text,
+                            avg_sentiment_score=content_data['avg_sentiment'],
+                            created_utc=content_data['created_utc'],
+                            keyword_mentions=keyword_mentions
+                        )
+                        contexts.append(context)
                 
-                # Calculate pagination info
+                # Step 7: Calculate pagination info
                 total_pages = (total_count + limit - 1) // limit  # Ceiling division
                 has_next = page < total_pages
                 has_previous = page > 1

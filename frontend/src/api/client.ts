@@ -25,7 +25,8 @@ import type {
   AnalysisStartResponse,
   IndexingRequest,
   IndexingResponse,
-  IndexingStatusResponse
+  IndexingStatusResponse,
+  AggregatedFilteredContextsResponse
 } from '@/types/api';
 
 // Create axios instance with base configuration
@@ -219,6 +220,37 @@ export class SentopicAPI {
 
   async getChatHistory(chatSessionId: string, limit = 50): Promise<ChatHistoryResponse> {
     const response = await this.client.get<ChatHistoryResponse>(`/chat/${chatSessionId}/history?limit=${limit}`);
+    return response.data;
+  }
+
+  async getFilteredContexts(
+    projectId: string, 
+    filters: {
+      primary_keyword: string;
+      secondary_keyword?: string;
+      min_sentiment: number;
+      max_sentiment: number;
+      sort_by: string;
+      page: number;
+      limit: number;
+    }
+  ): Promise<AggregatedFilteredContextsResponse> {
+    const params = new URLSearchParams({
+      primary_keyword: filters.primary_keyword,
+      min_sentiment: filters.min_sentiment.toString(),
+      max_sentiment: filters.max_sentiment.toString(),
+      sort_by: filters.sort_by,
+      page: filters.page.toString(),
+      limit: filters.limit.toString(),
+    });
+  
+    if (filters.secondary_keyword) {
+      params.append('secondary_keyword', filters.secondary_keyword);
+    }
+  
+    const response = await this.client.get<AggregatedFilteredContextsResponse>(
+      `/projects/${projectId}/contexts/filtered?${params.toString()}`
+    );
     return response.data;
   }
 }
