@@ -725,7 +725,7 @@ class APIError(BaseModel):
 
 class ContextFilters(BaseModel):
     """Request filters for context exploration."""
-    primary_keyword: str = Field(..., description="Primary keyword to filter by")
+    primary_keyword: Optional[str] = Field(None, description="Primary keyword to filter by (optional - if not provided, shows all keywords)")
     secondary_keyword: Optional[str] = Field(None, description="Secondary keyword for co-occurrence filtering")
     min_sentiment: float = Field(-1.0, description="Minimum sentiment score", ge=-1.0, le=1.0)
     max_sentiment: float = Field(1.0, description="Maximum sentiment score", ge=-1.0, le=1.0)
@@ -761,6 +761,7 @@ class ContextInstance(BaseModel):
     avg_sentiment_score: float = Field(..., description="Average sentiment score across filtered keywords")
     created_utc: int = Field(..., description="Unix timestamp when content was created")
     keyword_mentions: List[KeywordMentionDetail] = Field(..., description="All keyword mentions in this content piece")
+    parent_post_id: Optional[str] = Field(None, description="Reddit ID of parent post (for comments only)")
     
     class Config:
         json_schema_extra = {

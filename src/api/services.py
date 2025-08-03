@@ -818,14 +818,14 @@ Return only the keywords, separated by commas, with no additional explanation.""
                 raise ValueError(f"Project analysis not completed. Current status: {analysis_session.status}")
             
             # Extract filter parameters
-            primary_keyword = filters['primary_keyword']
+            primary_keyword = filters.get('primary_keyword')
             secondary_keyword = filters.get('secondary_keyword')
             min_sentiment = filters['min_sentiment']
             max_sentiment = filters['max_sentiment']
             sort_by = filters['sort_by']
             page = filters['page']
             limit = filters['limit']
-            
+
             # Build query to get all keyword mentions that match our filters
             session = db.get_session()
             try:
@@ -835,23 +835,28 @@ Return only the keywords, separated by commas, with no additional explanation.""
                 # Step 1: Get all keyword mentions that match our filter criteria
                 base_query = session.query(KeywordMention).filter(
                     KeywordMention.analysis_session_id == project_id,
-                    KeywordMention.keyword == primary_keyword,
                     KeywordMention.sentiment_score >= min_sentiment,
                     KeywordMention.sentiment_score <= max_sentiment
                 )
                 
+                # Add primary keyword filter only if specified
+                if primary_keyword:
+                    base_query = base_query.filter(KeywordMention.keyword == primary_keyword)
+                
                 # Add co-occurrence filtering if secondary keyword specified
                 if secondary_keyword:
-                    # Get content IDs that have the secondary keyword
+                    # Get content IDs that have the secondary keyword WITH sentiment filtering
                     secondary_content = session.query(
                         KeywordMention.content_reddit_id,
                         KeywordMention.collection_id
                     ).filter(
                         KeywordMention.analysis_session_id == project_id,
-                        KeywordMention.keyword == secondary_keyword
+                        KeywordMention.keyword == secondary_keyword,
+                        KeywordMention.sentiment_score >= min_sentiment,
+                        KeywordMention.sentiment_score <= max_sentiment
                     ).distinct().subquery()
 
-                    # Filter primary keyword results to only include content that also has secondary keyword
+                    # Filter primary keyword results to only include content that also has secondary keyword within sentiment range
                     base_query = base_query.join(
                         secondary_content,
                         (KeywordMention.content_reddit_id == secondary_content.c.content_reddit_id) &
@@ -883,8 +888,8 @@ Return only the keywords, separated by commas, with no additional explanation.""
                             KeywordMention.collection_id == collection_id,
                             KeywordMention.content_type == content_type,
                             KeywordMention.keyword == secondary_keyword,
-                            KeywordMention.sentiment_score >= min_sentiment,  # Add sentiment filtering
-                            KeywordMention.sentiment_score <= max_sentiment   # Add sentiment filtering
+                            KeywordMention.sentiment_score >= min_sentiment,
+                            KeywordMention.sentiment_score <= max_sentiment
                         ).all()
                         all_mentions_for_content = filtered_mentions + secondary_mentions
                         
@@ -953,6 +958,11 @@ Return only the keywords, separated by commas, with no additional explanation.""
                                 'sentiment_score': mention.sentiment_score
                             })
                         
+                        # Get parent post ID for comments
+                        parent_post_id = None
+                        if content_type == 'comment' and hasattr(content_obj, 'post_reddit_id'):
+                            parent_post_id = content_obj.post_reddit_id
+                        
                         # Create the aggregated context instance
                         context = ContextInstance(
                             content_type=content_type,
@@ -961,7 +971,8 @@ Return only the keywords, separated by commas, with no additional explanation.""
                             context=full_text,
                             avg_sentiment_score=content_data['avg_sentiment'],
                             created_utc=content_data['created_utc'],
-                            keyword_mentions=keyword_mentions
+                            keyword_mentions=keyword_mentions,
+                            parent_post_id=parent_post_id
                         )
                         contexts.append(context)
                 

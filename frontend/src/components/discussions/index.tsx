@@ -4,3 +4,4 @@
  */
 
 export { default as DiscussionSnippet } from './DiscussionSnippet';
+export { default as FullContextDisplay } from './FullContextDisplay';

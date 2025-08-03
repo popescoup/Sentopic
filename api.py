@@ -861,7 +861,7 @@ async def get_indexing_status(project_id: str) -> IndexingStatusResponse:
          description="Get filtered and paginated context instances for a project")
 async def get_filtered_contexts(
     project_id: str,
-    primary_keyword: str = Query(..., description="Primary keyword to filter by"),
+    primary_keyword: Optional[str] = Query(None, description="Primary keyword to filter by (optional - if not provided, shows all keywords)"),
     secondary_keyword: Optional[str] = Query(None, description="Secondary keyword for co-occurrence filtering"),
     min_sentiment: float = Query(-1.0, description="Minimum sentiment score", ge=-1.0, le=1.0),
     max_sentiment: float = Query(1.0, description="Maximum sentiment score", ge=-1.0, le=1.0),

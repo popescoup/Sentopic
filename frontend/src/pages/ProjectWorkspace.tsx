@@ -14,6 +14,7 @@ import Card, { InsightCard } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { DiscussionSnippet } from '@/components/discussions';
+import { ContextExplorerModal } from '@/components/modals';
 import AIQuestionPanel from '@/components/ai/AIQuestionPanel';
 import { api, getErrorMessage } from '@/api/client';
 import { getInsightData } from '@/utils/insightProcessing';
@@ -37,6 +38,7 @@ const ProjectWorkspace: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [isSummaryModalOpen, setIsSummaryModalOpen] = React.useState(false);
+  const [isContextExplorerOpen, setIsContextExplorerOpen] = React.useState(false);
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project-results', projectId],
     queryFn: () => api.getAnalysisResults(projectId!),
@@ -296,7 +298,7 @@ const ProjectWorkspace: React.FC = () => {
                       <Button 
                         variant="outline" 
                         fullWidth
-                        onClick={() => handleComingSoon('Context Explorer')}
+                        onClick={() => setIsContextExplorerOpen(true)}
                       >
                         Explore All {project.stats.total_mentions.toLocaleString()} Mentions →
                       </Button>
@@ -502,8 +504,15 @@ const ProjectWorkspace: React.FC = () => {
           </div>
         </Modal>
       )}
-</MainLayout>
-);
+
+      {/* Context Explorer Modal */}
+      <ContextExplorerModal
+        isOpen={isContextExplorerOpen}
+        onClose={() => setIsContextExplorerOpen(false)}
+        project={project}
+      />
+    </MainLayout>
+  );
 };
 
 export default ProjectWorkspace;

@@ -226,7 +226,7 @@ export class SentopicAPI {
   async getFilteredContexts(
     projectId: string, 
     filters: {
-      primary_keyword: string;
+      primary_keyword?: string;
       secondary_keyword?: string;
       min_sentiment: number;
       max_sentiment: number;
@@ -236,13 +236,16 @@ export class SentopicAPI {
     }
   ): Promise<AggregatedFilteredContextsResponse> {
     const params = new URLSearchParams({
-      primary_keyword: filters.primary_keyword,
       min_sentiment: filters.min_sentiment.toString(),
       max_sentiment: filters.max_sentiment.toString(),
       sort_by: filters.sort_by,
       page: filters.page.toString(),
       limit: filters.limit.toString(),
     });
+  
+    if (filters.primary_keyword) {
+      params.append('primary_keyword', filters.primary_keyword);
+    }
   
     if (filters.secondary_keyword) {
       params.append('secondary_keyword', filters.secondary_keyword);

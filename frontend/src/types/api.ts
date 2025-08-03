@@ -302,6 +302,7 @@ export interface FilteredContextInstance {
   avg_sentiment_score: number;
   created_utc: number;
   keyword_mentions: AggregatedKeywordMention[];
+  parent_post_id?: string;
 }
 
 export interface AggregatedFilteredContextsResponse {
