@@ -13,6 +13,7 @@ import { FullContextDisplay } from '@/components/discussions';
 import { useFilteredContexts, getDefaultFilters, type FilterState } from '@/hooks/useFilteredContexts';
 import type { ProjectResponse } from '@/types/api';
 
+
 interface ContextExplorerModalProps {
   /** Whether the modal is open */
   isOpen: boolean;
@@ -23,19 +24,33 @@ interface ContextExplorerModalProps {
 }
 
 export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
-  isOpen,
-  onClose,
-  project
-}) => {
-  // Filter state management
-  const [filters, setFilters] = useState<FilterState>(getDefaultFilters());
+    isOpen,
+    onClose,
+    project
+  }) => {
+    // Filter state management
+    const [filters, setFilters] = useState<FilterState>(getDefaultFilters());
+    
+    // Add this after the existing filters state declaration
+    const [localSentimentValues, setLocalSentimentValues] = useState({
+      min: filters.min_sentiment.toString(),
+      max: filters.max_sentiment.toString()
+    });
+    
+    // Reset filters when modal opens
+    useEffect(() => {
+      if (isOpen) {
+        setFilters(getDefaultFilters());
+      }
+    }, [isOpen]);
   
-  // Reset filters when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setFilters(getDefaultFilters());
-    }
-  }, [isOpen]);
+    // Update local values when filters change (e.g., when modal opens/resets)
+    useEffect(() => {
+      setLocalSentimentValues({
+        min: filters.min_sentiment.toString(),
+        max: filters.max_sentiment.toString()
+      });
+    }, [filters.min_sentiment, filters.max_sentiment]);
 
   // API call for filtered contexts
   const { 
@@ -161,30 +176,80 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
           </div>
 
           {/* Sentiment Range Controls */}
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
             <Input
-              label="Minimum Sentiment"
-              type="number"
-              min="-1"
-              max="1"
-              step="0.01"
-              value={filters.min_sentiment}
-              onChange={(e) => updateFilter('min_sentiment', parseFloat(e.target.value))}
-              hasError={!isValidSentimentRange}
-              helpText="Range: -1.0 (very negative) to +1.0 (very positive)"
+                label="Minimum Sentiment"
+                type="number"
+                min="-1"
+                max="1"
+                step="0.01"
+                value={localSentimentValues.min}
+                onChange={(e) => {
+                const value = e.target.value;
+                // Always update the local state to allow typing
+                setLocalSentimentValues(prev => ({ ...prev, min: value }));
+                
+                // Only update filter if we have a complete, valid number (not intermediate states)
+                if (value !== '' && value !== '-' && value !== '+' && value !== '-0' && !isNaN(parseFloat(value))) {
+                    const numValue = parseFloat(value);
+                    // Also check that the string representation matches to avoid premature updates
+                    if (numValue.toString() === value || Math.abs(numValue - parseFloat(value)) < 0.001) {
+                    updateFilter('min_sentiment', numValue);
+                    }
+                }
+                }}
+                onBlur={(e) => {
+                const value = e.target.value;
+                const numValue = parseFloat(value);
+                
+                if (value === '' || value === '-' || value === '+' || isNaN(numValue)) {
+                    // Reset to current filter value if invalid
+                    setLocalSentimentValues(prev => ({ ...prev, min: filters.min_sentiment.toString() }));
+                } else {
+                    // Ensure the filter is updated with the final value
+                    updateFilter('min_sentiment', numValue);
+                }
+                }}
+                hasError={!isValidSentimentRange}
+                helpText="Range: -1.0 (very negative) to +1.0 (very positive)"
             />
             <Input
-              label="Maximum Sentiment"
-              type="number"
-              min="-1"
-              max="1"
-              step="0.01"
-              value={filters.max_sentiment}
-              onChange={(e) => updateFilter('max_sentiment', parseFloat(e.target.value))}
-              hasError={!isValidSentimentRange}
-              error={!isValidSentimentRange ? "Maximum must be greater than or equal to minimum" : undefined}
+                label="Maximum Sentiment"
+                type="number"
+                min="-1"
+                max="1"
+                step="0.01"
+                value={localSentimentValues.max}
+                onChange={(e) => {
+                const value = e.target.value;
+                // Always update the local state to allow typing
+                setLocalSentimentValues(prev => ({ ...prev, max: value }));
+                
+                // Only update filter if we have a complete, valid number (not intermediate states)
+                if (value !== '' && value !== '-' && value !== '+' && value !== '-0' && !isNaN(parseFloat(value))) {
+                    const numValue = parseFloat(value);
+                    // Also check that the string representation matches to avoid premature updates
+                    if (numValue.toString() === value || Math.abs(numValue - parseFloat(value)) < 0.001) {
+                    updateFilter('max_sentiment', numValue);
+                    }
+                }
+                }}
+                onBlur={(e) => {
+                const value = e.target.value;
+                const numValue = parseFloat(value);
+                
+                if (value === '' || value === '-' || value === '+' || isNaN(numValue)) {
+                    // Reset to current filter value if invalid
+                    setLocalSentimentValues(prev => ({ ...prev, max: filters.max_sentiment.toString() }));
+                } else {
+                    // Ensure the filter is updated with the final value
+                    updateFilter('max_sentiment', numValue);
+                }
+                }}
+                hasError={!isValidSentimentRange}
+                error={!isValidSentimentRange ? "Maximum must be greater than or equal to minimum" : undefined}
             />
-          </div>
+            </div>
 
           {/* Applied Filters Summary */}
           <div className="mt-4 p-3 bg-panel rounded-input border border-border-primary">
