@@ -97,83 +97,76 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
       size="xl"
       className="max-h-[90vh]"
       >
-      <div className="max-h-[75vh] overflow-y-auto pr-2">
+      <div className="max-h-[75vh] overflow-y-auto pr-1">
           {/* Filter Controls */}
           <div className="border-b border-border-primary pb-6 mb-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             {/* Primary Keyword Filter */}
             <div>
-              <label className="block font-medium text-text-primary mb-2">
+                <label className="block font-medium text-text-primary mb-2">
                 Primary Keyword
-              </label>
-              <select
+                </label>
+                <select
                 value={filters.primary_keyword || ''}
                 onChange={(e) => updateFilter('primary_keyword', e.target.value || undefined)}
                 className="w-full px-3 py-2 border border-border-secondary rounded-input bg-content text-text-primary focus:border-accent focus:ring-2 focus:ring-accent focus:ring-offset-1 focus:outline-none"
-              >
+                >
                 <option value="">All Keywords</option>
                 {project.keywords.map(keyword => (
-                  <option key={keyword} value={keyword}>
+                    <option 
+                    key={keyword} 
+                    value={keyword}
+                    disabled={filters.secondary_keyword === keyword}
+                    className={filters.secondary_keyword === keyword ? 'text-text-tertiary bg-gray-100' : ''}
+                    >
                     {keyword}
-                  </option>
+                    </option>
                 ))}
-              </select>
+                </select>
             </div>
 
             {/* Secondary Keyword Filter */}
             <div>
-              <label className="block font-medium text-text-primary mb-2">
+                <label className="block font-medium text-text-primary mb-2">
                 Secondary Keyword
-              </label>
-              <select
+                </label>
+                <select
                 value={filters.secondary_keyword || ''}
                 onChange={(e) => updateFilter('secondary_keyword', e.target.value || undefined)}
                 className="w-full px-3 py-2 border border-border-secondary rounded-input bg-content text-text-primary focus:border-accent focus:ring-2 focus:ring-accent focus:ring-offset-1 focus:outline-none"
-              >
+                >
                 <option value="">None (No Co-occurrence)</option>
                 {project.keywords.map(keyword => (
-                  <option key={keyword} value={keyword}>
+                    <option 
+                    key={keyword} 
+                    value={keyword}
+                    disabled={filters.primary_keyword === keyword}
+                    className={filters.primary_keyword === keyword ? 'text-text-tertiary bg-gray-100' : ''}
+                    >
                     {keyword}
-                  </option>
+                    </option>
                 ))}
-              </select>
+                </select>
             </div>
 
             {/* Sort Options */}
             <div>
-              <label className="block font-medium text-text-primary mb-2">
+                <label className="block font-medium text-text-primary mb-2">
                 Sort By
-              </label>
-              <select
+                </label>
+                <select
                 value={filters.sort_by}
                 onChange={(e) => updateFilter('sort_by', e.target.value)}
                 className="w-full px-3 py-2 border border-border-secondary rounded-input bg-content text-text-primary focus:border-accent focus:ring-2 focus:ring-accent focus:ring-offset-1 focus:outline-none"
-              >
+                >
                 {sortOptions.map(option => (
-                  <option key={option.value} value={option.value}>
+                    <option key={option.value} value={option.value}>
                     {option.label}
-                  </option>
+                    </option>
                 ))}
-              </select>
+                </select>
             </div>
-
-            {/* Results Per Page */}
-            <div>
-              <label className="block font-medium text-text-primary mb-2">
-                Results Per Page
-              </label>
-              <select
-                value={filters.limit}
-                onChange={(e) => updateFilter('limit', parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-border-secondary rounded-input bg-content text-text-primary focus:border-accent focus:ring-2 focus:ring-accent focus:ring-offset-1 focus:outline-none"
-              >
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
             </div>
-          </div>
 
           {/* Sentiment Range Controls */}
             <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -374,16 +367,45 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
             )}
 
             {contextData && contextData.contexts.length > 0 && (
-              <div className="space-y-6">
+            <div className="space-y-6">
                 {contextData.contexts.map((context, index) => (
-                  <FullContextDisplay
+                <FullContextDisplay
                     key={`${context.content_reddit_id}-${index}`}
                     context={context}
                     keywords={project.keywords}
                     collectionsMetadata={project.collections_metadata}
-                  />
+                />
                 ))}
-              </div>
+                
+                {/* Bottom Pagination Controls - Duplicate of top pagination */}
+                {contextData.pagination.total_pages > 1 && (
+                <div className="flex items-center justify-center pt-6 mt-6 border-t border-border-primary">
+                    <div className="flex items-center space-x-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!contextData.pagination.has_previous}
+                        onClick={() => goToPage(contextData.pagination.page - 1)}
+                    >
+                        Previous
+                    </Button>
+                    
+                    <span className="font-technical text-text-secondary px-4">
+                        Page {contextData.pagination.page} of {contextData.pagination.total_pages}
+                    </span>
+                    
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!contextData.pagination.has_next}
+                        onClick={() => goToPage(contextData.pagination.page + 1)}
+                    >
+                        Next
+                    </Button>
+                    </div>
+                </div>
+                )}
+            </div>
             )}
           </div>
         </div>

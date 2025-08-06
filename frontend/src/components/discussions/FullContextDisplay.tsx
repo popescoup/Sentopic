@@ -237,12 +237,13 @@ if (context.keyword_mentions && context.keyword_mentions.length > 0) {
         </div>
 
       {/* Full content with keyword highlighting */}
-      <div className="mb-4">
+        <div className="mb-4">
         <div 
-          className="font-body text-text-primary leading-relaxed text-base"
-          dangerouslySetInnerHTML={{ __html: displayText }}
+            className="font-body text-text-primary leading-relaxed text-base break-words overflow-wrap-anywhere hyphens-auto"
+            dangerouslySetInnerHTML={{ __html: displayText }}
+            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
         />
-      </div>
+        </div>
 
       {/* Footer with sentiment summary */}
         <div className="pt-4 border-t border-border-primary">
