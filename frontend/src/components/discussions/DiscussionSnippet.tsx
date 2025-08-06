@@ -90,48 +90,71 @@ if (context.keyword_mentions && context.keyword_mentions.length > 0) {
 // Apply fuzzy position-based highlighting with sentiment colors
 let displayText: string;
   
-  if (context.keyword_mentions && context.keyword_mentions.length > 0) {
-    const adjustedKeywordMentions = context.keyword_mentions.map(mention => {
-      // Start with the calculated position
-      let basePosition = mention.position_in_content - textWindow.originalStart;
+if (context.keyword_mentions && context.keyword_mentions.length > 0) {
+  const adjustedKeywordMentions = context.keyword_mentions.map(mention => {
+    // Start with the calculated position
+    let basePosition = mention.position_in_content - textWindow.originalStart;
+    
+    // Skip if way out of bounds
+    if (basePosition < -10 || basePosition > textWindow.text.length + 10) {
+      return null;
+    }
+    
+    const keyword = mention.keyword.toLowerCase().trim();
+    if (!keyword) return null;
+    
+    const searchRadius = Math.min(30, Math.max(15, keyword.length * 3));
+    
+    // Search within the fuzzy window around the base position
+    const searchStart = Math.max(0, basePosition - searchRadius);
+    const searchEnd = Math.min(textWindow.text.length - keyword.length + 1, basePosition + searchRadius + 1);
+    
+    let bestMatch = null;
+    let bestDistance = Infinity;
+    
+    for (let pos = searchStart; pos < searchEnd; pos++) {
+      if (pos + keyword.length > textWindow.text.length) break;
       
-      // Skip if way out of bounds
-      if (basePosition < -10 || basePosition > textWindow.text.length + 10) {
-        return null;
-      }
-      
-      const keyword = mention.keyword.toLowerCase();
-      const searchRadius = Math.min(50, Math.max(20, keyword.length * 5));
-      
-      // Search within the fuzzy window around the base position
-      const searchStart = Math.max(0, basePosition - searchRadius);
-      const searchEnd = Math.min(textWindow.text.length - keyword.length + 1, basePosition + searchRadius + 1);
-      
-      for (let pos = searchStart; pos < searchEnd; pos++) {
-        const textAtPosition = textWindow.text.substring(pos, pos + keyword.length).toLowerCase();
-        if (textAtPosition === keyword.toLowerCase()) {  // <-- Add .toLowerCase()
-          // Found exact match! Use this position
-          return {
+      const textAtPosition = textWindow.text.substring(pos, pos + keyword.length).toLowerCase().trim();
+      if (textAtPosition === keyword) {
+        const distance = Math.abs(pos - basePosition);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestMatch = {
             ...mention,
             position: pos
           };
         }
       }
-      
-      // No exact match found within the fuzzy window
-      return null;
-    }).filter((mention): mention is NonNullable<typeof mention> => mention !== null);
-    
-    if (adjustedKeywordMentions.length > 0) {
-      displayText = highlightKeywordsByPosition(textWindow.text, adjustedKeywordMentions);
-    } else {
-      // No fuzzy matches found, use original text without highlighting
-      displayText = textWindow.text;
     }
+    
+    return bestMatch;
+  }).filter((mention): mention is NonNullable<typeof mention> => mention !== null);
+  
+  if (adjustedKeywordMentions.length > 0) {
+    // Sort and remove overlaps
+    adjustedKeywordMentions.sort((a, b) => a.position - b.position);
+    
+    const nonOverlappingMentions: typeof adjustedKeywordMentions = [];
+    for (const mention of adjustedKeywordMentions) {
+      const hasOverlap = nonOverlappingMentions.some(existing => {
+        const existingEnd = existing.position + existing.keyword.length;
+        const mentionEnd = mention.position + mention.keyword.length;
+        return (mention.position < existingEnd && mentionEnd > existing.position);
+      });
+      
+      if (!hasOverlap) {
+        nonOverlappingMentions.push(mention);
+      }
+    }
+    
+    displayText = highlightKeywordsByPosition(textWindow.text, nonOverlappingMentions);
   } else {
-    // No keyword mention data, use original text
     displayText = textWindow.text;
   }
+} else {
+  displayText = textWindow.text;
+}
   
   // Determine if we should show windowing indicator
   const showWindowIndicator = textWindow.isWindowed && textWindow.windowType === 'middle';

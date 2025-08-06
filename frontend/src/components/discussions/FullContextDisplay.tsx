@@ -34,61 +34,151 @@ export const FullContextDisplay: React.FC<FullContextDisplayProps> = ({
   // Clean the full text content
   const cleanedText = cleanRedditMarkdown(context.context);
 
-  // Apply position-based highlighting with sentiment colors, conditional tooltips, and fuzzy matching
-    let displayText: string;
+  // Apply position-based highlighting with proximity-based keyword matching
+let displayText: string;
 
-    if (context.keyword_mentions && context.keyword_mentions.length > 0) {
-    // Use fuzzy position-based highlighting with sentiment colors
-    const adjustedKeywordMentions = context.keyword_mentions.map(mention => {
-        // Start with the original position
-        let basePosition = mention.position_in_content;
-        
-        // Skip if way out of bounds
-        if (basePosition < -10 || basePosition > cleanedText.length + 10) {
-        return null;
-        }
-        
-        const keyword = mention.keyword.toLowerCase();
-        const searchRadius = Math.min(50, Math.max(20, keyword.length * 5));
-        
-        // Search within the fuzzy window around the base position
-        const searchStart = Math.max(0, basePosition - searchRadius);
-        const searchEnd = Math.min(cleanedText.length - keyword.length + 1, basePosition + searchRadius + 1);
-        
-        for (let pos = searchStart; pos < searchEnd; pos++) {
-        const textAtPosition = cleanedText.substring(pos, pos + keyword.length).toLowerCase();
-        if (textAtPosition === keyword.toLowerCase()) {
-            // Found exact match! Use this position
-            return {
-            ...mention,
-            position_in_content: pos
-            };
-        }
-        }
-        
-        // No exact match found within the fuzzy window
-        return null;
-    }).filter((mention): mention is NonNullable<typeof mention> => mention !== null);
+if (context.keyword_mentions && context.keyword_mentions.length > 0) {
+  // Instead of trying to map positions, search for each keyword using proximity
+  const foundKeywords: Array<{
+    keyword: string;
+    position: number;
+    sentiment_score: number;
+  }> = [];
+  
+  context.keyword_mentions.forEach(mention => {
+    const keyword = mention.keyword.toLowerCase().trim();
+    if (!keyword) return;
     
-    if (adjustedKeywordMentions.length > 0) {
-        // Transform to PositionBasedKeyword interface
-        const positionBasedKeywords = adjustedKeywordMentions.map(mention => ({
-        keyword: mention.keyword,
-        position: mention.position_in_content,
-        sentiment_score: mention.sentiment_score
-        }));
-
-        // Use enhanced highlighting with tooltips for multiple keywords
-        const hasMultipleKeywords = adjustedKeywordMentions.length > 1;
-        displayText = highlightKeywordsByPositionWithTooltips(cleanedText, positionBasedKeywords, hasMultipleKeywords);
-    } else {
-        // No fuzzy matches found, use original text without highlighting
-        displayText = cleanedText;
+    // Get the approximate expected position in cleaned text
+    // Use a rough ratio to estimate where the keyword should be
+    const positionRatio = mention.position_in_content / context.context.length;
+    const estimatedPosition = Math.floor(positionRatio * cleanedText.length);
+    
+    // Search around the estimated position first, then expand outward
+    const searchRadius = Math.max(100, keyword.length * 10);
+    const searchStart = Math.max(0, estimatedPosition - searchRadius);
+    const searchEnd = Math.min(cleanedText.length, estimatedPosition + searchRadius);
+    
+    const cleanedLower = cleanedText.toLowerCase();
+    let bestMatch: { position: number; distance: number } | null = null;
+    
+    // Find all occurrences in the search area
+    let searchPos = searchStart;
+    while (searchPos < searchEnd) {
+      const foundIndex = cleanedLower.indexOf(keyword, searchPos);
+      if (foundIndex === -1 || foundIndex >= searchEnd) break;
+      
+      // Check if it's a whole word
+      const beforeChar = foundIndex > 0 ? cleanedText[foundIndex - 1] : ' ';
+      const afterChar = foundIndex + keyword.length < cleanedText.length ? cleanedText[foundIndex + keyword.length] : ' ';
+      const isWholeWord = /\W/.test(beforeChar) && /\W/.test(afterChar);
+      
+      if (isWholeWord) {
+        const distance = Math.abs(foundIndex - estimatedPosition);
+        
+        if (!bestMatch || distance < bestMatch.distance) {
+          bestMatch = { position: foundIndex, distance };
+        }
+      }
+      
+      searchPos = foundIndex + 1;
     }
-    } else {
-    // Fallback to plain text if no position data
+    
+    // If we found a match near the expected position, use it
+    if (bestMatch) {
+      // Check for overlaps with already found keywords
+      const hasOverlap = foundKeywords.some(existing => {
+        const existingEnd = existing.position + existing.keyword.length;
+        const currentEnd = bestMatch!.position + keyword.length;
+        return (bestMatch!.position < existingEnd && currentEnd > existing.position);
+      });
+      
+      if (!hasOverlap) {
+        // Validate that the found position actually contains the keyword
+        const actualText = cleanedText.substring(bestMatch.position, bestMatch.position + mention.keyword.length);
+        const expectedKeyword = mention.keyword.toLowerCase();
+        
+        if (actualText.toLowerCase() === expectedKeyword) {
+          foundKeywords.push({
+            keyword: mention.keyword, // Original casing
+            position: bestMatch.position,
+            sentiment_score: mention.sentiment_score // Correct sentiment for this specific occurrence
+          });
+        } else {
+          console.warn(`Position validation failed for "${mention.keyword}":`, {
+            expectedKeyword,
+            actualText,
+            position: bestMatch.position,
+            contentId: context.content_reddit_id
+          });
+          
+          // Try one more search without word boundary restrictions as fallback
+          const simpleIndex = cleanedLower.indexOf(expectedKeyword);
+          if (simpleIndex !== -1) {
+            const simpleActualText = cleanedText.substring(simpleIndex, simpleIndex + mention.keyword.length);
+            if (simpleActualText.toLowerCase() === expectedKeyword) {
+              foundKeywords.push({
+                keyword: mention.keyword,
+                position: simpleIndex,
+                sentiment_score: mention.sentiment_score
+              });
+              console.log(`Fallback search succeeded for "${mention.keyword}" at position ${simpleIndex}`);
+            }
+          }
+        }
+      }
+    }
+  });
+  
+  // Debug logging
+  console.log('Keyword search results:', {
+    contentId: context.content_reddit_id,
+    originalMentions: context.keyword_mentions.map(m => ({
+      keyword: m.keyword,
+      originalPos: m.position_in_content,
+      sentiment: m.sentiment_score
+    })),
+    foundKeywords: foundKeywords.map(f => ({
+      keyword: f.keyword,
+      foundPos: f.position,
+      sentiment: f.sentiment_score,
+      textAtPosition: cleanedText.substring(f.position, f.position + f.keyword.length)
+    })),
+    textLengths: {
+      original: context.context.length,
+      cleaned: cleanedText.length,
+      ratio: cleanedText.length / context.context.length
+    },
+    cleanedTextPreview: cleanedText.substring(0, 200) + '...'
+  });
+  
+  if (foundKeywords.length > 0) {
+    // Sort by position
+    foundKeywords.sort((a, b) => a.position - b.position);
+    
+    // Debug each keyword before highlighting
+    foundKeywords.forEach((kw, index) => {
+      const actualText = cleanedText.substring(kw.position, kw.position + kw.keyword.length);
+      console.log(`Pre-highlight validation ${index}:`, {
+        keyword: kw.keyword,
+        position: kw.position,
+        expectedText: kw.keyword,
+        actualTextAtPosition: actualText,
+        matches: actualText.toLowerCase() === kw.keyword.toLowerCase(),
+        surroundingText: cleanedText.substring(Math.max(0, kw.position - 10), kw.position + kw.keyword.length + 10)
+      });
+    });
+    
+    // Use the highlighting function
+    const hasMultipleKeywords = foundKeywords.length > 1;
+    displayText = highlightKeywordsByPositionWithTooltips(cleanedText, foundKeywords, hasMultipleKeywords);
+  } else {
+    console.log('No keywords found for highlighting');
     displayText = cleanedText;
-    }
+  }
+} else {
+  displayText = cleanedText;
+}
 
   // Format the timestamp
   const displayDate = formatDate(context.created_utc);

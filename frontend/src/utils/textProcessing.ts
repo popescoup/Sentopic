@@ -163,3 +163,20 @@ export const escapeHtml = (text: string): string => {
     
     return substring.trim();
   };
+
+  /**
+ * Validates that a position-based highlight is safe to apply
+ * @param text - The text to validate against
+ * @param keyword - The keyword being highlighted
+ * @param position - The position where highlighting should occur
+ * @returns True if the highlight is safe to apply
+ */
+export const validateHighlightPosition = (text: string, keyword: string, position: number): boolean => {
+  if (!text || !keyword || position < 0) return false;
+  
+  const endPosition = position + keyword.length;
+  if (endPosition > text.length) return false;
+  
+  const textAtPosition = text.substring(position, endPosition);
+  return textAtPosition.toLowerCase().trim() === keyword.toLowerCase().trim();
+};

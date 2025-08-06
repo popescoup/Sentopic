@@ -338,44 +338,50 @@ export const highlightKeywordsByPositionWithTooltips = (
   }
 
   const opts = { ...DEFAULT_HIGHLIGHTING_OPTIONS, ...options };
-  let result = opts.escapeHtml ? escapeHtml(text) : text;
+  // Don't escape the entire text when using position-based highlighting
+  // since positions are calculated on unescaped text
+  let result = text;
   
   // Sort by position in reverse order to maintain correct positions during replacement
   const sortedKeywords = [...positionKeywords].sort((a, b) => b.position - a.position);
   
   // Apply highlighting for each keyword at its exact position
-  sortedKeywords.forEach(keywordData => {
-    const { keyword, position, sentiment_score } = keywordData;
+sortedKeywords.forEach(keywordData => {
+  const { keyword, position, sentiment_score } = keywordData;
+  
+  // Find the end position of the keyword
+  const endPosition = position + keyword.length;
+  
+  // Ensure the position is valid and within bounds
+  if (position >= 0 && position < result.length && endPosition <= result.length && endPosition > position) {
+    const beforeMatch = result.substring(0, position);
+    const matchText = result.substring(position, endPosition);
+    const afterMatch = result.substring(endPosition);
     
-    // Find the end position of the keyword
-    const endPosition = position + keyword.length;
-    
-    // Ensure the position is valid
-    if (position >= 0 && endPosition <= result.length) {
-      const beforeMatch = result.substring(0, position);
-      const matchText = result.substring(position, endPosition);
-      const afterMatch = result.substring(endPosition);
-      
-      // Generate sentiment-based highlight classes
-      const sentimentClasses = getSentimentHighlightClasses(sentiment_score);
-      
-      // Create highlighted match with optional tooltip
-      let highlightedMatch;
-      if (enableTooltips) {
-        const tooltipText = `${keyword}: ${sentiment_score > 0 ? '+' : ''}${sentiment_score.toFixed(3)}`;
-        highlightedMatch = `<span class="${sentimentClasses} relative group cursor-help" data-sentiment="${sentiment_score.toFixed(3)}">
-          ${matchText}
-          <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-            ${tooltipText}
-          </span>
-        </span>`;
-      } else {
-        highlightedMatch = `<mark class="${sentimentClasses}" data-sentiment="${sentiment_score.toFixed(3)}">${matchText}</mark>`;
-      }
-      
-      result = beforeMatch + highlightedMatch + afterMatch;
+    // Validate that we're actually highlighting the expected keyword
+    if (matchText.toLowerCase().trim() !== keyword.toLowerCase().trim()) {
+      console.warn(`Position mismatch: expected "${keyword}", found "${matchText}" at position ${position}`);
+      return; // Skip this highlight to avoid corrupting the HTML
     }
-  });
+    
+    // Escape the match text to prevent HTML injection
+    const escapedMatchText = escapeHtml(matchText);
+    
+    // Generate sentiment-based highlight classes
+    const sentimentClasses = getSentimentHighlightClasses(sentiment_score);
+    
+    // Create highlighted match with optional tooltip
+    let highlightedMatch;
+    if (enableTooltips) {
+      const tooltipText = escapeHtml(`${keyword}: ${sentiment_score > 0 ? '+' : ''}${sentiment_score.toFixed(3)}`);
+      highlightedMatch = `<span class="${sentimentClasses} relative group cursor-help" data-sentiment="${sentiment_score.toFixed(3)}">${escapedMatchText}<span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">${tooltipText}</span></span>`;
+    } else {
+      highlightedMatch = `<mark class="${sentimentClasses}" data-sentiment="${sentiment_score.toFixed(3)}">${escapedMatchText}</mark>`;
+    }
+    
+    result = beforeMatch + highlightedMatch + afterMatch;
+  }
+});
 
   return result;
 };
