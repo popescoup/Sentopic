@@ -97,7 +97,7 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
       size="xl"
       className="max-h-[90vh]"
       >
-      <div className="max-h-[75vh] overflow-y-auto">
+      <div className="max-h-[75vh] overflow-y-auto pr-2">
           {/* Filter Controls */}
           <div className="border-b border-border-primary pb-6 mb-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

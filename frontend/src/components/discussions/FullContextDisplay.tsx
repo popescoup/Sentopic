@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { cleanRedditMarkdown } from '@/utils/textProcessing';
-import { highlightKeywordsByPosition } from '@/utils/keywordHighlighting';
+import { highlightKeywordsByPosition, highlightKeywordsByPositionWithTooltips } from '@/utils/keywordHighlighting';
 import { formatDate } from '@/utils/dateFormatting';
 import type { ContextInstance, FilteredContextInstance, CollectionMetadata } from '@/types/api';
 
@@ -34,22 +34,61 @@ export const FullContextDisplay: React.FC<FullContextDisplayProps> = ({
   // Clean the full text content
   const cleanedText = cleanRedditMarkdown(context.context);
 
-  // Apply position-based highlighting with sentiment colors
-  let displayText: string;
+  // Apply position-based highlighting with sentiment colors, conditional tooltips, and fuzzy matching
+    let displayText: string;
 
-  if (context.keyword_mentions && context.keyword_mentions.length > 0) {
-    // Transform keyword mentions to match PositionBasedKeyword interface
-    const positionBasedKeywords = context.keyword_mentions.map(mention => ({
-      keyword: mention.keyword,
-      position: mention.position_in_content,
-      sentiment_score: mention.sentiment_score
-    }));
-  
-    displayText = highlightKeywordsByPosition(cleanedText, positionBasedKeywords);
-  } else {
+    if (context.keyword_mentions && context.keyword_mentions.length > 0) {
+    // Use fuzzy position-based highlighting with sentiment colors
+    const adjustedKeywordMentions = context.keyword_mentions.map(mention => {
+        // Start with the original position
+        let basePosition = mention.position_in_content;
+        
+        // Skip if way out of bounds
+        if (basePosition < -10 || basePosition > cleanedText.length + 10) {
+        return null;
+        }
+        
+        const keyword = mention.keyword.toLowerCase();
+        const searchRadius = Math.min(50, Math.max(20, keyword.length * 5));
+        
+        // Search within the fuzzy window around the base position
+        const searchStart = Math.max(0, basePosition - searchRadius);
+        const searchEnd = Math.min(cleanedText.length - keyword.length + 1, basePosition + searchRadius + 1);
+        
+        for (let pos = searchStart; pos < searchEnd; pos++) {
+        const textAtPosition = cleanedText.substring(pos, pos + keyword.length).toLowerCase();
+        if (textAtPosition === keyword.toLowerCase()) {
+            // Found exact match! Use this position
+            return {
+            ...mention,
+            position_in_content: pos
+            };
+        }
+        }
+        
+        // No exact match found within the fuzzy window
+        return null;
+    }).filter((mention): mention is NonNullable<typeof mention> => mention !== null);
+    
+    if (adjustedKeywordMentions.length > 0) {
+        // Transform to PositionBasedKeyword interface
+        const positionBasedKeywords = adjustedKeywordMentions.map(mention => ({
+        keyword: mention.keyword,
+        position: mention.position_in_content,
+        sentiment_score: mention.sentiment_score
+        }));
+
+        // Use enhanced highlighting with tooltips for multiple keywords
+        const hasMultipleKeywords = adjustedKeywordMentions.length > 1;
+        displayText = highlightKeywordsByPositionWithTooltips(cleanedText, positionBasedKeywords, hasMultipleKeywords);
+    } else {
+        // No fuzzy matches found, use original text without highlighting
+        displayText = cleanedText;
+    }
+    } else {
     // Fallback to plain text if no position data
     displayText = cleanedText;
-  }
+    }
 
   // Format the timestamp
   const displayDate = formatDate(context.created_utc);
@@ -88,31 +127,24 @@ export const FullContextDisplay: React.FC<FullContextDisplayProps> = ({
   return (
     <div className={`p-6 bg-content rounded-default border border-border-primary hover:border-border-emphasis transition-all duration-150 ${className}`}>
       {/* Header with metadata */}
-      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
-          {/* Subreddit and content type */}
-          <div className="flex items-center space-x-2">
+            {/* Subreddit and content type */}
+            <div className="flex items-center space-x-2">
             <span className="font-medium text-text-primary">
-              r/{subreddit}
+                r/{subreddit}
             </span>
             <span className="text-text-tertiary">•</span>
             <span className="font-small text-text-tertiary">
-              {contentTypeLabel}
+                {contentTypeLabel}
             </span>
             <span className="text-text-tertiary">•</span>
             <span className="font-small text-text-tertiary">
-              {displayDate}
+                {displayDate}
             </span>
-          </div>
+            </div>
         </div>
-
-        {/* Overall sentiment indicator */}
-        <div className={`px-2 py-1 rounded-input text-xs ${sentimentStyle.bgColor} ${sentimentStyle.borderColor} border`}>
-          <span className={`font-medium ${sentimentStyle.color}`}>
-          {sentimentStyle.label} ({avgSentiment > 0 ? '+' : ''}{avgSentiment.toFixed(3)})
-          </span>
         </div>
-      </div>
 
       {/* Full content with keyword highlighting */}
       <div className="mb-4">
@@ -122,35 +154,24 @@ export const FullContextDisplay: React.FC<FullContextDisplayProps> = ({
         />
       </div>
 
-      {/* Footer with keyword mentions summary */}
-      <div className="pt-4 border-t border-border-primary">
+      {/* Footer with sentiment summary */}
+        <div className="pt-4 border-t border-border-primary">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4">
             <span className="font-small text-text-tertiary">
-              Keywords Found: 
-              <span className="ml-1 font-medium text-text-primary">
-                {context.keyword_mentions?.length || 0}
-              </span>
+                {context.keyword_mentions && context.keyword_mentions.length > 1 ? 'Avg. Sentiment Score' : 'Sentiment Score'}: 
+                <span className={`ml-1 font-technical ${sentimentStyle.color}`}>
+                {avgSentiment > 0 ? '+' : ''}{avgSentiment.toFixed(3)}
+                </span>
             </span>
-            
-            {/* Individual keyword mentions with sentiment */}
-            <div className="flex flex-wrap gap-2">
-              {context.keyword_mentions?.map((mention, index) => {
-                const mentionSentimentStyle = getSentimentStyling(mention.sentiment_score);
-                return (
-                  <span
-                    key={index}
-                    className={`px-2 py-1 rounded-input text-xs font-medium ${mentionSentimentStyle.bgColor} ${mentionSentimentStyle.color} border ${mentionSentimentStyle.borderColor}`}
-                    title={`${mention.keyword}: ${mention.sentiment_score > 0 ? '+' : ''}${mention.sentiment_score.toFixed(3)}`}
-                  >
-                    {mention.keyword}
-                  </span>
-                );
-              })}
+            {context.keyword_mentions && context.keyword_mentions.length > 1 && (
+                <span className="font-small text-text-tertiary italic">
+                *Hover over keywords for individual sentiment scores
+                </span>
+            )}
             </div>
-          </div>
 
-          {/* Reddit link indicator */}
+            {/* Reddit link indicator */}
             <button 
             className="font-small text-accent hover:text-blue-700 transition-colors duration-150"
             onClick={() => {
@@ -171,7 +192,7 @@ export const FullContextDisplay: React.FC<FullContextDisplayProps> = ({
             View on Reddit →
             </button>
         </div>
-      </div>
+        </div>
     </div>
   );
 };

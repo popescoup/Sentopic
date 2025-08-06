@@ -265,17 +265,6 @@ const sentimentStyle = getSentimentStyling(visibleSentiment.score);
           </span>
         </span>
         </div>
-        
-        {/* Link indicator for Phase 5 context explorer */}
-        <button 
-          className="font-small text-accent hover:text-blue-700 transition-colors duration-150"
-          onClick={() => {
-            // Placeholder for Phase 5 - will open context explorer with this specific discussion
-            console.log('Future: Open context explorer for', context.content_reddit_id);
-          }}
-        >
-          View Full Context →
-        </button>
       </div>
     </div>
   );

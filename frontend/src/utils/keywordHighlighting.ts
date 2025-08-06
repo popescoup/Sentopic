@@ -317,3 +317,65 @@ const getSentimentHighlightClasses = (score: number): string => {
     return 'bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-medium border border-gray-300';
   }
 };
+
+/**
+ * Apply highlighting based on exact positions with optional tooltips for sentiment scores
+ * @param text - The original text
+ * @param positionKeywords - Array of keywords with positions and sentiment scores
+ * @param enableTooltips - Whether to add hover tooltips for individual sentiment scores
+ * @param options - Highlighting options
+ * @returns HTML string with position-based highlighted keywords and optional tooltips
+ */
+export const highlightKeywordsByPositionWithTooltips = (
+  text: string,
+  positionKeywords: PositionBasedKeyword[],
+  enableTooltips: boolean = false,
+  options: Partial<HighlightingOptions> = {}
+): string => {
+  if (!text || !positionKeywords || positionKeywords.length === 0) {
+    const opts = { ...DEFAULT_HIGHLIGHTING_OPTIONS, ...options };
+    return opts.escapeHtml ? escapeHtml(text) : text;
+  }
+
+  const opts = { ...DEFAULT_HIGHLIGHTING_OPTIONS, ...options };
+  let result = opts.escapeHtml ? escapeHtml(text) : text;
+  
+  // Sort by position in reverse order to maintain correct positions during replacement
+  const sortedKeywords = [...positionKeywords].sort((a, b) => b.position - a.position);
+  
+  // Apply highlighting for each keyword at its exact position
+  sortedKeywords.forEach(keywordData => {
+    const { keyword, position, sentiment_score } = keywordData;
+    
+    // Find the end position of the keyword
+    const endPosition = position + keyword.length;
+    
+    // Ensure the position is valid
+    if (position >= 0 && endPosition <= result.length) {
+      const beforeMatch = result.substring(0, position);
+      const matchText = result.substring(position, endPosition);
+      const afterMatch = result.substring(endPosition);
+      
+      // Generate sentiment-based highlight classes
+      const sentimentClasses = getSentimentHighlightClasses(sentiment_score);
+      
+      // Create highlighted match with optional tooltip
+      let highlightedMatch;
+      if (enableTooltips) {
+        const tooltipText = `${keyword}: ${sentiment_score > 0 ? '+' : ''}${sentiment_score.toFixed(3)}`;
+        highlightedMatch = `<span class="${sentimentClasses} relative group cursor-help" data-sentiment="${sentiment_score.toFixed(3)}">
+          ${matchText}
+          <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+            ${tooltipText}
+          </span>
+        </span>`;
+      } else {
+        highlightedMatch = `<mark class="${sentimentClasses}" data-sentiment="${sentiment_score.toFixed(3)}">${matchText}</mark>`;
+      }
+      
+      result = beforeMatch + highlightedMatch + afterMatch;
+    }
+  });
+
+  return result;
+};
