@@ -68,12 +68,8 @@ if (context.keyword_mentions && context.keyword_mentions.length > 0) {
       const foundIndex = cleanedLower.indexOf(keyword, searchPos);
       if (foundIndex === -1 || foundIndex >= searchEnd) break;
       
-      // Check if it's a whole word
-      const beforeChar = foundIndex > 0 ? cleanedText[foundIndex - 1] : ' ';
-      const afterChar = foundIndex + keyword.length < cleanedText.length ? cleanedText[foundIndex + keyword.length] : ' ';
-      const isWholeWord = /\W/.test(beforeChar) && /\W/.test(afterChar);
-      
-      if (isWholeWord) {
+      // Accept all matches (no whole word requirement)
+      if (true) {
         const distance = Math.abs(foundIndex - estimatedPosition);
         
         if (!bestMatch || distance < bestMatch.distance) {
