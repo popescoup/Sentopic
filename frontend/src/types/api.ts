@@ -37,7 +37,8 @@ export interface ProjectStats {
     cooccurrences?: KeywordCooccurrence[];
     trend_summaries?: Record<string, TrendSummary>;
     sample_contexts?: ContextInstance[];
-  }
+    keywords_data?: KeywordData[];
+}
   
   export interface ProjectCreate {
     name: string;
@@ -318,4 +319,15 @@ interface PaginationInfo {
   total_pages: number;
   has_next: boolean;
   has_previous: boolean;
+}
+
+export interface KeywordData {
+  keyword: string;
+  total_mentions: number;
+  avg_sentiment: number;
+  posts_found_in: number;
+  comments_found_in: number;
+  collections_found_in: string[];
+  first_mention_date: number;
+  last_mention_date: number;
 }

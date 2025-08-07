@@ -214,14 +214,14 @@ const visibleSentiment = calculateVisibleKeywordsSentiment();
 
 // Determine sentiment styling
 const getSentimentStyling = (score: number) => {
-  if (score > 0.001) {
+  if (score > 0.0001) {
     return {
       color: 'text-success',
       bgColor: 'bg-green-100',
       borderColor: 'border-success',
       label: 'Positive'
     };
-  } else if (score < -0.001) {
+  } else if (score < -0.0001) {
     return {
       color: 'text-danger',
       bgColor: 'bg-red-100',

@@ -94,6 +94,7 @@ class ProjectResponse(ProjectBase):
     cooccurrences: Optional[List[Dict[str, Any]]] = Field(None, description="Top keyword co-occurrences")
     trend_summaries: Optional[Dict[str, Dict[str, Any]]] = Field(None, description="Trend direction summaries by keyword")
     sample_contexts: Optional[List[Dict[str, Any]]] = Field(None, description="Sample discussion contexts")
+    keywords_data: Optional[List[Dict[str, Any]]] = Field(None, description="Individual keyword statistics with mentions and sentiment")
     
     class Config:
         """Pydantic configuration."""

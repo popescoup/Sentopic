@@ -4,3 +4,4 @@
  */
 
 export { default as ContextExplorerModal } from './ContextExplorerModal';
+export { default as KeywordOverviewModal } from './KeywordOverviewModal';

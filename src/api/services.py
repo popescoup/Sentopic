@@ -1210,6 +1210,10 @@ Return only the keywords, separated by commas, with no additional explanation.""
             sample_contexts = session_results.get('sample_contexts')
             print(f"🔍 Sample contexts: {len(sample_contexts) if sample_contexts else 0} items")
 
+            print("🔍 Preparing keywords_data...")
+            keywords_data = session_results.get('keywords_data')
+            print(f"🔍 Keywords data: {len(keywords_data) if keywords_data else 0} items")
+
             print("🔍 Creating ProjectResponse object...")
             return ProjectResponse(
                 id=session.id,
@@ -1226,7 +1230,8 @@ Return only the keywords, separated by commas, with no additional explanation.""
                 collections_metadata=collections_metadata,
                 cooccurrences=cooccurrences,
                 trend_summaries=trend_summaries,
-                sample_contexts=sample_contexts
+                sample_contexts=sample_contexts,
+                keywords_data=keywords_data
             )
         except Exception as e:
             print(f"🔍 Error in transformation: {e}")
