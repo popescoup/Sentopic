@@ -331,3 +331,38 @@ export interface KeywordData {
   first_mention_date: number;
   last_mention_date: number;
 }
+
+// Network visualization interfaces
+export interface NetworkNode extends d3.SimulationNodeDatum {
+  id: string;
+  connectionCount: number;
+  totalWeight: number;
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  fx?: number | null;
+  fy?: number | null;
+}
+
+export interface NetworkLink extends d3.SimulationLinkDatum<NetworkNode> {
+  source: string | NetworkNode;
+  target: string | NetworkNode;
+  weight: number;
+  inPosts: number;
+  inComments: number;
+  index?: number;
+}
+
+export interface NetworkData {
+  nodes: NetworkNode[];
+  links: NetworkLink[];
+  metadata: {
+    totalNodes: number;
+    totalLinks: number;
+    maxConnections: number;
+    minConnections: number;
+    maxWeight: number;
+    minWeight: number;
+  };
+}

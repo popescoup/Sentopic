@@ -7,6 +7,8 @@
 import React, { useState, useMemo } from 'react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
+import { KeywordNetworkGraph } from '@/components/visualizations';
+import { transformCooccurrenceToNetwork } from '@/utils/networkDataTransform';
 import type { ProjectResponse, KeywordCooccurrence } from '@/types/api';
 
 interface KeywordRelationshipsModalProps {
@@ -205,6 +207,25 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
             </div>
           )}
         </div>
+        
+        {/* Network Visualization Section */}
+        {sortedCooccurrences.length > 0 && (
+          <div className="mb-8">
+            <h3 className="font-section-header text-text-primary mb-4">
+              Relationship Network
+            </h3>
+            
+            <div className="p-4 bg-content rounded-default border border-border-primary">
+              <KeywordNetworkGraph
+                networkData={transformCooccurrenceToNetwork(sortedCooccurrences)}
+                onLinkClick={handleLinkClick}
+                width={800}
+                height={400}
+                className="w-full"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Relationships Table Section */}
         <div>
