@@ -14,11 +14,12 @@ import Card, { InsightCard } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { DiscussionSnippet } from '@/components/discussions';
-import { ContextExplorerModal, KeywordOverviewModal } from '@/components/modals';
+import { ContextExplorerModal, KeywordOverviewModal, KeywordRelationshipsModal } from '@/components/modals';
 import AIQuestionPanel from '@/components/ai/AIQuestionPanel';
 import { api, getErrorMessage } from '@/api/client';
 import { getInsightData } from '@/utils/insightProcessing';
 import type { ContextInstance } from '@/types/api';
+
 
 const getUniqueContexts = (contexts?: ContextInstance[]) => {
   if (!contexts) return [];
@@ -40,6 +41,7 @@ const ProjectWorkspace: React.FC = () => {
   const [isSummaryModalOpen, setIsSummaryModalOpen] = React.useState(false);
   const [isContextExplorerOpen, setIsContextExplorerOpen] = React.useState(false);
   const [isKeywordOverviewOpen, setIsKeywordOverviewOpen] = React.useState(false);
+  const [isKeywordRelationshipsOpen, setIsKeywordRelationshipsOpen] = React.useState(false);
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project-results', projectId],
     queryFn: () => api.getAnalysisResults(projectId!),
@@ -253,9 +255,9 @@ const ProjectWorkspace: React.FC = () => {
               
               <InsightCard
                 title="Keyword Relationships"
-                value={insightData.relationships?.count.toLocaleString() || 'No data'}
+                value={insightData.relationships?.count.toLocaleString() || '0'}
                 description={insightData.relationships?.description || 'No co-occurrence data available'}
-                onClick={() => handleComingSoon('Keyword Relationships')}
+                onClick={() => setIsKeywordRelationshipsOpen(true)}
               />
               
               <InsightCard
@@ -518,6 +520,20 @@ const ProjectWorkspace: React.FC = () => {
         isOpen={isKeywordOverviewOpen}
         onClose={() => setIsKeywordOverviewOpen(false)}
         project={project}
+      />
+
+      {/* Keyword Relationships Modal */}
+      <KeywordRelationshipsModal
+        isOpen={isKeywordRelationshipsOpen}
+        onClose={() => setIsKeywordRelationshipsOpen(false)}
+        project={project}
+        onExploreRelationship={(keyword1, keyword2) => {
+          // Close relationships modal and open context explorer with both keywords
+          setIsKeywordRelationshipsOpen(false);
+          setIsContextExplorerOpen(true);
+          // You might want to pass these keywords to the context explorer
+          // This would require updating the ContextExplorerModal to accept initial filters
+        }}
       />
     </MainLayout>
   );

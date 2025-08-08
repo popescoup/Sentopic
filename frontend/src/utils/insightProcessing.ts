@@ -31,7 +31,11 @@ export const getTopCooccurrence = (project: ProjectResponse): {
 } | null => {
   try {
     if (!project.cooccurrences || project.cooccurrences.length === 0) {
-      return null;
+      return {
+        count: 0,
+        pair: 'No relationships found',
+        description: 'No keyword co-occurrences detected in the analysis'
+      };
     }
 
     // Find the co-occurrence with the highest count
@@ -46,17 +50,25 @@ export const getTopCooccurrence = (project: ProjectResponse): {
     const keyword2 = topCooccurrence.keyword2 || '';
 
     if (!keyword1 || !keyword2) {
-      return null;
+      return {
+        count: 0,
+        pair: 'Invalid data',
+        description: 'Co-occurrence data appears to be malformed'
+      };
     }
 
     return {
       count,
       pair: `"${keyword1}" + "${keyword2}"`,
-      description: `Top co-occurrence: "${keyword1}" + "${keyword2}" appear together in ${formatNumber(count)} discussions`
+      description: `Top relationship: "${keyword1}" and "${keyword2}" appear together ${formatNumber(count)} times`
     };
   } catch (error) {
     console.error('Error processing co-occurrence data:', error);
-    return null;
+    return {
+      count: 0,
+      pair: 'Error',
+      description: 'Unable to process relationship data'
+    };
   }
 };
 
