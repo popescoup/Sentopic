@@ -3,6 +3,7 @@
  * Main interface for exploring analysis results
  * 
  * Phase 4.2: AI Q&A Integration
+ * ENHANCED: Keyword relationship navigation to Context Explorer
  */
 
 import React from 'react';
@@ -19,7 +20,6 @@ import AIQuestionPanel from '@/components/ai/AIQuestionPanel';
 import { api, getErrorMessage } from '@/api/client';
 import { getInsightData } from '@/utils/insightProcessing';
 import type { ContextInstance } from '@/types/api';
-
 
 const getUniqueContexts = (contexts?: ContextInstance[]) => {
   if (!contexts) return [];
@@ -38,10 +38,19 @@ const getUniqueContexts = (contexts?: ContextInstance[]) => {
 const ProjectWorkspace: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  
+  // Modal state management
   const [isSummaryModalOpen, setIsSummaryModalOpen] = React.useState(false);
   const [isContextExplorerOpen, setIsContextExplorerOpen] = React.useState(false);
   const [isKeywordOverviewOpen, setIsKeywordOverviewOpen] = React.useState(false);
   const [isKeywordRelationshipsOpen, setIsKeywordRelationshipsOpen] = React.useState(false);
+  
+  // NEW: State for managing initial context explorer filters
+  const [contextExplorerInitialFilters, setContextExplorerInitialFilters] = React.useState<{
+    primary_keyword?: string;
+    secondary_keyword?: string;
+  } | undefined>(undefined);
+  
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project-results', projectId],
     queryFn: () => api.getAnalysisResults(projectId!),
@@ -61,6 +70,28 @@ const ProjectWorkspace: React.FC = () => {
   const uniqueContexts = React.useMemo(() => {
     return getUniqueContexts(project?.sample_contexts);
   }, [project?.sample_contexts]);
+
+  // NEW: Handle keyword relationship exploration
+  const handleExploreRelationship = React.useCallback((keyword1: string, keyword2: string) => {
+    console.log(`🔍 Exploring relationship: "${keyword1}" + "${keyword2}"`);
+    
+    // Set initial filters for context explorer
+    setContextExplorerInitialFilters({
+      primary_keyword: keyword1,
+      secondary_keyword: keyword2
+    });
+    
+    // Close relationships modal and open context explorer
+    setIsKeywordRelationshipsOpen(false);
+    setIsContextExplorerOpen(true);
+  }, []);
+
+  // NEW: Handle context explorer close (clear initial filters)
+  const handleContextExplorerClose = React.useCallback(() => {
+    setIsContextExplorerOpen(false);
+    // Clear initial filters when modal closes
+    setContextExplorerInitialFilters(undefined);
+  }, []);
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -508,11 +539,12 @@ const ProjectWorkspace: React.FC = () => {
         </Modal>
       )}
 
-      {/* Context Explorer Modal */}
+      {/* Context Explorer Modal - ENHANCED with initial filters */}
       <ContextExplorerModal
         isOpen={isContextExplorerOpen}
-        onClose={() => setIsContextExplorerOpen(false)}
+        onClose={handleContextExplorerClose}
         project={project}
+        initialFilters={contextExplorerInitialFilters}
       />
 
       {/* Keyword Overview Modal */}
@@ -522,18 +554,12 @@ const ProjectWorkspace: React.FC = () => {
         project={project}
       />
 
-      {/* Keyword Relationships Modal */}
+      {/* Keyword Relationships Modal - ENHANCED with exploration handler */}
       <KeywordRelationshipsModal
         isOpen={isKeywordRelationshipsOpen}
         onClose={() => setIsKeywordRelationshipsOpen(false)}
         project={project}
-        onExploreRelationship={(keyword1, keyword2) => {
-          // Close relationships modal and open context explorer with both keywords
-          setIsKeywordRelationshipsOpen(false);
-          setIsContextExplorerOpen(true);
-          // You might want to pass these keywords to the context explorer
-          // This would require updating the ContextExplorerModal to accept initial filters
-        }}
+        onExploreRelationship={handleExploreRelationship}
       />
     </MainLayout>
   );

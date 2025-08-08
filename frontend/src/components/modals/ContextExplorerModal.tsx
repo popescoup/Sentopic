@@ -2,6 +2,8 @@
  * Context Explorer Modal
  * Advanced filtering and exploration of keyword contexts
  * Provides comprehensive search and navigation through Reddit discussions
+ * 
+ * ENHANCED: Now supports initial filter values for keyword relationships
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,7 +15,6 @@ import { FullContextDisplay } from '@/components/discussions';
 import { useFilteredContexts, getDefaultFilters, type FilterState } from '@/hooks/useFilteredContexts';
 import type { ProjectResponse } from '@/types/api';
 
-
 interface ContextExplorerModalProps {
   /** Whether the modal is open */
   isOpen: boolean;
@@ -21,29 +22,48 @@ interface ContextExplorerModalProps {
   onClose: () => void;
   /** Project data for filtering and display */
   project: ProjectResponse;
+  /** Initial filter values (for keyword relationships navigation) */
+  initialFilters?: {
+    primary_keyword?: string;
+    secondary_keyword?: string;
+  };
 }
 
 export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
     isOpen,
     onClose,
-    project
+    project,
+    initialFilters
   }) => {
     // Filter state management
     const [filters, setFilters] = useState<FilterState>(getDefaultFilters());
     
-    // Add this after the existing filters state declaration
+    // Local sentiment values for input handling
     const [localSentimentValues, setLocalSentimentValues] = useState({
       min: filters.min_sentiment.toString(),
       max: filters.max_sentiment.toString()
     });
     
-    // Reset filters when modal opens
+    // Reset filters when modal opens, but apply initial filters if provided
     useEffect(() => {
       if (isOpen) {
-        setFilters(getDefaultFilters());
+        const defaultFilters = getDefaultFilters();
+        
+        // Apply initial filters if provided (from keyword relationships)
+        if (initialFilters) {
+          const newFilters = {
+            ...defaultFilters,
+            primary_keyword: initialFilters.primary_keyword,
+            secondary_keyword: initialFilters.secondary_keyword,
+            page: 1 // Reset to first page
+          };
+          setFilters(newFilters);
+        } else {
+          setFilters(defaultFilters);
+        }
       }
-    }, [isOpen]);
-  
+    }, [isOpen, initialFilters]);
+    
     // Update local values when filters change (e.g., when modal opens/resets)
     useEffect(() => {
       setLocalSentimentValues({
@@ -268,6 +288,13 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
               <span className="px-2 py-1 bg-gray-200 text-text-secondary rounded text-xs">
                 Sentiment: {filters.min_sentiment.toFixed(2)} to {filters.max_sentiment.toFixed(2)}
               </span>
+              
+              {/* NEW: Show relationship indicator when both keywords are selected */}
+              {filters.primary_keyword && filters.secondary_keyword && (
+                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                  Co-occurrence: "{filters.primary_keyword}" + "{filters.secondary_keyword}"
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -355,7 +382,13 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
                   No Posts/Comments Found
                 </h3>
                 <p className="font-body text-text-secondary mb-4 max-w-md mx-auto">
-                  No discussions match your current filter criteria. Try adjusting your keywords or sentiment range.
+                  {filters.primary_keyword && filters.secondary_keyword ? (
+                    <>No discussions found where both "<strong>{filters.primary_keyword}</strong>" and "<strong>{filters.secondary_keyword}</strong>" appear together. Try adjusting your filters or sentiment range.</>
+                  ) : filters.primary_keyword ? (
+                    <>No discussions found containing "<strong>{filters.primary_keyword}</strong>". Try selecting a different keyword or adjusting your sentiment range.</>
+                  ) : (
+                    "No discussions match your current filter criteria. Try adjusting your keywords or sentiment range."
+                  )}
                 </p>
                 <Button 
                   variant="outline"
