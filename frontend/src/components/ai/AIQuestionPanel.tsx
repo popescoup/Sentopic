@@ -13,6 +13,7 @@ import { useAIStatus } from '@/hooks/useApi';
 import SearchTypeSelector from './SearchTypeSelector';
 import SemanticSearchModal from './SemanticSearchModal';
 import MessageList from './MessageList';
+import AIQuestionModal from './AIQuestionModal';
 import type { ChatMessageCreate } from '@/types/api';
 
 // Extract the search type for consistency
@@ -25,7 +26,8 @@ interface AIQuestionPanelProps {
 const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
   const [question, setQuestion] = useState('');
   const [showSemanticModal, setShowSemanticModal] = useState(false);
-  const [pendingSearchType, setPendingSearchType] = useState<SearchType | null>(null); // Updated type
+  const [pendingSearchType, setPendingSearchType] = useState<SearchType | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false); // New state for modal
 
   // Hooks
   const { data: aiStatus } = useAIStatus();
@@ -133,17 +135,35 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
   return (
     <>
       <Card className="bg-gradient-subtle">
-        <div className="mb-4">
-          <h3 className="font-section-header text-text-primary mb-2">
-            AI Assistant
-          </h3>
-          <div className="flex items-center text-small text-text-tertiary">
-            <div className={`w-2 h-2 rounded-full mr-2 ${
-              isLoading ? 'bg-accent animate-pulse' : 
-              error ? 'bg-danger' : 'bg-success'
-            }`}></div>
-            {isLoading ? 'Analyzing question' : 
-             error ? 'Error' : 'Ready'}
+      <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-section-header text-text-primary">
+              AI Assistant
+            </h3>
+            
+            {/* Expand Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsModalOpen(true)}
+              className="text-text-secondary hover:text-text-primary p-1"
+              aria-label="Expand to full screen"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+            </Button>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center text-small text-text-tertiary">
+              <div className={`w-2 h-2 rounded-full mr-2 ${
+                isLoading ? 'bg-accent animate-pulse' : 
+                error ? 'bg-danger' : 'bg-success'
+              }`}></div>
+              {isLoading ? 'Analyzing question' : 
+               error ? 'Error' : 'Ready'}
+            </div>
           </div>
         </div>
 
@@ -218,7 +238,19 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
         projectId={projectId}
         indexingStatus={indexingStatus}
         isIndexingInProgress={isIndexingInProgress}
-        />
+      />
+
+      {/* Full-Screen AI Chat Modal */}
+      <AIQuestionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        projectId={projectId}
+        sessionId={sessionId}
+        messages={messages}
+        isLoading={isLoading}
+        error={error}
+        sendQuestion={sendQuestion}
+      />
     </>
   );
 };
