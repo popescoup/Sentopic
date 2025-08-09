@@ -58,10 +58,9 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
   }, [project.cooccurrences, sortBy]);
 
   // Handle link click in network
-  const handleLinkClick = (link: any) => {
-    const source = typeof link.source === 'string' ? link.source : link.source?.id || '';
-    const target = typeof link.target === 'string' ? link.target : link.target?.id || '';
-    onExploreRelationship(source, target);
+  const handleLinkClick = (keyword1: string, keyword2: string) => {
+    console.log('🔍 Modal handleLinkClick received:', { keyword1, keyword2 }); // Debug line
+    onExploreRelationship(keyword1, keyword2);
   };
 
   // Handle table row click
@@ -218,7 +217,7 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
             <div className="p-4 bg-content rounded-default border border-border-primary">
               <KeywordNetworkGraph
                 networkData={transformCooccurrenceToNetwork(sortedCooccurrences)}
-                onLinkClick={handleLinkClick}
+                onLinkClick={handleLinkClick} // This should now match the expected signature
                 width={800}
                 height={400}
                 className="w-full"

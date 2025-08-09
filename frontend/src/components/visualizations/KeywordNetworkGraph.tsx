@@ -63,9 +63,10 @@ export const KeywordNetworkGraph: React.FC<KeywordNetworkGraphProps> = ({
 
     // Define scales for node size and link width
     const nodeConnectionScale = d3
-      .scaleLinear()
-      .domain(d3.extent(networkData.nodes, d => d.connectionCount) as [number, number])
-      .range([8, 24]);
+    .scalePow()
+    .exponent(2) // quadratic
+    .domain(d3.extent(networkData.nodes, d => d.connectionCount) as [number, number])
+    .range([8, 24]);
 
     const linkWidthScale = d3
       .scaleLinear()
@@ -80,7 +81,7 @@ export const KeywordNetworkGraph: React.FC<KeywordNetworkGraphProps> = ({
       .distance(80)
       .strength(0.3)
     )
-    .force('charge', d3.forceManyBody().strength(-300))
+    .force('charge', d3.forceManyBody().strength(-1000))
     .force('center', d3.forceCenter(width / 2, height / 2))
     .force('collision', d3.forceCollide<NetworkNode>().radius(d => nodeConnectionScale(d.connectionCount) + 4));
 
@@ -99,28 +100,36 @@ export const KeywordNetworkGraph: React.FC<KeywordNetworkGraphProps> = ({
           .attr('stroke', '#0366d6')
           .attr('opacity', 0.8);
         
-        // Show tooltip
+        // Extract keyword names properly
+        const sourceKeyword = typeof d.source === 'string' ? d.source : d.source.id;
+        const targetKeyword = typeof d.target === 'string' ? d.target : d.target.id;
+        
+        // Show tooltip with specific class
         const tooltip = d3.select('body')
           .append('div')
-          .attr('class', 'absolute bg-content border border-border-primary rounded-input px-2 py-1 font-small text-text-primary shadow-card z-50 pointer-events-none')
+          .attr('class', 'd3-tooltip absolute bg-content border border-border-primary rounded-input px-2 py-1 font-small text-text-primary shadow-card z-50 pointer-events-none')
           .style('left', (event.pageX + 10) + 'px')
           .style('top', (event.pageY - 10) + 'px')
-          .text(`"${d.source}" + "${d.target}": ${d.weight} co-occurrences`);
+          .text(`"${sourceKeyword}" + "${targetKeyword}": ${d.weight} co-occurrences`);
       })
       .on('mouseout', function() {
         d3.select(this)
           .attr('stroke', '#e1e4e8')
           .attr('opacity', 0.6);
         
-        // Remove tooltip
-        d3.selectAll('.absolute').remove();
+        // Remove only D3 tooltips, not all absolute positioned elements
+        d3.selectAll('.d3-tooltip').remove();
       })
       .on('click', function(event, d) {
         event.stopPropagation();
-        onLinkClick(
-          typeof d.source === 'string' ? d.source : d.source.id,
-          typeof d.target === 'string' ? d.target : d.target.id
-        );
+        
+        // Extract keyword names properly for click handler
+        const sourceKeyword = typeof d.source === 'string' ? d.source : d.source.id;
+        const targetKeyword = typeof d.target === 'string' ? d.target : d.target.id;
+
+        console.log('🔍 Network link clicked:', { sourceKeyword, targetKeyword }); // Add this debug line
+        
+        onLinkClick(sourceKeyword, targetKeyword);
       });
 
     // Create nodes
@@ -261,7 +270,7 @@ export const KeywordNetworkGraph: React.FC<KeywordNetworkGraphProps> = ({
           <span>Co-occurrences (thickness = frequency)</span>
         </div>
         <div className="text-text-tertiary">
-          Drag nodes • Hover for details • Click edges to explore
+          Drag nodes • Hover for details • Click connections to explore
         </div>
       </div>
     </div>

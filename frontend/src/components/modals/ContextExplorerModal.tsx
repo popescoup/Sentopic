@@ -289,12 +289,6 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
                 Sentiment: {filters.min_sentiment.toFixed(2)} to {filters.max_sentiment.toFixed(2)}
               </span>
               
-              {/* NEW: Show relationship indicator when both keywords are selected */}
-              {filters.primary_keyword && filters.secondary_keyword && (
-                <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
-                  Co-occurrence: "{filters.primary_keyword}" + "{filters.secondary_keyword}"
-                </span>
-              )}
             </div>
           </div>
         </div>
