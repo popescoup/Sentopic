@@ -257,14 +257,11 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
                     <th className="px-4 py-3 text-left font-subsection text-text-primary">
                       Keyword Pair
                     </th>
-                    <th className="px-4 py-3 text-right font-subsection text-text-primary">
+                    <th className="px-4 py-3 text-center font-subsection text-text-primary">
                       Total Count
                     </th>
-                    <th className="px-4 py-3 text-right font-subsection text-text-primary">
-                      In Posts
-                    </th>
-                    <th className="px-4 py-3 text-right font-subsection text-text-primary">
-                      In Comments
+                    <th className="px-4 py-3 text-center font-subsection text-text-primary">
+                      Posts / Comments
                     </th>
                     <th className="px-4 py-3 text-center font-subsection text-text-primary">
                       Action
@@ -288,23 +285,27 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
                         </div>
                       </td>
                       
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-center">
                         <span className="font-technical text-text-primary font-semibold">
                           {cooc.cooccurrence_count.toLocaleString()}
                         </span>
                       </td>
                       
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-center">
                         <span className="font-technical text-text-secondary">
-                          {cooc.in_posts.toLocaleString()}
-                        </span>
-                      </td>
-                      
-                      <td className="px-4 py-3 text-right">
-                        <span className="font-technical text-text-secondary">
-                          {cooc.in_comments.toLocaleString()}
-                        </span>
-                      </td>
+                        {(() => {
+                          const totalPosts = cooc.in_posts || 0;
+                          const totalComments = cooc.in_comments || 0;
+                          const total = totalPosts + totalComments;
+                          
+                          if (total === 0) return '0% / 0%';
+                          
+                          const postsPercent = Math.round((totalPosts / total) * 100);
+                          const commentsPercent = Math.round((totalComments / total) * 100);
+                          return `${postsPercent}% / ${commentsPercent}%`;
+                        })()}
+                      </span>
+                    </td>
                       
                       <td className="px-4 py-3 text-center">
                         <Button
