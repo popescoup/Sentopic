@@ -60,6 +60,7 @@ class ProjectStats(BaseModel):
     collections_count: int = Field(0, description="Number of collections analyzed")
     posts_analyzed: int = Field(0, description="Number of Reddit posts analyzed")
     comments_analyzed: int = Field(0, description="Number of Reddit comments analyzed")
+    sentiment_distribution: Dict[str, int] = Field({}, description="Project-wide sentiment distribution percentages")
 
 
 class ProjectSummary(BaseModel):

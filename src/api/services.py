@@ -1261,14 +1261,47 @@ Return only the keywords, separated by commas, with no additional explanation.""
         total_posts = sum(kw.get('posts_found_in', 0) for kw in keywords_data)
         total_comments = sum(kw.get('comments_found_in', 0) for kw in keywords_data)
         
+        # Calculate project-wide sentiment distribution
+        sentiment_distribution = ProjectService._calculate_project_sentiment_distribution(session.id)
+        
         return ProjectStats(
             total_mentions=session.total_mentions or 0,
             avg_sentiment=session.avg_sentiment or 0.0,
             keywords_count=len(keywords),
             collections_count=len(collection_ids),
             posts_analyzed=total_posts,
-            comments_analyzed=total_comments
+            comments_analyzed=total_comments,
+            sentiment_distribution=sentiment_distribution
         )
+    
+    @staticmethod
+    def _calculate_project_sentiment_distribution(session_id: str) -> Dict[str, int]:
+        """Calculate project-wide sentiment distribution."""
+        session = db.get_session()
+        try:
+            from src.database import KeywordMention
+            
+            # Get ALL mentions for this project
+            all_mentions = session.query(KeywordMention).filter(
+                KeywordMention.analysis_session_id == session_id
+            ).all()
+            
+            if not all_mentions:
+                return {"positive": 0, "neutral": 0, "negative": 0}
+            
+            # Categorize by sentiment thresholds
+            positive_count = len([m for m in all_mentions if m.sentiment_score > 0.1])
+            negative_count = len([m for m in all_mentions if m.sentiment_score < -0.1])
+            neutral_count = len(all_mentions) - positive_count - negative_count
+            
+            total = len(all_mentions)
+            return {
+                "positive": round(positive_count / total * 100),
+                "neutral": round(neutral_count / total * 100), 
+                "negative": round(negative_count / total * 100)
+            }
+        finally:
+            session.close()
     
     @staticmethod
     async def _get_project_summary(session_id: str) -> Optional[ProjectSummary]:

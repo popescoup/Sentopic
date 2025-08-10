@@ -5,13 +5,18 @@
 
 // Base project interfaces
 export interface ProjectStats {
-    total_mentions: number;
-    avg_sentiment: number;
-    keywords_count: number;
-    collections_count: number;
-    posts_analyzed: number;
-    comments_analyzed: number;
-  }
+  total_mentions: number;
+  avg_sentiment: number;
+  keywords_count: number;
+  collections_count: number;
+  posts_analyzed: number;
+  comments_analyzed: number;
+  sentiment_distribution: {
+      positive: number;  // percentage
+      neutral: number;   // percentage
+      negative: number;  // percentage
+  };
+}
   
   export interface ProjectSummary {
     summary_text: string;
