@@ -163,7 +163,7 @@ class AnalyticsEngine:
             # Calculate co-occurrences
             print("Computing co-occurrences...")
             cooccurrence_data = cooccurrence_detector.process_content_for_cooccurrences(
-                all_posts, all_comments, keywords, analysis_session.partial_matching
+                all_posts, all_comments, keywords, analysis_session.partial_matching, all_keyword_mentions
             )
 
             # DEBUG: Check what co-occurrence data was generated
@@ -312,7 +312,8 @@ class AnalyticsEngine:
                         'keyword2': cooc.keyword2,
                         'cooccurrence_count': cooc.cooccurrence_count,
                         'in_posts': cooc.in_posts,
-                        'in_comments': cooc.in_comments
+                        'in_comments': cooc.in_comments,
+                        'avg_sentiment': cooc.avg_sentiment or 0.0
                     })
     
                 # DEBUG: Check what we're adding to results
@@ -813,7 +814,8 @@ class AnalyticsEngine:
                     keyword2=keyword2,
                     cooccurrence_count=stats['total_count'],
                     in_posts=stats['in_posts'],
-                    in_comments=stats['in_comments']
+                    in_comments=stats['in_comments'],
+                    avg_sentiment=stats['avg_sentiment']
                 )
                 session.add(cooccurrence)
             

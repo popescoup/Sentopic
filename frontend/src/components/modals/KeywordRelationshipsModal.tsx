@@ -22,7 +22,7 @@ interface KeywordRelationshipsModalProps {
   onExploreRelationship: (keyword1: string, keyword2: string) => void;
 }
 
-type SortOption = 'frequency' | 'alphabetical' | 'posts' | 'comments';
+type SortOption = 'frequency' | 'alphabetical' | 'posts' | 'comments' | 'sentiment_asc' | 'sentiment_desc';
 
 const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
   isOpen,
@@ -50,10 +50,14 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
         });
       case 'posts':
         return sorted.sort((a, b) => b.in_posts - a.in_posts);
-      case 'comments':
-        return sorted.sort((a, b) => b.in_comments - a.in_comments);
-      default:
-        return sorted;
+        case 'comments':
+          return sorted.sort((a, b) => b.in_comments - a.in_comments);
+        case 'sentiment_asc':
+          return sorted.sort((a, b) => (a.avg_sentiment || 0) - (b.avg_sentiment || 0));
+        case 'sentiment_desc':
+          return sorted.sort((a, b) => (b.avg_sentiment || 0) - (a.avg_sentiment || 0));
+        default:
+          return sorted;
     }
   }, [project.cooccurrences, sortBy]);
 
@@ -73,8 +77,17 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
     { value: 'frequency', label: 'Most Frequent First' },
     { value: 'alphabetical', label: 'Alphabetical' },
     { value: 'posts', label: 'Most in Posts First' },
-    { value: 'comments', label: 'Most in Comments First' }
+    { value: 'comments', label: 'Most in Comments First' },
+    { value: 'sentiment_desc', label: 'Most Positive First' },
+    { value: 'sentiment_asc', label: 'Most Negative First' }
   ];
+
+  // Sentiment color helper function (matching other modals)
+  const getSentimentColor = (sentiment: number): string => {
+    if (sentiment > 0.0001) return 'text-success';
+    if (sentiment < -0.0001) return 'text-danger';
+    return 'text-text-secondary';
+  };
 
   // Calculate summary statistics
   const totalPairs = project.cooccurrences?.length || 0;
@@ -261,6 +274,9 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
                       Total Count
                     </th>
                     <th className="px-4 py-3 text-center font-subsection text-text-primary">
+                      Avg Sentiment
+                    </th>
+                    <th className="px-4 py-3 text-center font-subsection text-text-primary">
                       Posts / Comments
                     </th>
                     <th className="px-4 py-3 text-center font-subsection text-text-primary">
@@ -288,6 +304,12 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
                       <td className="px-4 py-3 text-center">
                         <span className="font-technical text-text-primary font-semibold">
                           {cooc.cooccurrence_count.toLocaleString()}
+                        </span>
+                      </td>
+                      
+                      <td className="px-4 py-3 text-center">
+                        <span className={`font-technical font-medium ${getSentimentColor(cooc.avg_sentiment || 0)}`}>
+                          {(cooc.avg_sentiment || 0) >= 0 ? '+' : ''}{(cooc.avg_sentiment || 0).toFixed(3)}
                         </span>
                       </td>
                       

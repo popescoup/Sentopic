@@ -265,13 +265,14 @@ export interface IndexingStatusResponse {
     message: string;
   }
 
-export interface KeywordCooccurrence {
-  keyword1: string;
-  keyword2: string;
-  cooccurrence_count: number;
-  in_posts: number;
-  in_comments: number;
-}
+  export interface KeywordCooccurrence {
+    keyword1: string;
+    keyword2: string;
+    cooccurrence_count: number;
+    in_posts: number;
+    in_comments: number;
+    avg_sentiment: number;
+  }
 
 export interface TrendSummary {
   trend_direction: 'rising' | 'falling' | 'stable' | 'insufficient_data';

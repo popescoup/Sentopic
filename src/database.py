@@ -135,6 +135,7 @@ class KeywordCooccurrence(Base):
     cooccurrence_count = Column(Integer, nullable=False)
     in_posts = Column(Integer, nullable=False)
     in_comments = Column(Integer, nullable=False)
+    avg_sentiment = Column(Float, nullable=True)
     
     # Relationship
     session = relationship("AnalysisSession", back_populates="keyword_cooccurrences")

@@ -57,11 +57,15 @@ export const getTopCooccurrence = (project: ProjectResponse): {
       };
     }
 
+    const sentiment = topCooccurrence.avg_sentiment || 0;
+    const sentimentText = sentiment >= 0 ? `+${sentiment.toFixed(3)}` : sentiment.toFixed(3);
+            
     return {
-      count,
-      pair: `"${keyword1}" + "${keyword2}"`,
-      description: `Top relationship: "${keyword1}" and "${keyword2}" appear together ${formatNumber(count)} times`
+        count,
+        pair: `"${keyword1}" + "${keyword2}"`,
+        description: `Top relationship: "${keyword1}" and "${keyword2}" appear together ${formatNumber(count)} times (avg sentiment: ${sentimentText})`
     };
+    
   } catch (error) {
     console.error('Error processing co-occurrence data:', error);
     return {
