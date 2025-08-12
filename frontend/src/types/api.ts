@@ -372,3 +372,28 @@ export interface NetworkData {
     minWeight: number;
   };
 }
+
+export interface TrendsDataPoint {
+  time_period: string;
+  formatted_date: string;
+  [key: string]: string | number; // Dynamic fields for keyword mentions and sentiment
+}
+
+export interface TrendsDateRange {
+  start_date: string | null;
+  end_date: string | null;
+}
+
+export interface TrendsSummary {
+  total_periods: number;
+  total_mentions: number;
+  date_coverage: string;
+}
+
+export interface TrendsResponse {
+  keywords_analyzed: string[];
+  time_period: string;
+  date_range: TrendsDateRange;
+  chart_data: TrendsDataPoint[];
+  summary: TrendsSummary;
+}

@@ -29,7 +29,8 @@ from .models import (
     KeywordSuggestionResponse, AIStatusResponse, CollectionCreateRequest,
     CollectionResponse, CollectionBatchResponse, CollectionBatchStatusResponse,
     CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse,
-    FilteredContextsResponse, ContextInstance, PaginationInfo
+    FilteredContextsResponse, ContextInstance, PaginationInfo,
+    TrendsResponse, TrendsRequest
 )
 
 # Temporary in-memory storage for project preferences
@@ -1013,6 +1014,86 @@ Return only the keywords, separated by commas, with no additional explanation.""
         except Exception as e:
             print(f"Error in ProjectService.get_filtered_contexts: {e}")
             raise ValueError(f"Failed to get filtered contexts: {str(e)}")
+        
+    # ============================================================================
+    # TRENDS ANALYSIS METHODS (NEW)
+    # ============================================================================
+    
+    @staticmethod
+    async def get_project_trends(project_id: str, keywords: List[str], time_period: str) -> 'TrendsResponse':
+        """
+        Get trends analysis for specific keywords in a project.
+        
+        Args:
+            project_id: Project ID to analyze trends for
+            keywords: List of keywords to include in trends analysis
+            time_period: Time period granularity ('daily', 'weekly', 'monthly')
+            
+        Returns:
+            TrendsResponse with chart-optimized trend data
+        """
+        try:
+            # Validate project exists and is completed
+            analysis_session = db.get_analysis_session(project_id)
+            if not analysis_session:
+                raise ValueError(f"Project not found: {project_id}")
+            
+            if analysis_session.status != 'completed':
+                raise ValueError(f"Project analysis not completed. Current status: {analysis_session.status}")
+            
+            # Get project keywords for validation
+            project_keywords = json.loads(analysis_session.keywords)
+            
+            # Validate that all requested keywords exist in the project
+            invalid_keywords = []
+            for keyword in keywords:
+                if keyword not in project_keywords:
+                    invalid_keywords.append(keyword)
+            
+            if invalid_keywords:
+                raise ValueError(f"Keywords not found in project: {', '.join(invalid_keywords)}. "
+                               f"Available keywords: {', '.join(project_keywords)}")
+            
+            # Import trends analyzer
+            from src.analytics.trends import trends_analyzer
+            
+            # Get raw trends data
+            raw_trends_data = trends_analyzer.get_trends_data(
+                session_id=project_id,
+                keywords=keywords,
+                time_period=time_period
+            )
+            
+            # Format for chart visualization
+            chart_formatted_data = trends_analyzer.format_trends_for_charts(raw_trends_data)
+            
+            # Import the response model
+            from .models import TrendsResponse, TrendsDateRange, TrendsSummary
+            
+            # Build response
+            response = TrendsResponse(
+                keywords_analyzed=chart_formatted_data['keywords_analyzed'],
+                time_period=chart_formatted_data['time_period'],
+                date_range=TrendsDateRange(
+                    start_date=chart_formatted_data['date_range']['start_date'],
+                    end_date=chart_formatted_data['date_range']['end_date']
+                ),
+                chart_data=chart_formatted_data['chart_data'],
+                summary=TrendsSummary(
+                    total_periods=chart_formatted_data['summary']['total_periods'],
+                    total_mentions=chart_formatted_data['summary']['total_mentions'],
+                    date_coverage=chart_formatted_data['summary']['date_coverage']
+                )
+            )
+            
+            return response
+            
+        except ValueError as e:
+            # Re-raise validation errors
+            raise e
+        except Exception as e:
+            print(f"Error in ProjectService.get_project_trends: {e}")
+            raise ValueError(f"Failed to get trends analysis: {str(e)}")
     
     # ============================================================================
     # PRIVATE HELPER METHODS (EXISTING + ENHANCEMENTS)

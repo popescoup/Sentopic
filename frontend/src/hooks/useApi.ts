@@ -20,7 +20,8 @@ import type {
   ChatHistoryResponse,
   IndexingRequest,
   IndexingResponse,
-  IndexingStatusResponse
+  IndexingStatusResponse,
+  TrendsResponse
 } from '@/types/api';
 
 // Query keys for consistent cache management
@@ -34,6 +35,7 @@ export const queryKeys = {
   chatSessions: (projectId: string) => ['projects', projectId, 'chat', 'sessions'] as const,
   chatHistory: (sessionId: string) => ['chat', sessionId, 'history'] as const,
   indexingStatus: (projectId: string) => ['projects', projectId, 'indexing', 'status'] as const,
+  trends: (projectId: string, keywords: string[], timePeriod: string) => ['projects', projectId, 'trends', keywords, timePeriod] as const,
 } as const;
 
 // ============================================================================
@@ -321,5 +323,24 @@ export const useIndexingPolling = (projectId: string | undefined, isIndexing: bo
         queryClient.invalidateQueries({ queryKey: queryKeys.indexingStatus(projectId!) });
       }
     },
+  });
+};
+
+// ============================================================================
+// TRENDS HOOKS
+// ============================================================================
+
+export const useTrends = (
+  projectId: string | undefined,
+  keywords: string[],
+  timePeriod: string = 'weekly',
+  enabled = true
+) => {
+  return useQuery({
+    queryKey: queryKeys.trends(projectId!, keywords, timePeriod),
+    queryFn: () => api.getTrends(projectId!, keywords, timePeriod),
+    enabled: !!projectId && keywords.length > 0 && enabled,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
   });
 };

@@ -6,3 +6,4 @@
 export { default as ContextExplorerModal } from './ContextExplorerModal';
 export { default as KeywordOverviewModal } from './KeywordOverviewModal';
 export { default as KeywordRelationshipsModal } from './KeywordRelationshipsModal';
+export { default as TrendsModal } from './TrendsModal';

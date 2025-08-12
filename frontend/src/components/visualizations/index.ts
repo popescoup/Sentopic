@@ -4,3 +4,4 @@
  */
 
 export { default as KeywordNetworkGraph } from './KeywordNetworkGraph';
+export { default as TrendsChart } from './TrendsChart';

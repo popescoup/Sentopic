@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from typing import Union
 
 # Import your service layer and models
@@ -12,7 +12,7 @@ from src.api.models import (
     KeywordSuggestionRequest, KeywordSuggestionResponse, AIStatusResponse,
     CollectionCreateRequest, CollectionBatchResponse, CollectionBatchStatusResponse,
     CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse,
-    FilteredContextsResponse
+    FilteredContextsResponse, TrendsResponse
 )
 
 # Initialize FastAPI application with enhanced documentation
@@ -947,6 +947,170 @@ async def get_filtered_contexts(
             detail={
                 "error": "server_error",
                 "message": "An unexpected error occurred while retrieving filtered contexts",
+                "details": {"project_id": project_id}
+            }
+        )
+    
+@app.get("/projects/{project_id}/trends",
+         response_model=TrendsResponse,
+         responses={
+             200: {"description": "Trends analysis retrieved successfully"},
+             400: {"model": APIError, "description": "Invalid parameters or keywords not in project"},
+             404: {"model": APIError, "description": "Project not found"},
+             409: {"model": APIError, "description": "Analysis not completed"},
+             500: {"model": APIError, "description": "Server error"}
+         },
+         tags=["analysis"],
+         summary="Get Trends Analysis",
+         description="Get trends analysis for specific keywords with chart-optimized data")
+async def get_project_trends(
+    project_id: str,
+    keywords: List[str] = Query(..., description="Keywords to analyze (max 5)"),
+    time_period: str = Query("weekly", description="Time period: daily, weekly, monthly")
+) -> TrendsResponse:
+    """
+    **Get Trends Analysis for Keywords**
+    
+    Returns trend analysis data optimized for chart visualization with mention frequency 
+    and sentiment trends over time for specified keywords.
+    
+    **Features**:
+    * **Multi-keyword comparison**: Analyze up to 5 keywords simultaneously
+    * **Flexible time periods**: Daily, weekly, or monthly granularity
+    * **Chart-ready format**: Data structure optimized for Recharts visualization
+    * **Complete time series**: Fills gaps with zero values for continuous charts
+    * **Dual trend types**: Same data supports both mention frequency and sentiment charts
+    
+    **Chart Integration**:
+    * Data format designed for Recharts LineChart components
+    * Dynamic field names for each keyword (e.g., 'battery_mentions', 'battery_sentiment')
+    * Human-readable date labels for chart axes
+    * Consistent time series without gaps
+    
+    **Use Case**: Powers the Trends Analysis Modal in the Project Workspace, allowing users
+    to visualize how keyword mentions and sentiment change over time with interactive controls.
+    
+    **Path Parameters**:
+    * **project_id**: Unique identifier of the project to analyze
+    
+    **Query Parameters**:
+    * **keywords**: Array of keywords to include in analysis (must exist in project, max 5)
+    * **time_period**: Granularity for time grouping ('daily', 'weekly', 'monthly')
+    
+    **Response**: Chart-optimized trends data with flat structure and complete time series
+    
+    **Example Usage**:
+    ```
+    GET /projects/abc123/trends?keywords=battery,charging&time_period=weekly
+    ```
+    
+    **Data Structure**: Each data point contains:
+    * `time_period`: ISO date string for the period
+    * `formatted_date`: Human-readable label for charts
+    * `{keyword}_mentions`: Mention count for each keyword
+    * `{keyword}_sentiment`: Average sentiment for each keyword
+    """
+    try:
+        # Validate time period
+        valid_periods = ["daily", "weekly", "monthly"]
+        if time_period not in valid_periods:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "invalid_time_period",
+                    "message": f"Time period must be one of: {valid_periods}",
+                    "details": {"provided": time_period, "valid_options": valid_periods}
+                }
+            )
+        
+        # Validate keywords list
+        if not keywords:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "keywords_required",
+                    "message": "At least one keyword is required",
+                    "details": {}
+                }
+            )
+        
+        if len(keywords) > 5:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "too_many_keywords",
+                    "message": "Maximum 5 keywords allowed for performance",
+                    "details": {"provided": len(keywords), "maximum": 5}
+                }
+            )
+        
+        # Clean keywords (remove duplicates and empty strings)
+        clean_keywords = list(set(kw.strip() for kw in keywords if kw.strip()))
+        if not clean_keywords:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "invalid_keywords",
+                    "message": "No valid keywords provided",
+                    "details": {}
+                }
+            )
+        
+        # Get trends analysis using service layer
+        result = await ProjectService.get_project_trends(project_id, clean_keywords, time_period)
+        
+        return result
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except ValueError as e:
+        error_message = str(e)
+        
+        if "not found" in error_message:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "project_not_found",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        elif "not completed" in error_message:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "analysis_not_completed",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        elif "Keywords not found" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "keywords_not_in_project",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "trends_error",
+                    "message": error_message,
+                    "details": {"project_id": project_id}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in get_project_trends endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while retrieving trends analysis",
                 "details": {"project_id": project_id}
             }
         )

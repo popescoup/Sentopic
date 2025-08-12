@@ -209,6 +209,143 @@ class TrendsAnalyzer:
             formatted_trends.append(period_data)
         
         return formatted_trends
+    
+    def format_trends_for_charts(self, trends_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Format trends data specifically for chart visualization (Recharts).
+        
+        Args:
+            trends_data: Output from get_trends_data
+        
+        Returns:
+            Chart-optimized data structure with flat arrays and complete time series
+        """
+        if not trends_data.get('trends'):
+            return {
+                'keywords_analyzed': [],
+                'time_period': trends_data.get('time_period', 'weekly'),
+                'date_range': {'start_date': None, 'end_date': None},
+                'chart_data': [],
+                'summary': {'total_periods': 0, 'total_mentions': 0, 'date_coverage': 'No data'}
+            }
+        
+        keywords = trends_data.get('keywords_analyzed', [])
+        time_period = trends_data.get('time_period', 'weekly')
+        
+        # Get all unique time periods and sort them
+        all_time_periods = set()
+        for keyword_data in trends_data['trends'].values():
+            all_time_periods.update(keyword_data.keys())
+        
+        sorted_periods = sorted(list(all_time_periods))
+        
+        if not sorted_periods:
+            return {
+                'keywords_analyzed': keywords,
+                'time_period': time_period,
+                'date_range': {'start_date': None, 'end_date': None},
+                'chart_data': [],
+                'summary': {'total_periods': 0, 'total_mentions': 0, 'date_coverage': 'No data'}
+            }
+        
+        # Build chart data array with flat structure
+        chart_data = []
+        total_mentions = 0
+        
+        for period in sorted_periods:
+            data_point = {
+                'time_period': period,
+                'formatted_date': self._format_date_for_display(period, time_period)
+            }
+            
+            # Add data for each keyword
+            for keyword in keywords:
+                keyword_data = trends_data['trends'].get(keyword, {})
+                period_data = keyword_data.get(period, {'mentions': 0, 'avg_sentiment': 0.0})
+                
+                # Use safe field names for Recharts (replace special characters)
+                safe_keyword = keyword.replace('-', '_').replace(' ', '_').replace('.', '_')
+                data_point[f'{safe_keyword}_mentions'] = period_data['mentions']
+                data_point[f'{safe_keyword}_sentiment'] = period_data['avg_sentiment']
+                
+                total_mentions += period_data['mentions']
+            
+            chart_data.append(data_point)
+        
+        # Calculate date range and coverage
+        start_date = sorted_periods[0]
+        end_date = sorted_periods[-1]
+        date_coverage = self._calculate_date_coverage(len(sorted_periods), time_period)
+        
+        return {
+            'keywords_analyzed': keywords,
+            'time_period': time_period,
+            'date_range': {
+                'start_date': start_date,
+                'end_date': end_date
+            },
+            'chart_data': chart_data,
+            'summary': {
+                'total_periods': len(sorted_periods),
+                'total_mentions': total_mentions,
+                'date_coverage': date_coverage
+            }
+        }
+    
+    def _format_date_for_display(self, time_key: str, time_period: str) -> str:
+        """
+        Format time key for human-readable display in charts.
+        
+        Args:
+            time_key: Time period key (e.g., '2024-01-15' or '2024-01')
+            time_period: Period type ('daily', 'weekly', 'monthly')
+        
+        Returns:
+            Human-readable date string
+        """
+        try:
+            if time_period == 'daily':
+                date_obj = datetime.strptime(time_key, '%Y-%m-%d').date()
+                return date_obj.strftime('%b %d, %Y')  # "Jan 15, 2024"
+            elif time_period == 'weekly':
+                # time_key is Monday of the week
+                date_obj = datetime.strptime(time_key, '%Y-%m-%d').date()
+                return f"Week of {date_obj.strftime('%b %d, %Y')}"  # "Week of Jan 15, 2024"
+            elif time_period == 'monthly':
+                date_obj = datetime.strptime(time_key, '%Y-%m').date()
+                return date_obj.strftime('%B %Y')  # "January 2024"
+            else:
+                return time_key
+        except ValueError:
+            return time_key
+    
+    def _calculate_date_coverage(self, period_count: int, time_period: str) -> str:
+        """
+        Calculate human-readable date coverage description.
+        
+        Args:
+            period_count: Number of time periods
+            time_period: Period type ('daily', 'weekly', 'monthly')
+        
+        Returns:
+            Human-readable coverage string
+        """
+        if period_count == 0:
+            return 'No data'
+        elif period_count == 1:
+            return f'1 {time_period[:-2]}'  # Remove 'ly' from 'daily'/'weekly'/'monthly'
+        else:
+            period_name = time_period[:-2] if time_period.endswith('ly') else time_period
+            if period_name == 'dai':
+                period_name = 'day'
+            elif period_name == 'week':
+                period_name = 'week'
+            elif period_name == 'month':
+                period_name = 'month'
+            
+            return f'{period_count} {period_name}s'
+        
+    
 
 
 # Global trends analyzer instance

@@ -26,7 +26,8 @@ import type {
   IndexingRequest,
   IndexingResponse,
   IndexingStatusResponse,
-  AggregatedFilteredContextsResponse
+  AggregatedFilteredContextsResponse,
+  TrendsResponse
 } from '@/types/api';
 
 // Create axios instance with base configuration
@@ -253,6 +254,25 @@ export class SentopicAPI {
   
     const response = await this.client.get<AggregatedFilteredContextsResponse>(
       `/projects/${projectId}/contexts/filtered?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  async getTrends(
+    projectId: string,
+    keywords: string[],
+    timePeriod: string = 'weekly'
+  ): Promise<TrendsResponse> {
+    const params = new URLSearchParams({
+      time_period: timePeriod,
+    });
+
+    keywords.forEach(keyword => {
+      params.append('keywords', keyword);
+    });
+
+    const response = await this.client.get<TrendsResponse>(
+      `/projects/${projectId}/trends?${params.toString()}`
     );
     return response.data;
   }

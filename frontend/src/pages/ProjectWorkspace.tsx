@@ -15,7 +15,7 @@ import Card, { InsightCard } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { DiscussionSnippet } from '@/components/discussions';
-import { ContextExplorerModal, KeywordOverviewModal, KeywordRelationshipsModal } from '@/components/modals';
+import { ContextExplorerModal, KeywordOverviewModal, KeywordRelationshipsModal, TrendsModal } from '@/components/modals';
 import AIQuestionPanel from '@/components/ai/AIQuestionPanel';
 import { api, getErrorMessage } from '@/api/client';
 import { getInsightData } from '@/utils/insightProcessing';
@@ -44,6 +44,7 @@ const ProjectWorkspace: React.FC = () => {
   const [isContextExplorerOpen, setIsContextExplorerOpen] = React.useState(false);
   const [isKeywordOverviewOpen, setIsKeywordOverviewOpen] = React.useState(false);
   const [isKeywordRelationshipsOpen, setIsKeywordRelationshipsOpen] = React.useState(false);
+  const [isTrendsModalOpen, setIsTrendsModalOpen] = React.useState(false);
   
   // NEW: State for managing initial context explorer filters
   const [contextExplorerInitialFilters, setContextExplorerInitialFilters] = React.useState<{
@@ -297,7 +298,7 @@ const ProjectWorkspace: React.FC = () => {
                 description={insightData.trends.description}
                 trend={insightData.trends.direction}
                 isArrowCard={true}
-                onClick={() => handleComingSoon('Keyword Trends')}
+                onClick={() => setIsTrendsModalOpen(true)}
               />
             </div>
           )}
@@ -560,6 +561,13 @@ const ProjectWorkspace: React.FC = () => {
         onClose={() => setIsKeywordRelationshipsOpen(false)}
         project={project}
         onExploreRelationship={handleExploreRelationship}
+      />
+
+      {/* Trends Modal */}
+      <TrendsModal
+        isOpen={isTrendsModalOpen}
+        onClose={() => setIsTrendsModalOpen(false)}
+        project={project}
       />
     </MainLayout>
   );

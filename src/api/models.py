@@ -845,3 +845,140 @@ class FilteredContextsResponse(BaseModel):
                 }
             }
         }
+
+# ============================================================================
+# TRENDS ANALYSIS MODELS
+# ============================================================================
+
+class TrendsRequest(BaseModel):
+    """Request parameters for trends analysis."""
+    keywords: List[str] = Field(..., description="Keywords to analyze (max 5)", min_items=1, max_items=5)
+    time_period: str = Field("weekly", description="Time period granularity", pattern="^(daily|weekly|monthly)$")
+    
+    @validator('keywords')
+    def validate_keywords(cls, v):
+        """Ensure keywords are non-empty strings."""
+        if not v:
+            raise ValueError("At least one keyword is required")
+        
+        # Remove empty/whitespace-only keywords
+        clean_keywords = [kw.strip() for kw in v if kw.strip()]
+        if not clean_keywords:
+            raise ValueError("Keywords cannot be empty")
+        
+        # Limit to 5 keywords for performance
+        if len(clean_keywords) > 5:
+            raise ValueError("Maximum 5 keywords allowed")
+        
+        return clean_keywords
+    
+    @validator('time_period')
+    def validate_time_period(cls, v):
+        """Validate time period options."""
+        valid_periods = ["daily", "weekly", "monthly"]
+        if v not in valid_periods:
+            raise ValueError(f"Time period must be one of: {valid_periods}")
+        return v
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "keywords": ["battery", "charging", "power"],
+                "time_period": "weekly"
+            }
+        }
+
+
+class TrendsDataPoint(BaseModel):
+    """Individual data point in trends time series."""
+    time_period: str = Field(..., description="Time period identifier (YYYY-MM-DD or YYYY-MM)")
+    formatted_date: str = Field(..., description="Human-readable date label for charts")
+    # Dynamic fields for keyword mentions and sentiment will be added at runtime
+    # Format: {keyword}_mentions: int, {keyword}_sentiment: float
+    
+    class Config:
+        extra = "allow"  # Allow additional fields for dynamic keyword data
+        json_schema_extra = {
+            "example": {
+                "time_period": "2024-01-15",
+                "formatted_date": "Week of Jan 15, 2024",
+                "battery_mentions": 12,
+                "battery_sentiment": -0.23,
+                "charging_mentions": 8,
+                "charging_sentiment": 0.15
+            }
+        }
+
+
+class TrendsDateRange(BaseModel):
+    """Date range information for trends data."""
+    start_date: Optional[str] = Field(None, description="Earliest date in the dataset")
+    end_date: Optional[str] = Field(None, description="Latest date in the dataset")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "start_date": "2024-01-15",
+                "end_date": "2024-03-15"
+            }
+        }
+
+
+class TrendsSummary(BaseModel):
+    """Summary statistics for trends analysis."""
+    total_periods: int = Field(..., description="Number of time periods in the dataset")
+    total_mentions: int = Field(..., description="Total keyword mentions across all periods")
+    date_coverage: str = Field(..., description="Human-readable description of time coverage")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "total_periods": 8,
+                "total_mentions": 156,
+                "date_coverage": "8 weeks"
+            }
+        }
+
+
+class TrendsResponse(BaseModel):
+    """Response for trends analysis with chart-optimized data."""
+    keywords_analyzed: List[str] = Field(..., description="Keywords included in the analysis")
+    time_period: str = Field(..., description="Time period granularity used")
+    date_range: TrendsDateRange = Field(..., description="Date range of the analysis")
+    chart_data: List[Dict[str, Any]] = Field(..., description="Chart-ready data points")
+    summary: TrendsSummary = Field(..., description="Analysis summary statistics")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "keywords_analyzed": ["battery", "charging"],
+                "time_period": "weekly",
+                "date_range": {
+                    "start_date": "2024-01-15",
+                    "end_date": "2024-03-15"
+                },
+                "chart_data": [
+                    {
+                        "time_period": "2024-01-15",
+                        "formatted_date": "Week of Jan 15, 2024",
+                        "battery_mentions": 12,
+                        "battery_sentiment": -0.23,
+                        "charging_mentions": 8,
+                        "charging_sentiment": 0.15
+                    },
+                    {
+                        "time_period": "2024-01-22",
+                        "formatted_date": "Week of Jan 22, 2024",
+                        "battery_mentions": 15,
+                        "battery_sentiment": -0.18,
+                        "charging_mentions": 6,
+                        "charging_sentiment": 0.22
+                    }
+                ],
+                "summary": {
+                    "total_periods": 8,
+                    "total_mentions": 156,
+                    "date_coverage": "8 weeks"
+                }
+            }
+        }
