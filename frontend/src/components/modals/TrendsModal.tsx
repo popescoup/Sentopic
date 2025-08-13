@@ -166,25 +166,6 @@ export const TrendsModal: React.FC<TrendsModalProps> = ({
               ))}
             </div>
           </div>
-
-          {/* Active Filters Summary */}
-          <div className="p-3 bg-panel rounded-input border border-border-primary">
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-medium text-text-primary">Active Configuration:</span>
-              
-              <span className="px-2 py-1 bg-accent text-white rounded text-xs">
-                {chartType === 'mentions' ? 'Mention Frequency' : 'Sentiment Trends'}
-              </span>
-              
-              <span className="px-2 py-1 bg-gray-200 text-text-secondary rounded text-xs">
-                {timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1)}
-              </span>
-              
-              <span className="px-2 py-1 bg-gray-200 text-text-secondary rounded text-xs">
-                {selectedKeywords.length} keyword{selectedKeywords.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Chart Visualization */}
@@ -256,32 +237,6 @@ export const TrendsModal: React.FC<TrendsModalProps> = ({
                   width={800}
                   height={400}
                 />
-                
-                {/* Chart Summary */}
-                {trendsData.summary && (
-                  <div className="mt-4 p-4 bg-panel rounded-input border border-border-primary">
-                    <div className="grid gap-4 md:grid-cols-3 text-center">
-                      <div>
-                        <div className="text-lg font-semibold text-text-primary">
-                          {trendsData.summary.total_periods}
-                        </div>
-                        <div className="text-text-secondary text-sm">Time Periods</div>
-                      </div>
-                      <div>
-                        <div className="text-lg font-semibold text-text-primary">
-                          {trendsData.summary.total_mentions.toLocaleString()}
-                        </div>
-                        <div className="text-text-secondary text-sm">Total Mentions</div>
-                      </div>
-                      <div>
-                        <div className="text-lg font-semibold text-text-primary">
-                          {trendsData.summary.date_coverage}
-                        </div>
-                        <div className="text-text-secondary text-sm">Date Coverage</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>

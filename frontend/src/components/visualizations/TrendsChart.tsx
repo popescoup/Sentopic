@@ -51,7 +51,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
     svg.selectAll('*').remove();
 
     // Set up margins for professional chart layout
-    const margin = { top: 20, right: 120, bottom: 60, left: 60 };
+    const margin = { top: 20, right: 120, bottom: 35, left: 60 };
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
 
@@ -67,10 +67,10 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
       return;
     }
 
-    // Create main chart group
+    // Create main chart group (this will appear above the masks)
     const chartGroup = svg
-      .append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
+    .append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
 
     // Create zoom container group
     const zoomGroup = chartGroup.append('g').attr('class', 'zoom-container');
@@ -160,11 +160,46 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
       .attr('class', 'grid y-grid')
       .call(yAxisGrid as any);
     
-    yGridGroup.selectAll('line')
+      yGridGroup.selectAll('line')
       .attr('stroke', '#f6f8fa')
       .attr('stroke-width', 1);
+    
+    // Add white overlay masks (after grid and chart content, but before axes)
+    const maskGroup = chartGroup.append('g').attr('class', 'boundary-masks');
+    
+    // Left mask (covers area left of Y-axis) - positioned relative to chartGroup
+    maskGroup.append('rect')
+    .attr('x', -margin.left)
+    .attr('y', -margin.top)
+    .attr('width', margin.left)
+    .attr('height', height)
+    .attr('fill', '#ffffff');
 
-    // Add axes (outside zoom group so they stay fixed)
+    // Right mask (covers area right of chart) - positioned relative to chartGroup
+    maskGroup.append('rect')
+    .attr('x', chartWidth)
+    .attr('y', -margin.top)
+    .attr('width', margin.right)
+    .attr('height', height)
+    .attr('fill', '#ffffff');
+
+    // Top mask (covers area above chart) - positioned relative to chartGroup
+    maskGroup.append('rect')
+    .attr('x', -margin.left)
+    .attr('y', -margin.top)
+    .attr('width', chartWidth + margin.left + margin.right)
+    .attr('height', margin.top)
+    .attr('fill', '#ffffff');
+
+    // Bottom mask (covers area below X-axis) - positioned relative to chartGroup
+    maskGroup.append('rect')
+    .attr('x', -margin.left)
+    .attr('y', chartHeight)
+    .attr('width', chartWidth + margin.left + margin.right)
+    .attr('height', margin.bottom)
+    .attr('fill', '#ffffff');
+    
+    // Add axes (outside zoom group so they stay fixed) - AFTER masks
     const xAxisGroup = chartGroup.append('g')
       .attr('class', 'x-axis')
       .attr('transform', `translate(0,${chartHeight})`)
@@ -181,14 +216,14 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
     yAxisGroup.selectAll('text')
       .attr('class', 'font-small fill-text-secondary');
 
-    // Add Y axis label
+    // Add Y axis label (positioned based on text length)
     chartGroup.append('text')
-      .attr('transform', 'rotate(-90)')
-      .attr('y', 0 - margin.left)
-      .attr('x', 0 - (chartHeight / 2))
-      .attr('dy', '1em')
-      .attr('class', 'font-small fill-text-primary text-center')
-      .text(chartType === 'sentiment' ? 'Average Sentiment' : 'Mention Count');
+    .attr('transform', 'rotate(-90)')
+    .attr('y', chartType === 'sentiment' ? 0 - margin.left : 0 - (margin.left / 2))
+    .attr('x', 0 - (chartHeight / 2))
+    .attr('dy', chartType === 'sentiment' ? '1em' : '0.02em')
+    .attr('class', 'font-small fill-text-primary text-center')
+    .text(chartType === 'sentiment' ? 'Average Sentiment' : 'Mention Count');
 
     // Create tooltip div
     const tooltip = d3.select('body')
@@ -323,10 +358,10 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
         .attr('stroke-dashoffset', 0);
     });
 
-    // Add legend
+    // Add legend (will appear above the masks)
     const legend = chartGroup.append('g')
-      .attr('class', 'legend')
-      .attr('transform', `translate(${chartWidth + 20}, 20)`);
+    .attr('class', 'legend')
+    .attr('transform', `translate(${chartWidth + 20}, 20)`);
 
     keywords.forEach((keyword, index) => {
       const legendRow = legend.append('g')
