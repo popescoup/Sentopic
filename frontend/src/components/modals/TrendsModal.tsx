@@ -81,163 +81,165 @@ export const TrendsModal: React.FC<TrendsModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Trends Analysis"
-      size="xl"
-      className="max-h-[90vh]"
+      size="full"
+      className="max-h-[80vh]"
     >
-      <div className="max-h-[75vh] overflow-y-auto pr-1">
-        {/* Interactive Controls */}
-        <div className="border-b border-border-primary pb-6 mb-6">
-          {/* Chart Type Toggle */}
-          <div className="mb-6">
-            <label className="block font-medium text-text-primary mb-3">
-              Chart Type
-            </label>
-            <div className="grid gap-3 md:grid-cols-2">
-              {chartTypeOptions.map(option => (
-                <button
-                  key={option.value}
-                  onClick={() => setChartType(option.value as 'mentions' | 'sentiment')}
-                  className={`p-4 rounded-default border text-left transition-all duration-150 ${
-                    chartType === option.value
-                      ? 'border-accent bg-hover-blue text-text-primary'
-                      : 'border-border-secondary bg-content text-text-secondary hover:border-border-emphasis hover:text-text-primary'
-                  }`}
-                >
-                  <div className="font-medium">{option.label}</div>
-                  <div className="text-sm mt-1">{option.description}</div>
-                </button>
-              ))}
+      <div className="h-[65vh] flex">
+        {/* Controls Section */}
+        <div className="w-1/4 pr-6 border-r border-border-primary">
+          <div className="h-full overflow-y-auto pr-2">
+            {/* Chart Type Toggle */}
+            <div className="mb-6">
+              <label className="block font-medium text-text-primary mb-3">
+                Chart Type
+              </label>
+              <div className="space-y-2">
+                {chartTypeOptions.map(option => (
+                  <button
+                    key={option.value}
+                    onClick={() => setChartType(option.value as 'mentions' | 'sentiment')}
+                    className={`w-full px-3 py-2 rounded-input border font-medium text-sm transition-all duration-150 ${
+                      chartType === option.value
+                        ? 'border-accent bg-accent text-white'
+                        : 'border-border-secondary bg-content text-text-secondary hover:border-border-emphasis hover:text-text-primary'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-
-          {/* Keyword Selection */}
-          <div className="mb-6">
-            <label className="block font-medium text-text-primary mb-3">
-              Keywords to Analyze (Max 5)
-            </label>
-            <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-4">
-              {project.keywords.map(keyword => (
-                <label
-                  key={keyword}
-                  className="flex items-center space-x-2 cursor-pointer p-2 rounded-input hover:bg-hover-blue transition-colors duration-150"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedKeywords.includes(keyword)}
-                    onChange={() => handleKeywordToggle(keyword)}
-                    disabled={!selectedKeywords.includes(keyword) && selectedKeywords.length >= 5}
-                    className="rounded border-border-secondary focus:border-accent focus:ring-accent"
-                  />
-                  <span className={`text-sm ${
-                    selectedKeywords.includes(keyword) 
-                      ? 'text-text-primary font-medium' 
-                      : 'text-text-secondary'
-                  }`}>
-                    {keyword}
-                  </span>
-                </label>
-              ))}
+  
+            {/* Time Period Selection */}
+            <div className="mb-6">
+              <label className="block font-medium text-text-primary mb-3">
+                Time Period
+              </label>
+              <div className="space-y-2">
+                {timePeriodOptions.map(option => (
+                  <button
+                    key={option.value}
+                    onClick={() => setTimePeriod(option.value as 'daily' | 'weekly' | 'monthly')}
+                    className={`w-full px-3 py-2 rounded-input border font-medium text-sm transition-all duration-150 ${
+                      timePeriod === option.value
+                        ? 'border-accent bg-accent text-white'
+                        : 'border-border-secondary bg-content text-text-secondary hover:border-border-emphasis hover:text-text-primary'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            {selectedKeywords.length === 5 && (
-              <p className="text-small text-text-tertiary mt-2">
-                Maximum of 5 keywords can be selected for performance.
-              </p>
-            )}
-          </div>
-
-          {/* Time Period Selection */}
-          <div className="mb-6">
-            <label className="block font-medium text-text-primary mb-3">
-              Time Period
-            </label>
-            <div className="flex space-x-2">
-              {timePeriodOptions.map(option => (
-                <button
-                  key={option.value}
-                  onClick={() => setTimePeriod(option.value as 'daily' | 'weekly' | 'monthly')}
-                  className={`px-4 py-2 rounded-input border font-medium transition-all duration-150 ${
-                    timePeriod === option.value
-                      ? 'border-accent bg-accent text-white'
-                      : 'border-border-secondary bg-content text-text-secondary hover:border-border-emphasis hover:text-text-primary'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+  
+            {/* Keyword Selection */}
+            <div className="mb-6">
+              <label className="block font-medium text-text-primary mb-3">
+                Keywords (Max 5)
+              </label>
+              <div className="space-y-2">
+                {project.keywords.map(keyword => (
+                  <label
+                    key={keyword}
+                    className="flex items-center space-x-2 cursor-pointer p-2 rounded-input hover:bg-hover-blue transition-colors duration-150"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedKeywords.includes(keyword)}
+                      onChange={() => handleKeywordToggle(keyword)}
+                      disabled={!selectedKeywords.includes(keyword) && selectedKeywords.length >= 5}
+                      className="rounded border-border-secondary focus:border-accent focus:ring-accent"
+                    />
+                    <span className={`text-sm ${
+                      selectedKeywords.includes(keyword) 
+                        ? 'text-text-primary font-medium' 
+                        : 'text-text-secondary'
+                    }`}>
+                      {keyword}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {selectedKeywords.length === 5 && (
+                <p className="text-small text-text-tertiary mt-2">
+                  Maximum of 5 keywords can be selected for performance.
+                </p>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Chart Visualization */}
-        <div>
-          {/* Chart Header */}
-          <div className="mb-4">
-            <h3 className="font-section-header text-text-primary mb-2">
-              {chartType === 'mentions' ? 'Mention Frequency Trends' : 'Sentiment Trends'}
-            </h3>
-            {selectedKeywords.length > 0 && (
-              <p className="font-body text-text-secondary">
-                Showing {chartType === 'mentions' ? 'mention counts' : 'average sentiment'} over time for: {selectedKeywords.join(', ')}
-              </p>
-            )}
-          </div>
-
+  
+        {/* Chart Section */}
+        <div className="flex-1 pl-6">
           {/* Chart Content */}
-          <div>
+          <div className="h-full flex flex-col">
             {/* Loading State */}
             {isLoading && (
-              <LoadingState 
-                title="Loading Trends..."
-                description="Analyzing keyword trends over time."
-              />
-            )}
-
-            {/* Error State */}
-            {!!error && (
-              <div className="text-center py-8">
-                <div className="text-danger mb-4">
-                  <svg className="h-12 w-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h3 className="font-subsection text-text-primary mb-2">Error Loading Trends</h3>
-                <p className="font-body text-text-secondary mb-4">
-                  {errorMessage}
-                </p>
-                <Button variant="outline" onClick={() => refetch()}>
-                  Try Again
-                </Button>
-              </div>
-            )}
-
-            {/* No Keywords Selected */}
-            {selectedKeywords.length === 0 && !isLoading && (
-              <div className="text-center py-12">
-                <div className="text-text-tertiary mb-4">
-                  <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <h3 className="font-subsection text-text-primary mb-2">
-                  Select Keywords
-                </h3>
-                <p className="font-body text-text-secondary mb-4 max-w-md mx-auto">
-                  Choose one or more keywords from your project to see their trends over time.
-                </p>
-              </div>
-            )}
-
-            {/* Trends Chart */}
-            {trendsData && selectedKeywords.length > 0 && !isLoading && (
-              <div className="mb-6">
-                <TrendsChart
-                  data={trendsData.chart_data}
-                  keywords={selectedKeywords}
-                  chartType={chartType}
-                  width={800}
-                  height={400}
+              <div className="flex-1 flex items-center justify-center">
+                <LoadingState 
+                  title="Loading Trends..."
+                  description="Analyzing keyword trends over time."
                 />
               </div>
+            )}
+  
+            {/* Error State */}
+            {!!error && (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center py-8">
+                  <div className="text-danger mb-4">
+                    <svg className="h-12 w-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-subsection text-text-primary mb-2">Error Loading Trends</h3>
+                  <p className="font-body text-text-secondary mb-4">
+                    {errorMessage}
+                  </p>
+                  <Button variant="outline" onClick={() => refetch()}>
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            )}
+  
+            {/* No Keywords Selected */}
+            {selectedKeywords.length === 0 && !isLoading && (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center py-12">
+                  <div className="text-text-tertiary mb-4">
+                    <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-subsection text-text-primary mb-2">
+                    Select Keywords
+                  </h3>
+                  <p className="font-body text-text-secondary mb-4 max-w-md mx-auto">
+                    Choose one or more keywords from your project to see their trends over time.
+                  </p>
+                </div>
+              </div>
+            )}
+  
+            {/* Trends Chart */}
+            {trendsData && selectedKeywords.length > 0 && !isLoading && (
+            <div className="flex-1 flex flex-col">
+                <div className="mb-2">
+                <p className="text-small text-text-tertiary">
+                    *Note: Charts show trends based on the time periods from which data was collected. Gaps may not represent actual discussion patterns.
+                </p>
+                </div>
+                <div className="flex-1 flex items-center justify-center">
+                <TrendsChart
+                    data={trendsData.chart_data}
+                    keywords={selectedKeywords}
+                    chartType={chartType}
+                    width={900}
+                    height={450}
+                />
+                </div>
+            </div>
             )}
           </div>
         </div>
