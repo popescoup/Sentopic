@@ -6,7 +6,7 @@
 
 import React from 'react';
 import * as d3 from 'd3';
-import { useD3 } from '@/hooks/useD3';
+import { useD3, useD3Zoom } from '@/hooks/useD3';
 
 interface TrendsDataPoint {
   time_period: string;
@@ -30,20 +30,23 @@ interface TrendsChartProps {
 }
 
 export const TrendsChart: React.FC<TrendsChartProps> = ({
-  data,
-  keywords,
-  chartType,
-  width = 800,
-  height = 400,
-  className = ''
-}) => {
+    data,
+    keywords,
+    chartType,
+    width = 800,
+    height = 400,
+    className = ''
+  }) => {
+    
+    // Professional color palette for chart lines (matches your design system)
+    const colorScale = d3.scaleOrdinal<string>()
+      .domain(keywords)
+      .range(['#0366d6', '#28a745', '#dc3545', '#ffc107', '#6f42c1']);
   
-  // Professional color palette for chart lines (matches your design system)
-  const colorScale = d3.scaleOrdinal<string>()
-    .domain(keywords)
-    .range(['#0366d6', '#28a745', '#dc3545', '#ffc107', '#6f42c1']);
-
-  const svgRef = useD3((svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) => {
+    // Initialize zoom functionality
+    const { createZoom, resetZoom } = useD3Zoom([1, 5]);
+  
+    const svgRef = useD3((svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) => {
     // Clear previous content
     svg.selectAll('*').remove();
 
@@ -68,6 +71,9 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
     const chartGroup = svg
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Create zoom container group
+    const zoomGroup = chartGroup.append('g').attr('class', 'zoom-container');
 
     // Parse dates and set up scales
     const parseDate = d3.timeParse('%Y-%m-%d');
@@ -104,45 +110,24 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
       })
       .curve(d3.curveMonotoneX); // Smooth curves
 
-    // Add grid lines for professional appearance
-    const xAxisGrid = d3.axisBottom(xScale)
-      .tickSize(-chartHeight)
-      .tickFormat(() => '');
+    // Add clipping path to contain zoomed content
+    const clipPath = svg.append('defs')
+      .append('clipPath')
+      .attr('id', `chart-clip-${Math.random().toString(36).substr(2, 9)}`)
+      .append('rect')
+      .attr('width', chartWidth)
+      .attr('height', chartHeight);
 
-    const yAxisGrid = d3.axisLeft(yScale)
-      .tickSize(-chartWidth)
-      .tickFormat(() => '');
+    // Apply clipping to zoom group
+    zoomGroup.attr('clip-path', `url(#${clipPath.attr('id')})`);
 
-    chartGroup.append('g')
-      .attr('class', 'grid')
-      .attr('transform', `translate(0,${chartHeight})`)
-      .call(xAxisGrid as any)
-      .selectAll('line')
-      .attr('stroke', '#f6f8fa')
-      .attr('stroke-width', 1);
-
-    chartGroup.append('g')
-      .attr('class', 'grid')
-      .call(yAxisGrid as any)
-      .selectAll('line')
-      .attr('stroke', '#f6f8fa')
-      .attr('stroke-width', 1);
-
-    // Add X axis
+    // Create axis generators
     const xAxis = d3.axisBottom(xScale)
       .tickFormat((domainValue) => {
         const date = domainValue as Date;
         return d3.timeFormat('%b %d')(date);
       });
 
-    chartGroup.append('g')
-      .attr('transform', `translate(0,${chartHeight})`)
-      .call(xAxis as any)
-      .selectAll('text')
-      .attr('class', 'font-small fill-text-secondary')
-      .style('text-anchor', 'middle');
-
-    // Add Y axis
     const yAxisFormat = chartType === 'sentiment' 
       ? d3.format('+.2f') 
       : d3.format('d');
@@ -153,9 +138,47 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
         return yAxisFormat(value);
       });
 
-    chartGroup.append('g')
-      .call(yAxis as any)
-      .selectAll('text')
+    // Add grid lines (in chart group, not zoom group, so they align with axes)
+    const xAxisGrid = d3.axisBottom(xScale)
+      .tickSize(-chartHeight)
+      .tickFormat(() => '');
+
+    const yAxisGrid = d3.axisLeft(yScale)
+      .tickSize(-chartWidth)
+      .tickFormat(() => '');
+
+    const xGridGroup = chartGroup.append('g')
+      .attr('class', 'grid x-grid')
+      .attr('transform', `translate(0,${chartHeight})`)
+      .call(xAxisGrid as any);
+    
+    xGridGroup.selectAll('line')
+      .attr('stroke', '#f6f8fa')
+      .attr('stroke-width', 1);
+
+    const yGridGroup = chartGroup.append('g')
+      .attr('class', 'grid y-grid')
+      .call(yAxisGrid as any);
+    
+    yGridGroup.selectAll('line')
+      .attr('stroke', '#f6f8fa')
+      .attr('stroke-width', 1);
+
+    // Add axes (outside zoom group so they stay fixed)
+    const xAxisGroup = chartGroup.append('g')
+      .attr('class', 'x-axis')
+      .attr('transform', `translate(0,${chartHeight})`)
+      .call(xAxis as any);
+    
+    xAxisGroup.selectAll('text')
+      .attr('class', 'font-small fill-text-secondary')
+      .style('text-anchor', 'middle');
+
+    const yAxisGroup = chartGroup.append('g')
+      .attr('class', 'y-axis')
+      .call(yAxis as any);
+    
+    yAxisGroup.selectAll('text')
       .attr('class', 'font-small fill-text-secondary');
 
     // Add Y axis label
@@ -177,68 +200,114 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
 
     // Draw lines for each keyword
     keywords.forEach((keyword, index) => {
-      const safeKeyword = keyword.replace(/[^a-zA-Z0-9]/g, '_');
-      const fieldName = `${safeKeyword}_${chartType}`;
-      
-      // Update line generator for this keyword
-      const keywordLine = d3.line<TrendsDataPoint>()
-        .x(d => xScale(parseDate(d.time_period)!))
-        .y(d => yScale(d[fieldName] as number || 0))
-        .curve(d3.curveMonotoneX);
+        const safeKeyword = keyword.replace(/[^a-zA-Z0-9]/g, '_');
+        const fieldName = `${safeKeyword}_${chartType}`;
+        
+        // Update line generator for this keyword
+        const keywordLine = d3.line<TrendsDataPoint>()
+          .x(d => xScale(parseDate(d.time_period)!))
+          .y(d => yScale(d[fieldName] as number || 0))
+          .curve(d3.curveMonotoneX);
+  
+        // Draw the line
+      const path = zoomGroup.append('path')
+      .datum(data)
+      .attr('class', `trend-line trend-line-${index}`)
+      .attr('fill', 'none')
+      .attr('stroke', colorScale(keyword))
+      .attr('stroke-width', 2.5)
+      .attr('d', keywordLine);
 
-      // Draw the line
-      const path = chartGroup.append('path')
-        .datum(data)
-        .attr('class', 'trend-line')
-        .attr('fill', 'none')
-        .attr('stroke', colorScale(keyword))
-        .attr('stroke-width', 2.5)
-        .attr('d', keywordLine);
-
-      // Add dots for data points
-      const dots = chartGroup.selectAll(`.dots-${index}`)
-        .data(data)
-        .enter()
-        .append('circle')
-        .attr('class', `dots-${index} trend-dot`)
-        .attr('cx', d => xScale(parseDate(d.time_period)!))
-        .attr('cy', d => yScale(d[fieldName] as number || 0))
-        .attr('r', 4)
-        .attr('fill', colorScale(keyword))
-        .attr('stroke', '#ffffff')
-        .attr('stroke-width', 2)
-        .style('cursor', 'pointer');
+    // Add dots for data points
+    const dots = zoomGroup.selectAll(`.dots-${index}`)
+      .data(data)
+      .enter()
+      .append('circle')
+      .attr('class', `dots-${index} trend-dot`)
+      .attr('cx', d => xScale(parseDate(d.time_period)!))
+      .attr('cy', d => yScale(d[fieldName] as number || 0))
+      .attr('r', 4)
+      .attr('fill', colorScale(keyword))
+      .attr('stroke', '#ffffff')
+      .attr('stroke-width', 2)
+      .style('cursor', 'pointer');
 
       // Add hover interactions
       dots
         .on('mouseover', function(event, d) {
+          // Get current zoom transform to calculate proper scaled radius
+          const currentTransform = d3.zoomTransform(svg.node()!);
+          const scaleInverse = 1 / currentTransform.k;
+          
           d3.select(this)
             .transition()
             .duration(100)
-            .attr('r', 6);
+            .attr('r', 6 * scaleInverse);
 
-          const value = d[fieldName] as number || 0;
+          // Get the current keyword's value
+          const currentValue = d[fieldName] as number || 0;
+          
+          // Find all keywords that have the exact same value at this time period
+          const overlappingKeywords: Array<{keyword: string, value: number}> = [];
+          
+          keywords.forEach(kw => {
+            const safeKw = kw.replace(/[^a-zA-Z0-9]/g, '_');
+            const kwFieldName = `${safeKw}_${chartType}`;
+            const kwValue = d[kwFieldName] as number || 0;
+            
+            // Only include keywords that have the exact same value
+            if (kwValue === currentValue) {
+              overlappingKeywords.push({
+                keyword: kw,
+                value: kwValue
+              });
+            }
+          });
+
+          // Format the value once since all overlapping keywords have the same value
           const formattedValue = chartType === 'sentiment' 
-            ? (value >= 0 ? '+' : '') + value.toFixed(3)
-            : value.toLocaleString();
+            ? (currentValue >= 0 ? '+' : '') + currentValue.toFixed(3)
+            : currentValue.toLocaleString();
 
-          tooltip
-            .style('opacity', 1)
-            .html(`
-              <div class="font-medium text-text-primary">${keyword}</div>
+          let tooltipHTML;
+          
+          if (overlappingKeywords.length === 1) {
+            // Single keyword - use original tooltip format
+            tooltipHTML = `
+              <div class="font-medium text-text-primary">${overlappingKeywords[0].keyword}</div>
               <div class="text-text-secondary">${d.formatted_date}</div>
               <div class="font-medium text-accent">
                 ${chartType === 'sentiment' ? 'Sentiment: ' : 'Mentions: '}${formattedValue}
               </div>
-            `)
+            `;
+          } else {
+            // Multiple keywords with same value - use combined tooltip format
+            const keywordsList = overlappingKeywords.map(kw => kw.keyword).join(', ');
+            
+            tooltipHTML = `
+              <div class="font-medium text-text-primary">${keywordsList}</div>
+              <div class="text-text-secondary">${d.formatted_date}</div>
+              <div class="font-medium text-accent">
+                ${chartType === 'sentiment' ? 'Sentiment: ' : 'Mentions: '}${formattedValue}
+              </div>
+            `;
+          }
+
+          tooltip
+            .style('opacity', 1)
+            .html(tooltipHTML)
             .style('left', (event.pageX + 10) + 'px')
             .style('top', (event.pageY - 10) + 'px');
         })
         .on('mouseout', function() {
+          // Get current zoom transform to calculate proper scaled radius
+          const currentTransform = d3.zoomTransform(svg.node()!);
+          const scaleInverse = 1 / currentTransform.k;
+          
           d3.select(this)
             .transition()
             .duration(100)
-            .attr('r', 4);
+            .attr('r', 4 * scaleInverse);
 
           tooltip.style('opacity', 0);
         });
@@ -279,17 +348,101 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
 
     // Add zero line for sentiment charts
     if (chartType === 'sentiment') {
-      chartGroup.append('line')
-        .attr('x1', 0)
-        .attr('x2', chartWidth)
-        .attr('y1', yScale(0))
-        .attr('y2', yScale(0))
-        .attr('stroke', '#6a737d')
-        .attr('stroke-width', 1)
-        .attr('stroke-dasharray', '3,3');
-    }
+        zoomGroup.append('line')
+          .attr('x1', 0)
+          .attr('x2', chartWidth)
+          .attr('y1', yScale(0))
+          .attr('y2', yScale(0))
+          .attr('stroke', '#6a737d')
+          .attr('stroke-width', 1)
+          .attr('stroke-dasharray', '3,3');
+      }
+  
+      // Set up zoom behavior with dynamic axis updates and constraints
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+    .scaleExtent([1, 5])
+    .translateExtent([[0, 0], [chartWidth, chartHeight]])
+    .extent([[0, 0], [chartWidth, chartHeight]])
+    .on('zoom', (event) => {
+      const transform = event.transform;
+      
+      // Apply transform to zoom group
+      zoomGroup.attr('transform', transform.toString());
+      
+      // Calculate scaling factors for visual elements
+      const scaleInverse = 1 / transform.k;
+      
+      // Update line widths to scale with zoom
+      zoomGroup.selectAll('.trend-line')
+        .attr('stroke-width', 2.5 * scaleInverse);
+      
+      // Update dot sizes to scale with zoom
+      zoomGroup.selectAll('.trend-dot')
+        .attr('r', 4 * scaleInverse)
+        .attr('stroke-width', 2 * scaleInverse);
+      
+      // Update axes with new scales
+      const newXScale = transform.rescaleX(xScale);
+      const newYScale = transform.rescaleY(yScale);
+      
+      // Update X axis
+      const newXAxis = d3.axisBottom(newXScale)
+        .tickFormat((domainValue) => {
+          const date = domainValue as Date;
+          return d3.timeFormat('%b %d')(date);
+        });
+      
+      xAxisGroup.call(newXAxis as any);
+      xAxisGroup.selectAll('text')
+        .attr('class', 'font-small fill-text-secondary')
+        .style('text-anchor', 'middle');
+      
+      // Update Y axis
+      const newYAxis = d3.axisLeft(newYScale)
+        .tickFormat((domainValue) => {
+          const value = domainValue as number;
+          return yAxisFormat(value);
+        });
+      
+      yAxisGroup.call(newYAxis as any);
+      yAxisGroup.selectAll('text')
+        .attr('class', 'font-small fill-text-secondary');
+      
+      // Update grid lines to align with new axis scales
+      const newXGrid = d3.axisBottom(newXScale)
+        .tickSize(-chartHeight)
+        .tickFormat(() => '');
+      
+      const newYGrid = d3.axisLeft(newYScale)
+        .tickSize(-chartWidth)
+        .tickFormat(() => '');
+      
+      // Remove old grid lines and recreate them with proper positioning
+      xGridGroup.selectAll('*').remove();
+      yGridGroup.selectAll('*').remove();
+      
+      xGridGroup.call(newXGrid as any);
+      xGridGroup.selectAll('line')
+        .attr('stroke', '#f6f8fa')
+        .attr('stroke-width', 1);
+      
+      yGridGroup.call(newYGrid as any);
+      yGridGroup.selectAll('line')
+        .attr('stroke', '#f6f8fa')
+        .attr('stroke-width', 1);
+    });
 
-  }, [data, keywords, chartType, width, height]);
+  // Apply zoom behavior to SVG
+  svg.call(zoom);
+  
+      // Add double-click to reset zoom
+    svg.on('dblclick.zoom', () => {
+        svg.transition()
+          .duration(750)
+          .call(zoom.transform, d3.zoomIdentity);
+      });
+  
+    }, [data, keywords, chartType, width, height, createZoom, resetZoom]);
 
   return (
     <div className={`trends-chart-container ${className}`}>
@@ -306,7 +459,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
       {/* Chart info */}
       <div className="mt-3 flex items-center justify-center text-small text-text-secondary">
         <div className="text-text-tertiary">
-          Hover over data points for details • {chartType === 'sentiment' ? 'Sentiment ranges from -1 (negative) to +1 (positive)' : 'Higher values indicate more mentions'}
+          Scroll to zoom • Drag to pan • Double-click to reset • Hover over data points for details
         </div>
       </div>
     </div>
