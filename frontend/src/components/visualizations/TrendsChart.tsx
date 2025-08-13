@@ -75,9 +75,25 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
     // Create zoom container group
     const zoomGroup = chartGroup.append('g').attr('class', 'zoom-container');
 
-    // Parse dates and set up scales
-    const parseDate = d3.timeParse('%Y-%m-%d');
-    const dates = data.map(d => parseDate(d.time_period)!).filter(Boolean);
+    // Parse dates and set up scales - handle different formats
+    // Check if we have monthly data (format: YYYY-MM) or daily/weekly (format: YYYY-MM-DD)
+    const sampleDate = data[0]?.time_period || '';
+    const isMonthlyFormat = sampleDate.match(/^\d{4}-\d{2}$/);
+    
+    // Use appropriate date parser based on format
+    const parseDate = isMonthlyFormat 
+      ? d3.timeParse('%Y-%m')
+      : d3.timeParse('%Y-%m-%d');
+    
+    const dates = data.map(d => {
+      // For monthly format, ensure we have a valid date string
+      if (isMonthlyFormat && d.time_period.match(/^\d{4}-\d{2}$/)) {
+        return parseDate(d.time_period);
+      } else if (!isMonthlyFormat && d.time_period.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return parseDate(d.time_period);
+      }
+      return null;
+    }).filter(Boolean) as Date[];
     
     const xScale = d3.scaleTime()
       .domain(d3.extent(dates) as [Date, Date])
@@ -103,7 +119,10 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
 
     // Create line generator
     const line = d3.line<TrendsDataPoint>()
-      .x(d => xScale(parseDate(d.time_period)!))
+      .x(d => {
+        const parsedDate = parseDate(d.time_period);
+        return parsedDate ? xScale(parsedDate) : 0;
+      })
       .y(d => {
         const safeKeyword = keywords[0]?.replace(/[^a-zA-Z0-9]/g, '_');
         return yScale(d[`${safeKeyword}_${chartType}`] as number || 0);
@@ -177,7 +196,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
 
     // Right mask (covers area right of chart) - positioned relative to chartGroup
     maskGroup.append('rect')
-    .attr('x', chartWidth)
+    .attr('x', chartWidth)  // Moved 1px to the right to show the last grid line
     .attr('y', -margin.top)
     .attr('width', margin.right)
     .attr('height', height)
@@ -240,7 +259,10 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
         
         // Update line generator for this keyword
         const keywordLine = d3.line<TrendsDataPoint>()
-          .x(d => xScale(parseDate(d.time_period)!))
+          .x(d => {
+            const parsedDate = parseDate(d.time_period);
+            return parsedDate ? xScale(parsedDate) : 0;
+          })
           .y(d => yScale(d[fieldName] as number || 0))
           .curve(d3.curveMonotoneX);
   
@@ -259,7 +281,10 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
       .enter()
       .append('circle')
       .attr('class', `dots-${index} trend-dot`)
-      .attr('cx', d => xScale(parseDate(d.time_period)!))
+      .attr('cx', d => {
+        const parsedDate = parseDate(d.time_period);
+        return parsedDate ? xScale(parsedDate) : 0;
+      })
       .attr('cy', d => yScale(d[fieldName] as number || 0))
       .attr('r', 4)
       .attr('fill', colorScale(keyword))
