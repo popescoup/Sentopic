@@ -6,7 +6,7 @@
 
 import React from 'react';
 import * as d3 from 'd3';
-import { useD3, useD3Zoom } from '@/hooks/useD3';
+import { useD3 } from '@/hooks/useD3';
 
 interface TrendsDataPoint {
   time_period: string;
@@ -42,9 +42,6 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
     const colorScale = d3.scaleOrdinal<string>()
       .domain(keywords)
       .range(['#0366d6', '#28a745', '#dc3545', '#ffc107', '#6f42c1']);
-  
-    // Initialize zoom functionality
-    const { createZoom, resetZoom } = useD3Zoom([1, 5]);
   
     const svgRef = useD3((svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) => {
     // Clear previous content
@@ -159,29 +156,35 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
 
     // Add grid lines (in chart group, not zoom group, so they align with axes)
     const xAxisGrid = d3.axisBottom(xScale)
-      .tickSize(-chartHeight)
-      .tickFormat(() => '');
+    .tickSize(-chartHeight)
+    .tickFormat(() => '');
 
     const yAxisGrid = d3.axisLeft(yScale)
-      .tickSize(-chartWidth)
-      .tickFormat(() => '');
+    .tickSize(-chartWidth)
+    .tickFormat(() => '');
 
     const xGridGroup = chartGroup.append('g')
-      .attr('class', 'grid x-grid')
-      .attr('transform', `translate(0,${chartHeight})`)
-      .call(xAxisGrid as any);
-    
+    .attr('class', 'grid x-grid')
+    .attr('transform', `translate(0,${chartHeight})`)
+    .call(xAxisGrid as any);
+
     xGridGroup.selectAll('line')
-      .attr('stroke', '#f6f8fa')
-      .attr('stroke-width', 1);
+    .attr('stroke', '#f6f8fa')
+    .attr('stroke-width', 1);
+
+    // Remove the domain line (the line at the bottom/right of the grid)
+    xGridGroup.select('.domain').remove();
 
     const yGridGroup = chartGroup.append('g')
-      .attr('class', 'grid y-grid')
-      .call(yAxisGrid as any);
-    
-      yGridGroup.selectAll('line')
-      .attr('stroke', '#f6f8fa')
-      .attr('stroke-width', 1);
+    .attr('class', 'grid y-grid')
+    .call(yAxisGrid as any);
+
+    yGridGroup.selectAll('line')
+    .attr('stroke', '#f6f8fa')
+    .attr('stroke-width', 1);
+
+    // Remove the domain line (the line at the left/top of the grid)
+    yGridGroup.select('.domain').remove();
     
     // Add white overlay masks (after grid and chart content, but before axes)
     const maskGroup = chartGroup.append('g').attr('class', 'boundary-masks');
@@ -469,40 +472,44 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
         .attr('class', 'font-small fill-text-secondary');
       
       // Update grid lines to align with new axis scales
-      const newXGrid = d3.axisBottom(newXScale)
-        .tickSize(-chartHeight)
-        .tickFormat(() => '');
-      
-      const newYGrid = d3.axisLeft(newYScale)
-        .tickSize(-chartWidth)
-        .tickFormat(() => '');
-      
-      // Remove old grid lines and recreate them with proper positioning
-      xGridGroup.selectAll('*').remove();
-      yGridGroup.selectAll('*').remove();
-      
-      xGridGroup.call(newXGrid as any);
-      xGridGroup.selectAll('line')
-        .attr('stroke', '#f6f8fa')
-        .attr('stroke-width', 1);
-      
-      yGridGroup.call(newYGrid as any);
-      yGridGroup.selectAll('line')
-        .attr('stroke', '#f6f8fa')
-        .attr('stroke-width', 1);
+    const newXGrid = d3.axisBottom(newXScale)
+    .tickSize(-chartHeight)
+    .tickFormat(() => '');
+
+    const newYGrid = d3.axisLeft(newYScale)
+    .tickSize(-chartWidth)
+    .tickFormat(() => '');
+
+    // Remove old grid lines and recreate them with proper positioning
+    xGridGroup.selectAll('*').remove();
+    yGridGroup.selectAll('*').remove();
+
+    xGridGroup.call(newXGrid as any);
+    xGridGroup.selectAll('line')
+    .attr('stroke', '#f6f8fa')
+    .attr('stroke-width', 1);
+    // Remove domain line after zoom update
+    xGridGroup.select('.domain').remove();
+
+    yGridGroup.call(newYGrid as any);
+    yGridGroup.selectAll('line')
+    .attr('stroke', '#f6f8fa')
+    .attr('stroke-width', 1);
+    // Remove domain line after zoom update  
+    yGridGroup.select('.domain').remove();
     });
 
-  // Apply zoom behavior to SVG
-  svg.call(zoom);
-  
-      // Add double-click to reset zoom
+    // Apply zoom behavior to SVG
+    svg.call(zoom);
+    
+    // Add double-click to reset zoom
     svg.on('dblclick.zoom', () => {
-        svg.transition()
-          .duration(750)
-          .call(zoom.transform, d3.zoomIdentity);
-      });
+      svg.transition()
+        .duration(750)
+        .call(zoom.transform, d3.zoomIdentity);
+    });
   
-    }, [data, keywords, chartType, width, height, createZoom, resetZoom]);
+    }, [data, keywords, chartType, width, height]);
 
   return (
     <div className={`trends-chart-container ${className}`}>
