@@ -852,7 +852,7 @@ class FilteredContextsResponse(BaseModel):
 
 class TrendsRequest(BaseModel):
     """Request parameters for trends analysis."""
-    keywords: List[str] = Field(..., description="Keywords to analyze (max 5)", min_items=1, max_items=5)
+    keywords: List[str] = Field(..., description="Keywords to analyze (max 5 for interactive modal)", min_items=1, max_items=5)
     time_period: str = Field("weekly", description="Time period granularity", pattern="^(daily|weekly|monthly)$")
     
     @validator('keywords')
@@ -866,9 +866,9 @@ class TrendsRequest(BaseModel):
         if not clean_keywords:
             raise ValueError("Keywords cannot be empty")
         
-        # Limit to 5 keywords for performance
+        # Limit to 5 keywords for interactive modal performance
         if len(clean_keywords) > 5:
-            raise ValueError("Maximum 5 keywords allowed")
+            raise ValueError("Maximum 5 keywords allowed for interactive trends")
         
         return clean_keywords
     

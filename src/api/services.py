@@ -1057,11 +1057,12 @@ Return only the keywords, separated by commas, with no additional explanation.""
             # Import trends analyzer
             from src.analytics.trends import trends_analyzer
             
-            # Get raw trends data
+            # Get raw trends data - KEEP the 5-keyword limit for interactive trends modal
             raw_trends_data = trends_analyzer.get_trends_data(
                 session_id=project_id,
                 keywords=keywords,
-                time_period=time_period
+                time_period=time_period,
+                limit_keywords=True  # Keep limit for interactive modal
             )
             
             # Format for chart visualization

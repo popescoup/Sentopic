@@ -17,14 +17,16 @@ class TrendsAnalyzer:
         pass
     
     def get_trends_data(self, session_id: str, keywords: List[str], 
-                       time_period: str = 'weekly') -> Dict[str, Any]:
+                   time_period: str = 'weekly', limit_keywords: bool = True) -> Dict[str, Any]:
         """
         Get trends data for specified keywords from an analysis session.
         
         Args:
             session_id: Analysis session ID
-            keywords: List of keywords to analyze (max 5 recommended)
+            keywords: List of keywords to analyze
             time_period: 'daily', 'weekly', or 'monthly'
+            limit_keywords: If True, limit to 5 keywords for performance (default: True)
+                        If False, process all keywords (used for project summaries)
         
         Returns:
             Dictionary with trends data for each keyword
@@ -32,8 +34,9 @@ class TrendsAnalyzer:
         if not keywords:
             return {'trends': {}, 'time_period': time_period}
         
-        # Limit to 5 keywords for performance
-        keywords = keywords[:5]
+        # Only limit keywords when explicitly requested (for interactive features)
+        if limit_keywords:
+            keywords = keywords[:5]
         
         session = db.get_session()
         try:
@@ -104,7 +107,7 @@ class TrendsAnalyzer:
         
         Args:
             mention_date: Date of the mention
-            time_period: 'daily', 'weekly', or 'monthly'
+            time_period: 'daily', 'weekly', 'biweekly', or 'monthly'
         
         Returns:
             String key for time grouping
@@ -116,6 +119,18 @@ class TrendsAnalyzer:
             days_since_monday = mention_date.weekday()
             monday = mention_date - timedelta(days=days_since_monday)
             return monday.strftime('%Y-%m-%d')  # Monday of the week
+        elif time_period == 'biweekly':
+            # Get 2-week periods using a universal reference point
+            # Using Unix epoch start (1970-01-05) which was a Monday
+            from datetime import date as date_class
+            epoch_monday = date_class(1970, 1, 5)  # Monday, January 5, 1970
+            
+            days_diff = (mention_date - epoch_monday).days
+            biweek_number = days_diff // 14  # 14 days = 2 weeks
+            
+            # Calculate the start of this 2-week period
+            biweek_start = epoch_monday + timedelta(days=biweek_number * 14)
+            return biweek_start.strftime('%Y-%m-%d')  # Start date of the 2-week period
         elif time_period == 'monthly':
             return mention_date.strftime('%Y-%m')
         else:

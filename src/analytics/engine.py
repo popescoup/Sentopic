@@ -322,17 +322,20 @@ class AnalyticsEngine:
             finally:
                 session.close()
         
-            # Get trend summaries for all keywords
+            # Get trend summaries for ALL keywords (no limit for project summaries)
             keywords = results.get('keywords', [])
             print(f"🔍 Processing trends for {len(keywords)} keywords: {keywords}")
 
             if keywords:
-                trend_data = trends_analyzer.get_trends_data(session_id, keywords, 'monthly')
+                # Use limit_keywords=False to process ALL keywords for project summaries
+                trend_data = trends_analyzer.get_trends_data(
+                    session_id, keywords, 'biweekly', limit_keywords=False
+                )
                 print(f"🔍 Trend data keys: {trend_data.get('trends', {}).keys()}")
-    
+
                 trend_summary = trends_analyzer.get_trend_summary(trend_data)
                 print(f"🔍 Trend summary computed for: {list(trend_summary.keys())}")
-    
+
                 results['trend_summaries'] = {}
                 for keyword, summary_info in trend_summary.items():
                     print(f"    {keyword}: {summary_info.get('trend_direction', 'unknown')} ({summary_info.get('total_mentions', 0)} mentions)")
@@ -340,7 +343,7 @@ class AnalyticsEngine:
                         'trend_direction': summary_info['trend_direction'],
                         'total_mentions': summary_info['total_mentions']
                     }
-    
+
                 print(f"🔍 Trend summaries added to results: {len(results['trend_summaries'])}")
         
             # Get enhanced sample contexts (5 most recent with all keyword mentions)
