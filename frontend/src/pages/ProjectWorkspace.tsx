@@ -474,56 +474,6 @@ const ProjectWorkspace: React.FC = () => {
         </div>
       </div>
 
-      {/* Phase Information */}
-      <div className="mt-12 bg-panel rounded-default p-6 border border-border-primary">
-        <h2 className="font-section-header text-text-primary mb-3">
-          Project Workspace - Phase 4.2 Implementation
-        </h2>
-        
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <h3 className="font-subsection text-text-primary mb-2">
-              ✅ Implemented in Phase 4.2
-            </h3>
-            <ul className="font-body text-text-secondary space-y-1 text-sm">
-              <li>• AI Q&A sidebar with search type selection</li>
-              <li>• Semantic search setup and embedding generation</li>
-              <li>• Question-answer interface with context independence</li>
-              <li>• Interactive search type dropdown</li>
-              <li>• Cost information for cloud embeddings</li>
-              <li>• Real-time indexing progress tracking</li>
-            </ul>
-          </div>
-          
-          <div>
-            <h3 className="font-subsection text-text-primary mb-2">
-              🔄 Enhanced from Phase 3.1
-            </h3>
-            <ul className="font-body text-text-secondary space-y-1 text-sm">
-              <li>• Professional two-column layout maintained</li>
-              <li>• Real project data integration</li>
-              <li>• Functional insight cards (clickable)</li>
-              <li>• Research context display</li>
-              <li>• Loading and error states</li>
-              <li>• Project status handling</li>
-            </ul>
-          </div>
-          
-          <div>
-            <h3 className="font-subsection text-text-primary mb-2">
-              📊 Coming in Phase 5
-            </h3>
-            <ul className="font-body text-text-secondary space-y-1 text-sm">
-              <li>• Interactive analysis modals</li>
-              <li>• Advanced data visualizations</li>
-              <li>• Context explorer with filters</li>
-              <li>• Network relationship graphs</li>
-              <li>• Trend analysis charts</li>
-            </ul>
-          </div>
-        </div>
-        </div>
-
 {/* AI Summary Modal */}
 {project.summary && (
         <Modal
