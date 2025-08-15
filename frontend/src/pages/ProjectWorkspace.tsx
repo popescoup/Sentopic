@@ -55,6 +55,9 @@ const ProjectWorkspace: React.FC = () => {
   // NEW: State for managing initial trends modal keywords
   const [trendsModalInitialKeywords, setTrendsModalInitialKeywords] = React.useState<string[] | undefined>(undefined);
   
+  // NEW: State for project info modal
+  const [isProjectInfoModalOpen, setIsProjectInfoModalOpen] = React.useState(false);
+
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project-results', projectId],
     queryFn: () => api.getAnalysisResults(projectId!),
@@ -237,24 +240,23 @@ const ProjectWorkspace: React.FC = () => {
         </nav>
       </div>
 
-      {/* Research Context Bar */}
-      <div className="mb-8">
-        <h1 className="font-page-title text-text-primary mb-3">
-          {project.name}
-        </h1>
-        <div className="flex flex-wrap items-center gap-4 font-body text-text-secondary">
-          {project.research_question && (
-            <>
-              <span>Question: {project.research_question}</span>
-              <span>•</span>
-            </>
-          )}
-          <span>Keywords: {project.keywords.join(', ')}</span>
-          <span>•</span>
-          <span>Collections: {collectionsText}</span>
-          <span>•</span>
-          <span>Created {formatDate(project.created_at)}</span>
+      {/* Minimal Header with Project Info Icon */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <h1 className="font-page-title text-text-primary">{project.name}</h1>
+          <button
+            onClick={() => setIsProjectInfoModalOpen(true)}
+            className="text-accent hover:text-accent-dark transition-colors flex-shrink-0"
+            title="Project Information"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
         </div>
+        {project.research_question && (
+          <p className="font-body text-text-secondary mt-1">{project.research_question}</p>
+        )}
       </div>
 
       {/* Analysis Summary Section */}
@@ -446,85 +448,11 @@ const ProjectWorkspace: React.FC = () => {
               </div>
             </Card>
           )}
-
-          {/* Project Stats Card */}
-          <Card className="mt-6">
-            <div className="mb-4">
-              <h3 className="font-section-header text-text-primary mb-2">
-                Project Details
-              </h3>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="font-body text-text-secondary">Keywords:</span>
-                <span className="font-technical text-text-primary">
-                  {project.keywords.length}
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="font-body text-text-secondary">Collections:</span>
-                <span className="font-technical text-text-primary">
-                  {project.stats.collections_count}
-                </span>
-              </div>
-              
-              {project.status === 'completed' && (
-                <>
-                  <div className="flex justify-between items-center">
-                    <span className="font-body text-text-secondary">Posts:</span>
-                    <span className="font-technical text-text-primary">
-                      {project.stats.posts_analyzed.toLocaleString()}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="font-body text-text-secondary">Comments:</span>
-                    <span className="font-technical text-text-primary">
-                      {project.stats.comments_analyzed.toLocaleString()}
-                    </span>
-                  </div>
-                </>
-              )}
-              
-              <div className="flex justify-between items-center">
-                <span className="font-body text-text-secondary">Status:</span>
-                <span className={`font-small px-2 py-1 rounded-input text-xs ${
-                  project.status === 'completed' ? 'bg-green-100 text-success' :
-                  project.status === 'running' ? 'bg-blue-100 text-accent' :
-                  'bg-red-100 text-danger'
-                }`}>
-                  {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
-                </span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Keywords Preview */}
-          <Card className="mt-6">
-            <div className="mb-4">
-              <h3 className="font-section-header text-text-primary mb-2">
-                Keywords
-              </h3>
-            </div>
-            
-            <div className="flex flex-wrap gap-2">
-              {project.keywords.map((keyword, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 bg-hover-blue text-accent font-small rounded-input text-xs"
-                >
-                  {keyword}
-                </span>
-              ))}
-            </div>
-          </Card>
         </div>
       </div>
 
-{/* AI Summary Modal */}
-{project.summary && (
+        {/* AI Summary Modal */}
+        {project.summary && (
         <Modal
           isOpen={isSummaryModalOpen}
           onClose={() => setIsSummaryModalOpen(false)}
@@ -538,6 +466,142 @@ const ProjectWorkspace: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Project Info Modal */}
+      <Modal
+        isOpen={isProjectInfoModalOpen}
+        onClose={() => setIsProjectInfoModalOpen(false)}
+        title="Project Information"
+        size="lg"
+      >
+        <div className="space-y-6">
+          {/* Project Details */}
+          <div>
+            <h3 className="font-section-header text-text-primary mb-3">Project Details</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <span className="font-body text-text-secondary">Project Name:</span>
+                <p className="font-technical text-text-primary">{project.name}</p>
+              </div>
+              <div>
+                <span className="font-body text-text-secondary">Created:</span>
+                <p className="font-technical text-text-primary">{formatDate(project.created_at)}</p>
+              </div>
+              {project.research_question && (
+                <div className="md:col-span-2">
+                  <span className="font-body text-text-secondary">Research Question:</span>
+                  <p className="font-technical text-text-primary mt-1">{project.research_question}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Keywords */}
+          <div>
+            <h3 className="font-section-header text-text-primary mb-3">
+              Keywords ({project.keywords.length})
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {project.keywords.map((keyword, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-hover-blue text-accent font-small rounded text-sm"
+                >
+                  {keyword}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Collections */}
+          <div>
+            <h3 className="font-section-header text-text-primary mb-3">
+              Collections ({project.stats.collections_count})
+            </h3>
+            <div className="space-y-3">
+              {project.collections_metadata.map((collection, index) => (
+                <details key={index} className="group">
+                  <summary className="flex items-center justify-between cursor-pointer hover:bg-gradient-subtle p-3 rounded-lg transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className="font-technical text-text-primary text-lg">
+                        r/{collection.subreddit}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-text-secondary">
+                        {collection.sort_method}
+                        {collection.time_period && ` (${collection.time_period})`}
+                      </span>
+                      <svg 
+                        className="w-4 h-4 text-text-tertiary transition-transform group-open:rotate-180" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </summary>
+                  
+                  <div className="mt-3 pl-6 pr-3 pb-3 border-l-2 border-border-primary">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-text-secondary">Sort Method:</span>
+                        <span className="ml-2 font-technical text-text-primary">
+                          {collection.sort_method}
+                          {collection.time_period && (
+                            <span className="text-text-secondary"> ({collection.time_period})</span>
+                          )}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-text-secondary">Posts Requested:</span>
+                        <span className="ml-2 font-technical text-text-primary">
+                          {collection.posts_requested}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-text-secondary">Created:</span>
+                        <span className="ml-2 font-technical text-text-primary">
+                          {formatDate(collection.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+
+          {/* Analysis Statistics */}
+          {project.status === 'completed' && (
+            <div>
+              <h3 className="font-section-header text-text-primary mb-3">Analysis Statistics</h3>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="p-4 bg-gradient-subtle rounded-lg">
+                  <div className="text-2xl font-technical text-text-primary">
+                    {project.stats.posts_analyzed.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-text-secondary">Posts Analyzed</div>
+                </div>
+                <div className="p-4 bg-gradient-subtle rounded-lg">
+                  <div className="text-2xl font-technical text-text-primary">
+                    {project.stats.comments_analyzed.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-text-secondary">Comments Analyzed</div>
+                </div>
+                <div className="p-4 bg-gradient-subtle rounded-lg">
+                  <div className="text-2xl font-technical text-text-primary">
+                    {project.stats.total_mentions.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-text-secondary">Total Mentions</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* Context Explorer Modal - ENHANCED with initial filters */}
       <ContextExplorerModal

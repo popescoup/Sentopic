@@ -69,6 +69,12 @@ export interface ProjectStats {
     created_at: string;
     status: string;
     posts_requested: number;
+    posts_collected?: number;
+    comments_collected?: number;
+    root_comments_requested?: number;
+    replies_per_root?: number;
+    min_upvotes?: number;
+    error_message?: string;
   }
   
   export interface CollectionParams {
