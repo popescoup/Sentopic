@@ -13,31 +13,40 @@ import { useTrends } from '@/hooks/useApi';
 import type { ProjectResponse } from '@/types/api';
 
 interface TrendsModalProps {
-  /** Whether the modal is open */
-  isOpen: boolean;
-  /** Function to call when modal should close */
-  onClose: () => void;
-  /** Project data for trends analysis */
-  project: ProjectResponse;
-}
+    /** Whether the modal is open */
+    isOpen: boolean;
+    /** Function to call when modal should close */
+    onClose: () => void;
+    /** Project data for trends analysis */
+    project: ProjectResponse;
+    /** Initial keywords to select (for keyword relationships navigation) */
+    initialKeywords?: string[];
+  }
 
-export const TrendsModal: React.FC<TrendsModalProps> = ({
-  isOpen,
-  onClose,
-  project
-}) => {
+  export const TrendsModal: React.FC<TrendsModalProps> = ({
+    isOpen,
+    onClose,
+    project,
+    initialKeywords
+  }) => {
   // State for interactive controls
   const [chartType, setChartType] = useState<'mentions' | 'sentiment'>('mentions');
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [timePeriod, setTimePeriod] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
 
-  // Initialize with first 3 keywords when modal opens
+  // Initialize with provided keywords or first 3 keywords when modal opens
   useEffect(() => {
     if (isOpen && project.keywords.length > 0) {
-      const initialKeywords = project.keywords.slice(0, Math.min(3, project.keywords.length));
-      setSelectedKeywords(initialKeywords);
+      if (initialKeywords && initialKeywords.length > 0) {
+        // Use provided initial keywords (from keyword relationships)
+        setSelectedKeywords(initialKeywords);
+      } else {
+        // Default behavior: use first 3 keywords
+        const defaultKeywords = project.keywords.slice(0, Math.min(3, project.keywords.length));
+        setSelectedKeywords(defaultKeywords);
+      }
     }
-  }, [isOpen, project.keywords]);
+  }, [isOpen, project.keywords, initialKeywords]);
 
   // API call for trends data
   const { 

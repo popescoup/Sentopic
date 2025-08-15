@@ -7,6 +7,7 @@
 import React, { useState, useMemo } from 'react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
+import { Search, TrendingUp } from 'lucide-react';
 import { KeywordNetworkGraph } from '@/components/visualizations';
 import { transformCooccurrenceToNetwork } from '@/utils/networkDataTransform';
 import type { ProjectResponse, KeywordCooccurrence } from '@/types/api';
@@ -20,6 +21,8 @@ interface KeywordRelationshipsModalProps {
   project: ProjectResponse;
   /** Function to call when user wants to explore specific keyword pair */
   onExploreRelationship: (keyword1: string, keyword2: string) => void;
+  /** Function to call when user wants to view trends for keyword pair */
+  onViewTrends: (keyword1: string, keyword2: string) => void;
 }
 
 type SortOption = 'frequency' | 'alphabetical' | 'posts' | 'comments' | 'sentiment_asc' | 'sentiment_desc';
@@ -28,7 +31,8 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
   isOpen,
   onClose,
   project,
-  onExploreRelationship
+  onExploreRelationship,
+  onViewTrends
 }) => {
   // Sorting state
   const [sortBy, setSortBy] = useState<SortOption>('frequency');
@@ -70,6 +74,11 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
   // Handle table row click
   const handleTableRowClick = (cooc: KeywordCooccurrence) => {
     onExploreRelationship(cooc.keyword1, cooc.keyword2);
+  };
+
+  // Handle trends view click
+  const handleViewTrends = (cooc: KeywordCooccurrence) => {
+    onViewTrends(cooc.keyword1, cooc.keyword2);
   };
 
   // Sort options for dropdown
@@ -287,12 +296,11 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
                 <tbody className="divide-y divide-border-primary">
                   {sortedCooccurrences.map((cooc, index) => (
                     <tr 
-                      key={`${cooc.keyword1}-${cooc.keyword2}`}
-                      className={`hover:bg-hover-blue transition-colors duration-150 cursor-pointer ${
-                        index % 2 === 0 ? 'bg-content' : 'bg-panel'
-                      }`}
-                      onClick={() => handleTableRowClick(cooc)}
-                    >
+                    key={`${cooc.keyword1}-${cooc.keyword2}`}
+                    className={`hover:bg-hover-blue transition-colors duration-150 ${
+                      index % 2 === 0 ? 'bg-content' : 'bg-panel'
+                    }`}
+                  >
                       <td className="px-4 py-3">
                         <div className="flex items-center space-x-2">
                           <span className="font-medium text-accent">{cooc.keyword1}</span>
@@ -329,17 +337,41 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
                       </span>
                     </td>
                       
-                      <td className="px-4 py-3 text-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTableRowClick(cooc);
-                          }}
-                        >
-                          Explore
-                        </Button>
+                    <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="relative group">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTableRowClick(cooc);
+                              }}
+                              className="p-2 w-10 h-10 flex items-center justify-center"
+                            >
+                              <Search className="h-3 w-3" />
+                            </Button>
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                              Explore co-occurrences
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewTrends(cooc);
+                              }}
+                              className="p-2 w-10 h-10 flex items-center justify-center"
+                            >
+                              <TrendingUp className="h-3 w-3" />
+                            </Button>
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                              View trends
+                            </div>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ))}

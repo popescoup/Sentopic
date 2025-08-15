@@ -6,6 +6,8 @@
 
 import React, { useState, useMemo } from 'react';
 import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import { Search, TrendingUp } from 'lucide-react';
 import type { ProjectResponse, KeywordData } from '@/types/api';
 
 interface KeywordOverviewModalProps {
@@ -15,6 +17,10 @@ interface KeywordOverviewModalProps {
   onClose: () => void;
   /** Project data containing keyword statistics */
   project: ProjectResponse;
+  /** Function to call when user wants to explore specific keyword */
+  onExploreKeyword: (keyword: string) => void;
+  /** Function to call when user wants to view trends for specific keyword */
+  onViewTrends: (keyword: string) => void;
 }
 
 type SortOption = 'mentions' | 'sentiment' | 'alphabetical';
@@ -71,7 +77,9 @@ const calculateSentimentDistribution = (keywordsData: any[]) => {
 const KeywordOverviewModal: React.FC<KeywordOverviewModalProps> = ({
   isOpen,
   onClose,
-  project
+  project,
+  onExploreKeyword,
+  onViewTrends
 }) => {
   // Sorting state
   const [sortBy, setSortBy] = useState<SortOption>('mentions');
@@ -97,6 +105,16 @@ const KeywordOverviewModal: React.FC<KeywordOverviewModalProps> = ({
     if (sentiment > 0.0001) return 'text-success';
     if (sentiment < -0.0001) return 'text-danger';
     return 'text-text-secondary';
+  };
+
+  // Handle explore context click
+  const handleExploreClick = (keyword: string) => {
+    onExploreKeyword(keyword);
+  };
+
+  // Handle trends view click
+  const handleViewTrends = (keyword: string) => {
+    onViewTrends(keyword);
   };
 
   // Sort options for dropdown
@@ -186,7 +204,7 @@ const KeywordOverviewModal: React.FC<KeywordOverviewModalProps> = ({
         {/* Sort Controls */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div>
               <span className="font-medium text-text-primary">
                 {sortedKeywords.length} keyword{sortedKeywords.length !== 1 ? 's' : ''} found
               </span>
@@ -227,9 +245,12 @@ const KeywordOverviewModal: React.FC<KeywordOverviewModalProps> = ({
                   <th className="px-4 py-3 text-center font-subsection text-text-primary">
                     Posts / Comments
                   </th>
+                  <th className="px-4 py-3 text-center font-subsection text-text-primary">
+                    Action
+                  </th>
                 </tr>
                 </thead>
-              <tbody className="divide-y divide-border-primary">
+                <tbody className="divide-y divide-border-primary">
                 {sortedKeywords.map((keyword, index) => (
                   <tr 
                     key={keyword.keyword}
@@ -273,6 +294,38 @@ const KeywordOverviewModal: React.FC<KeywordOverviewModalProps> = ({
                           return `${postsPercent}% / ${commentsPercent}%`;
                         })()}
                       </span>
+                    </td>
+                    
+                    {/* Action */}
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="relative group">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleExploreClick(keyword.keyword)}
+                            className="p-2 w-10 h-10 flex items-center justify-center"
+                          >
+                            <Search className="h-3 w-3" />
+                          </Button>
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                            Explore contexts
+                          </div>
+                        </div>
+                        <div className="relative group">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewTrends(keyword.keyword)}
+                            className="p-2 w-10 h-10 flex items-center justify-center"
+                          >
+                            <TrendingUp className="h-3 w-3" />
+                          </Button>
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                            View trends
+                          </div>
+                        </div>
+                      </div>
                     </td>
                     
                   </tr>

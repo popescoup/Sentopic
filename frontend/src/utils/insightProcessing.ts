@@ -45,7 +45,8 @@ export const getTopCooccurrence = (project: ProjectResponse): {
       return currentCount > maxCount ? current : max;
     });
 
-    const count = topCooccurrence.cooccurrence_count || 0;
+    // Calculate total count of all co-occurrences (sum of all cooccurrence_count values)
+    const totalCooccurrences = project.cooccurrences.reduce((sum, cooc) => sum + (cooc.cooccurrence_count || 0), 0);
     const keyword1 = topCooccurrence.keyword1 || '';
     const keyword2 = topCooccurrence.keyword2 || '';
 
@@ -61,9 +62,9 @@ export const getTopCooccurrence = (project: ProjectResponse): {
     const sentimentText = sentiment >= 0 ? `+${sentiment.toFixed(3)}` : sentiment.toFixed(3);
             
     return {
-        count,
+        count: totalCooccurrences,
         pair: `"${keyword1}" + "${keyword2}"`,
-        description: `Top relationship: "${keyword1}" and "${keyword2}" appear together ${formatNumber(count)} times (avg sentiment: ${sentimentText})`
+        description: `Total co-occurrences found with an average sentiment of ${sentimentText} for the top relationship, "${keyword1}" & "${keyword2}"`
     };
     
   } catch (error) {
@@ -162,7 +163,7 @@ export const getInsightData = (project: ProjectResponse) => {
       totalMentions: hasData ? project.stats.total_mentions : 0,
       avgSentiment: hasData ? project.stats.avg_sentiment : 0,
       description: hasData 
-        ? `total keyword mentions with an average sentiment of ${formatSentiment(project.stats.avg_sentiment)}`
+        ? `Total keyword mentions with an average sentiment of ${formatSentiment(project.stats.avg_sentiment)}`
         : 'Analysis in progress or no data available'
     },
     relationships: hasData ? getTopCooccurrence(project) : null,

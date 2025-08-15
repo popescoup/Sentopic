@@ -51,6 +51,9 @@ const ProjectWorkspace: React.FC = () => {
     primary_keyword?: string;
     secondary_keyword?: string;
   } | undefined>(undefined);
+
+  // NEW: State for managing initial trends modal keywords
+  const [trendsModalInitialKeywords, setTrendsModalInitialKeywords] = React.useState<string[] | undefined>(undefined);
   
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project-results', projectId],
@@ -85,6 +88,52 @@ const ProjectWorkspace: React.FC = () => {
     // Close relationships modal and open context explorer
     setIsKeywordRelationshipsOpen(false);
     setIsContextExplorerOpen(true);
+  }, []);
+
+  // NEW: Handle keyword exploration
+  const handleExploreKeyword = React.useCallback((keyword: string) => {
+    console.log(`🔍 Exploring keyword: "${keyword}"`);
+    
+    // Set initial filters for context explorer
+    setContextExplorerInitialFilters({
+      primary_keyword: keyword,
+      secondary_keyword: undefined
+    });
+    
+    // Close keyword overview modal and open context explorer
+    setIsKeywordOverviewOpen(false);
+    setIsContextExplorerOpen(true);
+  }, []);
+
+  // NEW: Handle trends view for keyword relationships
+  const handleViewTrends = React.useCallback((keyword1: string, keyword2: string) => {
+    console.log(`🔍 Viewing trends for: "${keyword1}" + "${keyword2}"`);
+    
+    // Set initial keywords for trends modal
+    setTrendsModalInitialKeywords([keyword1, keyword2]);
+    
+    // Close relationships modal and open trends modal
+    setIsKeywordRelationshipsOpen(false);
+    setIsTrendsModalOpen(true);
+  }, []);
+
+  // NEW: Handle trends modal close (clear initial keywords)
+  const handleTrendsModalClose = React.useCallback(() => {
+    setIsTrendsModalOpen(false);
+    // Clear initial keywords when modal closes
+    setTrendsModalInitialKeywords(undefined);
+  }, []);
+
+  // NEW: Handle trends view for single keyword
+  const handleViewKeywordTrends = React.useCallback((keyword: string) => {
+    console.log(`🔍 Viewing trends for keyword: "${keyword}"`);
+    
+    // Set initial keyword for trends modal (single keyword)
+    setTrendsModalInitialKeywords([keyword]);
+    
+    // Close keyword overview modal and open trends modal
+    setIsKeywordOverviewOpen(false);
+    setIsTrendsModalOpen(true);
   }, []);
 
   // NEW: Handle context explorer close (clear initial filters)
@@ -503,6 +552,8 @@ const ProjectWorkspace: React.FC = () => {
         isOpen={isKeywordOverviewOpen}
         onClose={() => setIsKeywordOverviewOpen(false)}
         project={project}
+        onExploreKeyword={handleExploreKeyword}
+        onViewTrends={handleViewKeywordTrends}
       />
 
       {/* Keyword Relationships Modal - ENHANCED with exploration handler */}
@@ -511,13 +562,15 @@ const ProjectWorkspace: React.FC = () => {
         onClose={() => setIsKeywordRelationshipsOpen(false)}
         project={project}
         onExploreRelationship={handleExploreRelationship}
+        onViewTrends={handleViewTrends}
       />
 
       {/* Trends Modal */}
       <TrendsModal
         isOpen={isTrendsModalOpen}
-        onClose={() => setIsTrendsModalOpen(false)}
+        onClose={handleTrendsModalClose}
         project={project}
+        initialKeywords={trendsModalInitialKeywords}
       />
     </MainLayout>
   );
