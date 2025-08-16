@@ -1436,7 +1436,10 @@ Return only the keywords, separated by commas, with no additional explanation.""
                         "time_period": collection.time_period,
                         "created_at": datetime.fromtimestamp(collection.created_at).isoformat(),
                         "status": collection.status,
-                        "posts_requested": collection.posts_requested
+                        "posts_requested": collection.posts_requested,
+                        "root_comments_requested": collection.root_comments_requested,
+                        "replies_per_root": collection.replies_per_root,
+                        "min_upvotes": collection.min_upvotes
                     })
             
             return collections_metadata

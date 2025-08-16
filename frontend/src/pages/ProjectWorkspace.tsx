@@ -246,7 +246,7 @@ const ProjectWorkspace: React.FC = () => {
           <h1 className="font-page-title text-text-primary">{project.name}</h1>
           <button
             onClick={() => setIsProjectInfoModalOpen(true)}
-            className="text-accent hover:text-accent-dark transition-colors flex-shrink-0"
+            className="text-accent hover:text-accent-dark transition-colors flex-shrink-0 -translate-y-2"
             title="Project Information"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -562,6 +562,24 @@ const ProjectWorkspace: React.FC = () => {
                         </span>
                       </div>
                       <div>
+                        <span className="text-text-secondary">Root Comments:</span>
+                        <span className="ml-2 font-technical text-text-primary">
+                          {collection.root_comments_requested || 0} per post
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-text-secondary">Replies per Root:</span>
+                        <span className="ml-2 font-technical text-text-primary">
+                          {collection.replies_per_root || 0}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-text-secondary">Min Upvotes:</span>
+                        <span className="ml-2 font-technical text-text-primary">
+                          {collection.min_upvotes || 0}
+                        </span>
+                      </div>
+                      <div>
                         <span className="text-text-secondary">Created:</span>
                         <span className="ml-2 font-technical text-text-primary">
                           {formatDate(collection.created_at)}
@@ -583,13 +601,13 @@ const ProjectWorkspace: React.FC = () => {
                   <div className="text-2xl font-technical text-text-primary">
                     {project.stats.posts_analyzed.toLocaleString()}
                   </div>
-                  <div className="text-sm text-text-secondary">Posts Analyzed</div>
+                  <div className="text-sm text-text-secondary">Posts with Keywords</div>
                 </div>
                 <div className="p-4 bg-gradient-subtle rounded-lg">
                   <div className="text-2xl font-technical text-text-primary">
                     {project.stats.comments_analyzed.toLocaleString()}
                   </div>
-                  <div className="text-sm text-text-secondary">Comments Analyzed</div>
+                  <div className="text-sm text-text-secondary">Comments with Keywords</div>
                 </div>
                 <div className="p-4 bg-gradient-subtle rounded-lg">
                   <div className="text-2xl font-technical text-text-primary">
