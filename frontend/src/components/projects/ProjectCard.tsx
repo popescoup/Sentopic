@@ -46,22 +46,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     return date.toLocaleDateString();
   };
 
-  // Get status display info
-  const getStatusInfo = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return { text: 'Completed', className: 'text-success bg-green-100' };
-      case 'running':
-        return { text: 'Running', className: 'text-accent bg-blue-100' };
-      case 'failed':
-        return { text: 'Failed', className: 'text-danger bg-red-100' };
-      default:
-        return { text: 'Unknown', className: 'text-text-tertiary bg-panel' };
-    }
-  };
-
-  const statusInfo = getStatusInfo(project.status);
-
   return (
     <Card
       hover
@@ -70,14 +54,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     >
       {/* Project Header */}
       <div className="mb-4">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="font-subsection text-text-primary mb-1 flex-1 mr-3">
-            {project.name}
-          </h3>
-          <span className={`px-2 py-1 rounded-input font-small text-xs ${statusInfo.className}`}>
-            {statusInfo.text}
-          </span>
-        </div>
+      <div className="mb-2">
+        <h3 className="font-subsection text-text-primary mb-1">
+          {project.name}
+        </h3>
+      </div>
         <p className="font-small text-text-tertiary">
           Created {formatDate(project.created_at)} • {project.collections_metadata.map(c => `r/${c.subreddit}`).join(', ')}
         </p>

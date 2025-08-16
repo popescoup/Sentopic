@@ -20,12 +20,10 @@ export const ProjectCardSkeleton: React.FC<ProjectCardSkeletonProps> = ({ count 
         <Card key={index} className="animate-pulse">
           {/* Project Header Skeleton */}
           <div className="mb-4">
-            <div className="flex items-start justify-between mb-2">
-              {/* Project name skeleton */}
-              <div className="h-5 bg-panel rounded w-3/4"></div>
-              {/* Status badge skeleton */}
-              <div className="h-6 bg-panel rounded-input w-16"></div>
-            </div>
+          <div className="mb-2">
+            {/* Project name skeleton */}
+            <div className="h-5 bg-panel rounded w-3/4"></div>
+          </div>
             {/* Created date and collections skeleton */}
             <div className="h-3 bg-panel rounded w-2/3"></div>
           </div>
