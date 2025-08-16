@@ -78,20 +78,6 @@ const ProjectsDashboard: React.FC = () => {
     return date.toLocaleDateString();
   };
 
-  // Get status display info
-  const getStatusInfo = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return { text: 'Completed', className: 'text-success bg-green-100' };
-      case 'running':
-        return { text: 'Running', className: 'text-accent bg-blue-100' };
-      case 'failed':
-        return { text: 'Failed', className: 'text-danger bg-red-100' };
-      default:
-        return { text: 'Unknown', className: 'text-text-tertiary bg-panel' };
-    }
-  };
-
   // Loading state
   if (isLoading) {
     return (
@@ -298,8 +284,6 @@ const ProjectsDashboard: React.FC = () => {
 
         {/* Existing Project Cards */}
         {projects.map((project) => {
-          const statusInfo = getStatusInfo(project.status);
-          
           return (
             <Card
               key={project.id}
@@ -309,13 +293,10 @@ const ProjectsDashboard: React.FC = () => {
             >
               {/* Project Content */}
               <div className="mb-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-subsection text-text-primary mb-1 flex-1 mr-3">
+                <div className="mb-2">
+                  <h3 className="font-subsection text-text-primary mb-1">
                     {project.name}
                   </h3>
-                  <span className={`px-2 py-1 rounded-input font-small text-xs ${statusInfo.className}`}>
-                    {statusInfo.text}
-                  </span>
                 </div>
                 <p className="font-small text-text-tertiary">
                   Created {formatDate(project.created_at)} • {project.collections_metadata.map(c => `r/${c.subreddit}`).join(', ')}
@@ -432,9 +413,7 @@ const ProjectsDashboard: React.FC = () => {
               Project Overview
             </h3>
             <p className="font-body text-text-secondary">
-              {projects.length} {projects.length === 1 ? 'project' : 'projects'} • 
-              {projects.filter(p => p.status === 'completed').length} completed • 
-              {projects.filter(p => p.status === 'running').length} running
+              {projects.length} {projects.length === 1 ? 'project' : 'projects'} total
             </p>
           </div>
           
