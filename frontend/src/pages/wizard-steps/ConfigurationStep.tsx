@@ -120,16 +120,16 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
                 </label>
                 <input
                   type="range"
-                  min="50"
-                  max="500"
-                  step="25"
+                  min="20"
+                  max="200"
+                  step="10"
                   value={formData.contextWindow}
                   onChange={handleContextWindowChange}
                   className="w-full h-2 bg-border-secondary rounded-lg appearance-none cursor-pointer"
                 />
                 <div className="flex justify-between text-sm text-text-tertiary mt-1">
-                  <span>50 words</span>
-                  <span>500 words</span>
+                  <span>20 words</span>
+                  <span>200 words</span>
                 </div>
                 <div className="font-body text-text-secondary text-sm mt-1">
                   Amount of surrounding text to include with each keyword match
@@ -253,75 +253,6 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
             </div>
           </Card>
         </div>
-      </div>
-
-      {/* Analysis Process Preview */}
-      <div className="mt-8 p-4 bg-panel rounded-input border border-border-primary">
-        <h4 className="font-subsection text-text-primary mb-3">
-          What happens next?
-        </h4>
-        <div className="grid gap-4 md:grid-cols-4">
-          <div className="text-center">
-            <div className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center mx-auto mb-2">
-              1
-            </div>
-            <h5 className="font-body text-text-primary font-medium mb-1">
-              Create Project
-            </h5>
-            <p className="font-small text-text-secondary">
-              Project saved with your settings
-            </p>
-          </div>
-          
-          <div className="text-center">
-            <div className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center mx-auto mb-2">
-              2
-            </div>
-            <h5 className="font-body text-text-primary font-medium mb-1">
-              Start Analysis
-            </h5>
-            <p className="font-small text-text-secondary">
-              Begin processing your data
-            </p>
-          </div>
-          
-          <div className="text-center">
-            <div className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center mx-auto mb-2">
-              3
-            </div>
-            <h5 className="font-body text-text-primary font-medium mb-1">
-              Track Progress
-            </h5>
-            <p className="font-small text-text-secondary">
-              Monitor analysis progress
-            </p>
-          </div>
-          
-          <div className="text-center">
-            <div className="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center mx-auto mb-2">
-              ✓
-            </div>
-            <h5 className="font-body text-text-primary font-medium mb-1">
-              View Results
-            </h5>
-            <p className="font-small text-text-secondary">
-              Explore insights and findings
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Requirements */}
-      <div className="mt-6 p-4 bg-hover-blue rounded-input border border-accent">
-        <h4 className="font-subsection text-text-primary mb-2">
-          Ready to Create Project:
-        </h4>
-        <ul className="space-y-1 text-sm text-text-secondary">
-          <li>• Project name: {formData.projectName || 'Required'}</li>
-          <li>• {formData.keywords.length} keywords selected</li>
-          <li>• {selectedCollections.length} collections selected</li>
-          <li>• Analysis parameters configured</li>
-        </ul>
       </div>
     </div>
   );

@@ -199,18 +199,6 @@ export const KeywordsManager: React.FC<KeywordsManagerProps> = ({
           <div>• <kbd className="px-1 py-0.5 bg-border-secondary rounded text-xs">Backspace</kbd> - Remove last keyword (when input is empty)</div>
         </div>
       </div>
-
-      {/* Usage Guidelines */}
-      <div className="mt-3 p-3 bg-panel rounded-input border border-border-primary">
-        <h4 className="font-subsection text-text-primary mb-2">Guidelines:</h4>
-        <ul className="space-y-1 text-sm text-text-secondary">
-          <li>• Use specific, relevant terms related to your research</li>
-          <li>• Avoid very common words (the, and, or, etc.)</li>
-          <li>• Consider synonyms and related terms</li>
-          <li>• Keywords are case-insensitive</li>
-          <li>• Maximum {maxKeywords} keywords per project</li>
-        </ul>
-      </div>
     </div>
   );
 };

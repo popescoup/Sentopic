@@ -35,7 +35,7 @@ const initialFormData: WizardFormData = {
   selectedCollections: [],
   projectName: '',
   partialMatching: true,
-  contextWindow: 150,
+  contextWindow: 100,
   generateSummary: true,
 };
 

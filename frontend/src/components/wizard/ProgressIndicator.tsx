@@ -68,9 +68,9 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
     <div className={`w-full ${classes.container} ${className}`}>
       {/* Desktop Layout */}
       <div className="hidden md:block">
-        <div className="flex items-center justify-between relative">
+      <div className="flex items-start justify-between relative">
           {/* Background connector line */}
-          <div className="absolute inset-0 flex items-center">
+          <div className="absolute inset-0 flex items-center z-0">
             <div className="w-full">
               <div className={`${classes.connector} bg-border-secondary`} />
             </div>

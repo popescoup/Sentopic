@@ -103,12 +103,12 @@ export const validateConfiguration = (formData: WizardFormData): ValidationResul
   }
   
   // Context window validation
-  if (formData.contextWindow < 50) {
-    errors.contextWindow = 'Context window should be at least 50 words';
+  if (formData.contextWindow < 20) {
+    errors.contextWindow = 'Context window should be at least 20 words';
   }
   
-  if (formData.contextWindow > 500) {
-    errors.contextWindow = 'Context window should not exceed 500 words';
+  if (formData.contextWindow > 200) {
+    errors.contextWindow = 'Context window should not exceed 200 words';
   }
   
   return {

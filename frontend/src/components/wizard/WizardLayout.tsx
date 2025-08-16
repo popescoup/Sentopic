@@ -70,35 +70,8 @@ export const WizardLayout: React.FC<WizardLayoutProps> = ({
         />
       </div>
 
-      {/* Main Content Card */}
-      <Card className="mb-6">
-        {/* Step Header */}
-        <div className="border-b border-border-primary pb-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-section-header text-text-primary mb-2">
-                {currentStepConfig?.title}
-              </h2>
-              <p className="font-body text-text-secondary">
-                {currentStepConfig?.description}
-              </p>
-            </div>
-            <div className="text-right">
-              <span className="font-small text-text-tertiary">
-                Step {currentStep} of {steps.length}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Step Content */}
-        <div className="min-h-[400px]">
-          {children}
-        </div>
-      </Card>
-
       {/* Navigation Controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
           {/* Cancel Button */}
           <Button
@@ -136,6 +109,33 @@ export const WizardLayout: React.FC<WizardLayoutProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Main Content Card */}
+      <Card className="mb-6">
+        {/* Step Header */}
+        <div className="border-b border-border-primary pb-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-section-header text-text-primary mb-1">
+                {currentStepConfig?.title}
+              </h2>
+              <p className="font-body text-text-secondary">
+                {currentStepConfig?.description}
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="font-small text-text-tertiary">
+                Step {currentStep} of {steps.length}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Step Content */}
+        <div className="min-h-[200px]">
+          {children}
+        </div>
+      </Card>
 
       {/* Step Completion Status */}
       <div className="mt-4 flex items-center justify-center">

@@ -29,12 +29,8 @@ export const CollectionsStep: React.FC<CollectionsStepProps> = ({
     <div className="max-w-6xl mx-auto">
       {/* Step Introduction */}
       <div className="mb-8">
-        <h3 className="font-subsection text-text-primary mb-3">
-          Choose Data Collections
-        </h3>
         <p className="font-body text-text-secondary">
-          Select the Reddit data collections you want to analyze. Each collection represents 
-          posts and comments from a specific subreddit, gathered with specific parameters.
+          Each collection contains posts and comments from a specific subreddit with different sorting methods and time periods.
         </p>
       </div>
 
@@ -78,95 +74,6 @@ export const CollectionsStep: React.FC<CollectionsStepProps> = ({
           </div>
         </div>
       )}
-
-      {/* Data Quality Guidelines */}
-      <div className="mt-6 p-4 bg-panel rounded-input border border-border-primary">
-        <h4 className="font-subsection text-text-primary mb-3">
-          Choosing the Right Collections
-        </h4>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <h5 className="font-body text-text-primary mb-2 font-medium">
-              ✅ Good collection choices:
-            </h5>
-            <ul className="space-y-1 text-sm text-text-secondary">
-              <li>• Collections relevant to your research question</li>
-              <li>• Subreddits where your keywords likely appear</li>
-              <li>• Recent collections with substantial data</li>
-              <li>• Multiple subreddits for broader perspective</li>
-            </ul>
-          </div>
-          
-          <div>
-            <h5 className="font-body text-text-primary mb-2 font-medium">
-              ⚠️ Consider carefully:
-            </h5>
-            <ul className="space-y-1 text-sm text-text-secondary">
-              <li>• Very large collections may slow analysis</li>
-              <li>• Unrelated subreddits may dilute insights</li>
-              <li>• Too many collections may overwhelm results</li>
-              <li>• Very small collections may lack sufficient data</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Collection Types Guide */}
-      <div className="mt-6 p-4 bg-panel rounded-input border border-border-primary">
-        <h4 className="font-subsection text-text-primary mb-3">
-          Understanding Collection Types
-        </h4>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="p-3 bg-content rounded-input border border-border-secondary">
-            <h5 className="font-body text-text-primary mb-2 font-medium">
-              Hot Posts
-            </h5>
-            <p className="font-small text-text-secondary">
-              Currently trending discussions with high engagement
-            </p>
-          </div>
-          
-          <div className="p-3 bg-content rounded-input border border-border-secondary">
-            <h5 className="font-body text-text-primary mb-2 font-medium">
-              Top Posts
-            </h5>
-            <p className="font-small text-text-secondary">
-              Highest-scoring posts from specific time periods
-            </p>
-          </div>
-          
-          <div className="p-3 bg-content rounded-input border border-border-secondary">
-            <h5 className="font-body text-text-primary mb-2 font-medium">
-              New Posts
-            </h5>
-            <p className="font-small text-text-secondary">
-              Recently submitted content, regardless of score
-            </p>
-          </div>
-          
-          <div className="p-3 bg-content rounded-input border border-border-secondary">
-            <h5 className="font-body text-text-primary mb-2 font-medium">
-              Controversial
-            </h5>
-            <p className="font-small text-text-secondary">
-              Posts with high engagement but mixed voting
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Requirements */}
-      <div className="mt-6 p-4 bg-hover-blue rounded-input border border-accent">
-        <h4 className="font-subsection text-text-primary mb-2">
-          Requirements for Next Step:
-        </h4>
-        <ul className="space-y-1 text-sm text-text-secondary">
-          <li>• At least 1 collection must be selected</li>
-          <li>• Only completed collections are available</li>
-          <li>• Selected collections should be relevant to your research</li>
-          <li>• Consider the time period and sorting method of each collection</li>
-        </ul>
-      </div>
     </div>
   );
 };

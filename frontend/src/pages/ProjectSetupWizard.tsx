@@ -52,9 +52,9 @@ const ProjectSetupWizard: React.FC = () => {
     },
     {
       id: 3,
-      title: 'Collections',
+      title: 'Select Collections',
       component: CollectionsStep,
-      description: 'Choose data sources'
+      description: 'Choose your data sources'
     },
     {
       id: 4,
@@ -206,31 +206,6 @@ const ProjectSetupWizard: React.FC = () => {
           </Card>
         </div>
       )}
-
-      {/* Development Info - Remove in production */}
-      <div className="mt-12 bg-panel rounded-default p-6 border border-border-primary max-w-4xl mx-auto">
-        <h2 className="font-section-header text-text-primary mb-3">
-          Phase 2.2 Development Status
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <h3 className="font-subsection text-text-primary mb-2">
-              Current Step Data
-            </h3>
-            <pre className="font-technical text-text-secondary bg-content p-3 rounded-default border border-border-secondary text-xs overflow-auto">
-              {JSON.stringify({ currentStep, formData }, null, 2)}
-            </pre>
-          </div>
-          <div>
-            <h3 className="font-subsection text-text-primary mb-2">
-              Step Validation
-            </h3>
-            <pre className="font-technical text-text-secondary bg-content p-3 rounded-default border border-border-secondary text-xs overflow-auto">
-              {JSON.stringify(validateStep(currentStep, formData), null, 2)}
-            </pre>
-          </div>
-        </div>
-      </div>
     </MainLayout>
   );
 };

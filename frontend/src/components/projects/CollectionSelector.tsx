@@ -158,13 +158,10 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
     <div className={className}>
       {/* Header with Select All */}
       <div className="flex items-center justify-between mb-4">
-        <div>
+      <div>
           <h3 className="font-subsection text-text-primary">
-            Available Collections ({availableCollections.length})
+            {availableCollections.length} Available
           </h3>
-          <p className="font-body text-text-secondary">
-            Select one or more collections to analyze
-          </p>
         </div>
         
         <div className="flex items-center space-x-2">
@@ -281,14 +278,7 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
               </div>
 
               {/* Collection Footer */}
-              <div className="flex items-center justify-between pt-3 border-t border-border-primary">
-                <div className={`
-                  inline-flex items-center px-2 py-1 rounded-input text-xs font-medium border
-                  ${getStatusStyling(collection.status)}
-                `}>
-                  {collection.status}
-                </div>
-                
+              <div className="flex items-center justify-end pt-3 border-t border-border-primary">
                 <span className="font-body text-text-tertiary text-sm">
                   {meta.date}
                 </span>
@@ -296,17 +286,6 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
             </Card>
           );
         })}
-      </div>
-
-      {/* Usage Guidelines */}
-      <div className="mt-6 p-4 bg-panel rounded-input border border-border-primary">
-        <h4 className="font-subsection text-text-primary mb-2">Collection Guidelines:</h4>
-        <ul className="space-y-1 text-sm text-text-secondary">
-          <li>• Select collections that are relevant to your research question</li>
-          <li>• More collections provide broader coverage but may dilute specific insights</li>
-          <li>• Consider the time period and sorting method of each collection</li>
-          <li>• Only completed collections are available for analysis</li>
-        </ul>
       </div>
     </div>
   );
