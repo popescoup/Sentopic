@@ -54,11 +54,27 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     >
       {/* Project Header */}
       <div className="mb-4">
-      <div className="mb-2">
-        <h3 className="font-subsection text-text-primary mb-1">
-          {project.name}
-        </h3>
-      </div>
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="font-subsection text-text-primary mb-1 flex-1 mr-3">
+            {project.name}
+          </h3>
+          {/* Delete button moved to top right */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(project);
+            }}
+            className="text-text-secondary hover:text-danger -mr-2 -mt-1"
+            aria-label="Delete project"
+            disabled={isDeleting}
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </Button>
+        </div>
         <p className="font-small text-text-tertiary">
           Created {formatDate(project.created_at)} • {project.collections_metadata.map(c => `r/${c.subreddit}`).join(', ')}
         </p>
@@ -116,21 +132,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           }}
         >
           View Results
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(project);
-          }}
-          className="text-text-secondary hover:text-danger"
-          aria-label="Delete project"
-          disabled={isDeleting}
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
         </Button>
       </div>
 

@@ -182,6 +182,44 @@ export const useCollections = () => {
   });
 };
 
+export const useDeleteCollection = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (collectionId: string) => api.deleteCollection(collectionId),
+    onMutate: async (collectionId: string) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: queryKeys.collections });
+
+      // Snapshot the previous value
+      const previousCollections = queryClient.getQueryData(queryKeys.collections);
+
+      // Optimistically update to remove the collection
+      queryClient.setQueryData(queryKeys.collections, (old: any) => {
+        if (!old?.collections) return old;
+        return {
+          ...old,
+          collections: old.collections.filter((collection: any) => collection.id !== collectionId),
+          total_count: old.total_count - 1
+        };
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousCollections };
+    },
+    onError: (error, collectionId, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousCollections) {
+        queryClient.setQueryData(queryKeys.collections, context.previousCollections);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure server state sync
+      queryClient.invalidateQueries({ queryKey: queryKeys.collections });
+    },
+  });
+};
+
 // ============================================================================
 // AI HOOKS
 // ============================================================================
