@@ -3,8 +3,10 @@
  * Step 3: Data source selection interface
  */
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CollectionSelector from '@/components/projects/CollectionSelector';
+import { ConfirmModal } from '@/components/ui/Modal';
 import type { WizardFormData } from '@/hooks/useWizardState';
 
 export interface CollectionsStepProps {
@@ -21,8 +23,24 @@ export const CollectionsStep: React.FC<CollectionsStepProps> = ({
   updateFormData,
   errors
 }) => {
+  const navigate = useNavigate();
+  const [showNavigationWarning, setShowNavigationWarning] = useState(false);
+
   const handleCollectionChange = (selectedCollections: string[]) => {
     updateFormData({ selectedCollections });
+  };
+
+  const handleManageCollectionsClick = () => {
+    setShowNavigationWarning(true);
+  };
+
+  const handleConfirmNavigation = () => {
+    setShowNavigationWarning(false);
+    navigate('/collections');
+  };
+
+  const handleCancelNavigation = () => {
+    setShowNavigationWarning(false);
   };
 
   return (
@@ -39,6 +57,7 @@ export const CollectionsStep: React.FC<CollectionsStepProps> = ({
         selectedCollections={formData.selectedCollections}
         onSelectionChange={handleCollectionChange}
         error={errors.collections}
+        onManageCollectionsClick={handleManageCollectionsClick}
       />
 
       {/* Analysis Preview */}
@@ -74,6 +93,17 @@ export const CollectionsStep: React.FC<CollectionsStepProps> = ({
           </div>
         </div>
       )}
+      {/* Navigation Warning Modal */}
+      <ConfirmModal
+        isOpen={showNavigationWarning}
+        onClose={handleCancelNavigation}
+        onConfirm={handleConfirmNavigation}
+        title="Leave Project Setup?"
+        message="Navigating to the Collection Manager will abandon your current project setup. All progress will be lost and you'll need to start over. Are you sure you want to continue?"
+        confirmText="Yes, Go to Collections"
+        cancelText="Stay in Setup"
+        variant="warning"
+      />
     </div>
   );
 };

@@ -22,6 +22,8 @@ export interface CollectionSelectorProps {
   error?: string;
   /** Additional CSS classes */
   className?: string;
+  /** Custom handler for manage collections button */
+  onManageCollectionsClick?: () => void;
 }
 
 export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
@@ -29,7 +31,8 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
   onSelectionChange,
   disabled = false,
   error,
-  className = ''
+  className = '',
+  onManageCollectionsClick
 }) => {
   const { data: collectionsData, isLoading, error: fetchError } = useCollections();
 
@@ -144,11 +147,21 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
           <p className="font-body text-text-secondary mb-4">
             You need to create data collections before setting up a project.
           </p>
-          <Link to="/collections">
-            <Button variant="primary">
-              Create Collections
+          {onManageCollectionsClick ? (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onManageCollectionsClick}
+            >
+              Manage Collections
             </Button>
-          </Link>
+          ) : (
+            <Link to="/collections">
+              <Button variant="outline" size="sm">
+                Manage Collections
+              </Button>
+            </Link>
+          )}
         </Card>
       </div>
     );
@@ -174,11 +187,21 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
             {selectAll ? 'Deselect All' : 'Select All'}
           </Button>
           
-          <Link to="/collections">
-            <Button variant="outline" size="sm">
+          {onManageCollectionsClick ? (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onManageCollectionsClick}
+            >
               Manage Collections
             </Button>
-          </Link>
+          ) : (
+            <Link to="/collections">
+              <Button variant="outline" size="sm">
+                Manage Collections
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
