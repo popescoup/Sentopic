@@ -10,6 +10,7 @@ import type {
   ProjectCreate,
   ProjectListResponse,
   CollectionListResponse,
+  CollectionCreateRequest,
   AIStatusResponse,
   AnalysisStatusResponse,
   HealthCheckResponse,
@@ -179,6 +180,31 @@ export const useCollections = () => {
     queryKey: queryKeys.collections,
     queryFn: () => api.getCollections(),
     staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+export const useCreateCollections = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (request: CollectionCreateRequest) => api.createCollections(request),
+    onSuccess: () => {
+      // Invalidate collections list to refetch after creation
+      queryClient.invalidateQueries({ queryKey: queryKeys.collections });
+    },
+  });
+};
+
+export const useCollectionBatchStatus = (batchId: string, enabled = true) => {
+  return useQuery({
+    queryKey: ['collections', 'batch', batchId, 'status'],
+    queryFn: () => api.getCollectionBatchStatus(batchId),
+    enabled: !!batchId && enabled,
+    refetchInterval: (data) => {
+      // Poll every 3 seconds if batch is still running
+      return data?.status === 'running' ? 3000 : false;
+    },
+    retry: 1,
   });
 };
 

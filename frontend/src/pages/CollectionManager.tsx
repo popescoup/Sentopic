@@ -1,9 +1,6 @@
 /**
  * Collection Manager Page
  * CRUD interface for managing Reddit data collections
- * 
- * Phase 1: Placeholder with professional styling
- * Phase 6: Full implementation with collection creation and management
  */
 
 import React, { useState } from 'react';
@@ -11,12 +8,16 @@ import MainLayout from '@/components/layout/MainLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/Modal';
+import { CollectionCreationModal } from '@/components/collections';
 import { useCollections, useDeleteCollection } from '@/hooks/useApi';
 import { getErrorMessage } from '@/api/client';
 
 const CollectionManager: React.FC = () => {
   const { data: collectionsData, isLoading, error, refetch } = useCollections();
   const deleteCollectionMutation = useDeleteCollection();
+  
+  // State for collection creation modal
+  const [showCreationModal, setShowCreationModal] = useState(false);
   
   // State for delete confirmation modal
   const [deleteModal, setDeleteModal] = useState<{
@@ -147,7 +148,10 @@ const CollectionManager: React.FC = () => {
       {/* Action Bar */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
-          <Button variant="primary">
+          <Button 
+            variant="primary"
+            onClick={() => setShowCreationModal(true)}
+          >
             + New Collection
           </Button>
           {selectedCollections.size > 0 && (
@@ -346,6 +350,16 @@ const CollectionManager: React.FC = () => {
           })
         )}
       </div>
+
+{/* Collection Creation Modal */}
+<CollectionCreationModal
+  isOpen={showCreationModal}
+  onClose={() => setShowCreationModal(false)}
+  onSuccess={() => {
+    setShowCreationModal(false);
+    refetch(); // Refresh the collections list
+  }}
+/>
 
 {/* Delete Confirmation Modal */}
 <ConfirmModal
