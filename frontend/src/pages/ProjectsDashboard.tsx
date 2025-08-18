@@ -25,10 +25,15 @@ const ProjectsDashboard: React.FC = () => {
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     project: ProjectResponse | null;
+    projects?: ProjectResponse[] | null;
   }>({
     isOpen: false,
-    project: null
+    project: null,
+    projects: null
   });
+
+  // State for bulk selection
+  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
 
   // Handle navigation to project workspace
   const handleViewProject = (projectId: string) => {
@@ -44,24 +49,65 @@ const ProjectsDashboard: React.FC = () => {
   const handleDeleteProject = (project: ProjectResponse) => {
     setDeleteModal({
       isOpen: true,
-      project
+      project,
+      projects: null
     });
   };
 
   const confirmDeleteProject = async () => {
-    if (!deleteModal.project) return;
+    if (!deleteModal.project && !deleteModal.projects) return;
 
     try {
-      await deleteProjectMutation.mutateAsync(deleteModal.project.id);
-      setDeleteModal({ isOpen: false, project: null });
+      if (deleteModal.projects) {
+        // Bulk delete
+        for (const project of deleteModal.projects) {
+          await deleteProjectMutation.mutateAsync(project.id);
+        }
+        setSelectedProjects(new Set()); // Clear selection
+      } else if (deleteModal.project) {
+        // Single delete
+        await deleteProjectMutation.mutateAsync(deleteModal.project.id);
+      }
+      
+      setDeleteModal({ isOpen: false, project: null, projects: null });
     } catch (error) {
-      console.error('Failed to delete project:', error);
-      // Error is handled by the mutation's onError callback
+      console.error('Failed to delete project(s):', error);
     }
   };
 
+  // Handle bulk selection
+  const handleSelectProject = (projectId: string, isSelected: boolean) => {
+    const newSelected = new Set(selectedProjects);
+    if (isSelected) {
+      newSelected.add(projectId);
+    } else {
+      newSelected.delete(projectId);
+    }
+    setSelectedProjects(newSelected);
+  };
+
+  const handleSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      const allIds = new Set(projects.map(p => p.id));
+      setSelectedProjects(allIds);
+    } else {
+      setSelectedProjects(new Set());
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedProjects.size === 0) return;
+    
+    const projectsToDelete = projects.filter(p => selectedProjects.has(p.id));
+    setDeleteModal({
+      isOpen: true,
+      project: null,
+      projects: projectsToDelete
+    });
+  };
+
   const closeDeleteModal = () => {
-    setDeleteModal({ isOpen: false, project: null });
+    setDeleteModal({ isOpen: false, project: null, projects: null });
   };
 
   // Format date for display
@@ -227,28 +273,53 @@ const ProjectsDashboard: React.FC = () => {
     <MainLayout title="Projects Dashboard">
       {/* Page Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="font-page-title text-text-primary">
-            Research Projects
-          </h1>
-          <Button
-            variant="primary"
-            onClick={handleCreateProject}
-            startIcon={
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            }
-          >
-            New Project
-          </Button>
-        </div>
+        <h1 className="font-page-title text-text-primary mb-3">
+          Research Projects
+        </h1>
         <p className="font-body text-text-secondary max-w-2xl">
           Create and manage your Reddit research investigations. Each project combines 
           keywords, data collections, and AI-powered insights to help you understand 
           discussions and sentiment patterns.
         </p>
       </div>
+
+      {/* Action Bar */}
+      {projects.length > 0 && (
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-4">
+            {selectedProjects.size > 0 && (
+              <Button 
+                variant="danger" 
+                onClick={handleBulkDelete}
+                startIcon={
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                }
+              >
+                Delete Selected ({selectedProjects.size})
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleSelectAll(selectedProjects.size !== projects.length)}
+            >
+              {selectedProjects.size === projects.length ? 'Deselect All' : 'Select All'}
+            </Button>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <span className="font-body text-text-secondary">
+              {selectedProjects.size > 0 
+                ? `${selectedProjects.size} selected • `
+                : ''
+              }
+              {projects.length} {projects.length === 1 ? 'project' : 'projects'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Projects Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -284,6 +355,8 @@ const ProjectsDashboard: React.FC = () => {
 
         {/* Existing Project Cards */}
         {projects.map((project) => {
+          const isSelected = selectedProjects.has(project.id);
+          
           return (
             <Card
               key={project.id}
@@ -294,9 +367,21 @@ const ProjectsDashboard: React.FC = () => {
               {/* Project Content */}
               <div className="mb-4">
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-subsection text-text-primary mb-1 flex-1 mr-3">
-                    {project.name}
-                  </h3>
+                  <div className="flex items-center space-x-3 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleSelectProject(project.id, e.target.checked);
+                      }}
+                      className="h-4 w-4 text-accent focus:ring-accent border-border-secondary rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <h3 className="font-subsection text-text-primary mb-1 flex-1">
+                      {project.name}
+                    </h3>
+                  </div>
                   {/* Delete button moved to top right */}
                   <Button
                     variant="ghost"
@@ -307,6 +392,7 @@ const ProjectsDashboard: React.FC = () => {
                     }}
                     className="text-text-secondary hover:text-danger -mr-2 -mt-1"
                     aria-label="Delete project"
+                    disabled={deleteProjectMutation.isPending && deleteModal.project?.id === project.id}
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -317,13 +403,6 @@ const ProjectsDashboard: React.FC = () => {
                   Created {formatDate(project.created_at)} • {project.collections_metadata.map(c => `r/${c.subreddit}`).join(', ')}
                 </p>
               </div>
-              
-              {/* AI Summary Preview */}
-              {project.summary && (
-                <p className="font-body text-text-secondary mb-4 line-clamp-2">
-                  {project.summary.summary_preview}
-                </p>
-              )}
               
               {/* Project Stats */}
               <div className="flex items-center justify-between text-small mb-4">
@@ -397,11 +476,13 @@ const ProjectsDashboard: React.FC = () => {
         onConfirm={confirmDeleteProject}
         title="Delete Project"
         message={
-          deleteModal.project
+          deleteModal.projects
+            ? `Are you sure you want to delete ${deleteModal.projects.length} projects? This will permanently remove all analysis results, chat sessions, and project data for: ${deleteModal.projects.map(p => `"${p.name}"`).join(', ')}. This action cannot be undone.`
+            : deleteModal.project
             ? `Are you sure you want to delete "${deleteModal.project.name}"? This will permanently remove all analysis results, chat sessions, and project data. This action cannot be undone.`
             : ''
         }
-        confirmText="Delete Project"
+        confirmText={deleteModal.projects ? `Delete ${deleteModal.projects.length} Projects` : "Delete Project"}
         cancelText="Cancel"
         variant="danger"
       />
