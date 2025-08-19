@@ -1,8 +1,12 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from typing import Union
+
+from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 # Import your service layer and models
 from src.api.services import ProjectService, CollectionService
@@ -75,6 +79,22 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print("🚨 Validation Error Details:")
+    print(f"📧 Request body: {exc.body}")
+    print(f"🔍 Errors: {exc.errors()}")
+    
+    return JSONResponse(
+        status_code=422,
+        content=jsonable_encoder({
+            "error": "validation_error", 
+            "message": "Request validation failed",
+            "details": exc.errors(),
+            "body": exc.body
+        })
+    )
 
 @app.on_event("startup")
 async def startup_event():

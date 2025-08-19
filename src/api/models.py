@@ -46,7 +46,7 @@ class ProjectCreate(ProjectBase):
     """Data required to create a new project."""
     # Optional configuration settings
     partial_matching: bool = Field(False, description="Use partial keyword matching instead of exact word matching")
-    context_window_words: int = Field(5, description="Number of words before/after keyword for sentiment analysis", ge=1, le=50)
+    context_window_words: int = Field(110, description="Number of words before/after keyword for sentiment analysis", ge=20, le=200)
     
     # Optional AI features
     generate_summary: bool = Field(False, description="Generate AI summary after analysis completes")

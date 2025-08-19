@@ -88,14 +88,78 @@ export const CollectionParametersForm: React.FC<CollectionParametersFormProps> =
   };
 
   // Calculate estimated collection size
-  const calculateEstimatedSize = () => {
+const calculateEstimatedSize = () => {
     const estimatedComments = parameters.posts_count * parameters.root_comments * (1 + parameters.replies_per_root);
-    const estimatedDuration = Math.max(1, Math.ceil(parameters.posts_count / 25)); // Rough estimate
     
+    // Time coefficients (lower and upper bounds) in seconds per post for comment collection
+    const timeCoefficients = {
+      'new': { min: 0.6, max: 0.8 },
+      'hot': { min: 2.4, max: 3.6 },
+      'rising': { min: 2.4, max: 3.6 },
+      'top': {
+        'hour': { min: 0.7, max: 0.9 },
+        'day': { min: 2.6, max: 3.8 },
+        'week': { min: 3.0, max: 4.4 },
+        'month': { min: 3.0, max: 4.4 },
+        'year': { min: 3.3, max: 4.9 },
+        'all': { min: 3.3, max: 4.9 }
+      },
+      'controversial': {
+        'hour': { min: 0.6, max: 0.8 },
+        'day': { min: 0.7, max: 1.0 },
+        'week': { min: 1.0, max: 1.4 },
+        'month': { min: 1.4, max: 2.1 },
+        'year': { min: 1.9, max: 2.9 },
+        'all': { min: 2.5, max: 3.7 }
+      }
+    };
+    
+    // Get the time coefficient range for comment collection
+    let commentTimeRange: { min: number, max: number };
+    if (['new', 'hot', 'rising'].includes(parameters.sort_method)) {
+      commentTimeRange = timeCoefficients[parameters.sort_method as keyof typeof timeCoefficients] as { min: number, max: number };
+    } else if (['top', 'controversial'].includes(parameters.sort_method) && parameters.time_period) {
+      const methodCoeffs = timeCoefficients[parameters.sort_method as 'top' | 'controversial'];
+      commentTimeRange = methodCoeffs[parameters.time_period as keyof typeof methodCoeffs] || { min: 3.3, max: 4.9 };
+    } else {
+      // Fallback for unknown combinations
+      commentTimeRange = { min: 3.3, max: 4.9 };
+    }
+    
+    // Calculate time range in seconds
+    const postCollectionTime = parameters.posts_count / 100; // 1 second per 100 posts
+    const commentCollectionTimeMin = parameters.posts_count * commentTimeRange.min;
+    const commentCollectionTimeMax = parameters.posts_count * commentTimeRange.max;
+    const totalTimeSecondsMin = postCollectionTime + commentCollectionTimeMin;
+    const totalTimeSecondsMax = postCollectionTime + commentCollectionTimeMax;
+    
+    // Convert to minutes and handle sub-minute cases
+    const totalTimeMinutesMin = totalTimeSecondsMin / 60;
+    const totalTimeMinutesMax = totalTimeSecondsMax / 60;
+
+    // Check if both estimates are under 1 minute
+    if (totalTimeMinutesMax < 1) {
     return {
-      posts: parameters.posts_count,
-      comments: estimatedComments,
-      duration: estimatedDuration
+        posts: parameters.posts_count,
+        comments: estimatedComments,
+        durationText: "< 1"
+    };
+    }
+
+    // Otherwise, use normal minute calculation
+    const estimatedDurationMin = Math.max(1, Math.floor(totalTimeMinutesMin));
+    const estimatedDurationMax = Math.max(1, Math.ceil(totalTimeMinutesMax));
+
+    // Ensure we always have a range (if they're the same, add 1 to max)
+    const finalMin = estimatedDurationMin;
+    const finalMax = estimatedDurationMin === estimatedDurationMax ? estimatedDurationMax + 1 : estimatedDurationMax;
+
+    return {
+    posts: parameters.posts_count,
+    comments: estimatedComments,
+    durationMin: finalMin,
+    durationMax: finalMax,
+    durationText: `${finalMin}-${finalMax}`
     };
   };
 
@@ -290,10 +354,10 @@ export const CollectionParametersForm: React.FC<CollectionParametersFormProps> =
           </div>
           <div>
             <div className="text-2xl font-semibold text-accent">
-              {estimates.duration}-{estimates.duration * 2}
+                {estimates.durationText || `${estimates.durationMin}-${estimates.durationMax}`}
             </div>
             <div className="font-small text-text-secondary">Minutes</div>
-          </div>
+            </div>
         </div>
         <p className="mt-3 font-small text-text-secondary text-center">
           Actual collection size may vary based on subreddit activity and content availability

@@ -1520,7 +1520,9 @@ class CollectionService:
             # Estimate duration based on number of subreddits and posts
             estimated_duration = CollectionService._estimate_collection_duration(
                 len(request.subreddits), 
-                request.collection_params.posts_count
+                request.collection_params.posts_count,
+                request.collection_params.sort_method,
+                request.collection_params.time_period
             )
             
             return CollectionBatchResponse(
@@ -1752,20 +1754,56 @@ class CollectionService:
                 _collection_batches[batch_id]['status'] = 'failed'
     
     @staticmethod
-    def _estimate_collection_duration(subreddit_count: int, posts_per_subreddit: int) -> int:
-        """Estimate collection duration in minutes."""
-        # Base estimation: ~0.5 minutes per subreddit for basic collection
-        # Add more time for larger post counts
-        base_time = subreddit_count * 0.5
+    def _estimate_collection_duration(subreddit_count: int, posts_per_subreddit: int, 
+                                    sort_method: str, time_period: Optional[str] = None) -> int:
+        """Estimate collection duration in minutes based on observed collection times."""
         
-        # Add time based on posts (more posts = more comments to collect)
-        if posts_per_subreddit > 50:
-            base_time += subreddit_count * 2  # Extra time for large collections
-        elif posts_per_subreddit > 20:
-            base_time += subreddit_count * 1  # Moderate extra time
+        # Time coefficients (upper bound for conservative estimates) in seconds per post for comment collection
+        time_coefficients = {
+            'new': 0.8,
+            'hot': 3.6,
+            'rising': 3.6,
+            'top': {
+                'hour': 0.9,
+                'day': 3.8,
+                'week': 4.4,
+                'month': 4.4,
+                'year': 4.9,
+                'all': 4.9
+            },
+            'controversial': {
+                'hour': 0.8,
+                'day': 1.0,
+                'week': 1.4,
+                'month': 2.1,
+                'year': 2.9,
+                'all': 3.7
+            }
+        }
         
-        # Minimum 1 minute, maximum 30 minutes for UI purposes
-        return max(1, min(30, int(base_time)))
+        # Get the time coefficient for comment collection
+        if sort_method in ['new', 'hot', 'rising']:
+            comment_time_per_post = time_coefficients[sort_method]
+        elif sort_method in ['top', 'controversial'] and time_period:
+            comment_time_per_post = time_coefficients[sort_method].get(time_period, 4.9)  # Default to highest
+        else:
+            # Fallback for unknown combinations
+            comment_time_per_post = 4.9
+        
+        # Calculate total time per subreddit in seconds
+        post_collection_time = posts_per_subreddit / 100  # 1 second per 100 posts
+        comment_collection_time = posts_per_subreddit * comment_time_per_post
+        total_time_per_subreddit = post_collection_time + comment_collection_time
+        
+        # Calculate total time for all subreddits
+        total_time_seconds = subreddit_count * total_time_per_subreddit
+        
+        # Convert to minutes
+        total_time_minutes = total_time_seconds / 60
+        
+        # Round up to next minute for conservative estimate
+        import math
+        return max(1, math.ceil(total_time_minutes))
     
     @staticmethod
     def _get_collection_response(collection_id: str) -> Optional[CollectionResponse]:
