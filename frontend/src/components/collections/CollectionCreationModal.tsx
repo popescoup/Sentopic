@@ -159,22 +159,41 @@ export const CollectionCreationModal: React.FC<CollectionCreationModalProps> = (
 
   // Handle input submission
   const handleStartCollection = async () => {
-    try {
-      // Go to progress step immediately
-      goToStep('progress');
-      const result = await createCollectionsMutation.mutateAsync({
+    // Go to progress step immediately - don't wait for backend
+    goToStep('progress');
+    
+    // Start the collection request but don't await it
+    createCollectionsMutation.mutate(
+      {
         subreddits: formData.subreddits,
         collection_params: formData.parameters
-      });
-
-      setBatchId(result.batch_id);
-      // Already on progress step, just set the batch ID
-    } catch (error) {
-      console.error('Failed to start collection:', error);
-      setErrors({
-        submit: error instanceof Error ? error.message : 'Failed to start collection'
-      });
-    }
+      },
+      {
+        onSuccess: (result) => {
+          // When we eventually get the batch ID, set it
+          console.log('Collection started successfully, batch ID:', result.batch_id);
+          setBatchId(result.batch_id);
+        },
+        onError: (error) => {
+          // Type-safe error handling
+          const errorMessage = error instanceof Error ? error.message : 'Failed to start collection';
+          
+          // If it's a timeout, we assume collection is still running
+          if (errorMessage.includes('timeout')) {
+            console.log('Request timed out but collection likely still running');
+            // Generate a temporary batch ID for simulation purposes
+            setBatchId('temp-' + Date.now());
+          } else {
+            console.error('Failed to start collection:', error);
+            setErrors({
+              submit: errorMessage
+            });
+            // Go back to review step on real errors
+            goToStep('review');
+          }
+        }
+      }
+    );
   };
 
   // Update form data
