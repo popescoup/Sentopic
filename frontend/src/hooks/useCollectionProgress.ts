@@ -68,24 +68,24 @@ export const useCollectionProgress = (
     const { sort_method, time_period } = collectionParams;
     
     const timeCoefficients: Record<string, any> = {
-      'new': 0.7,
-      'hot': 3.0,
-      'rising': 3.0,
+      'new': 0.6,
+      'hot': 2.9,
+      'rising': 2.9,
       'top': {
-        'hour': 0.8,
-        'day': 3.2,
-        'week': 3.7,
-        'month': 3.7,
-        'year': 4.1,
-        'all': 4.1
+        'hour': 0.7,
+        'day': 3.1,
+        'week': 3.6,
+        'month': 3.6,
+        'year': 4.0,
+        'all': 4.0
       },
       'controversial': {
-        'hour': 0.7,
-        'day': 0.85,
-        'week': 1.2,
-        'month': 1.75,
-        'year': 2.4,
-        'all': 3.1
+        'hour': 0.6,
+        'day': 0.75,
+        'week': 1.1,
+        'month': 1.65,
+        'year': 2.3,
+        'all': 3.0
       }
     };
 
