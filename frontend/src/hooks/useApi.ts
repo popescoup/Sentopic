@@ -201,8 +201,8 @@ export const useCollectionBatchStatus = (batchId: string, enabled = true) => {
     queryFn: () => api.getCollectionBatchStatus(batchId),
     enabled: !!batchId && enabled,
     refetchInterval: (data) => {
-      // Poll every 3 seconds if batch is still running
-      return data?.status === 'running' ? 3000 : false;
+      // Poll every 2 seconds regardless of status to catch completion
+      return data?.status === 'completed' ? false : 2000;
     },
     retry: 1,
   });

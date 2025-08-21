@@ -36,7 +36,7 @@ const createApiClient = (): AxiosInstance => {
   
   const client = axios.create({
     baseURL,
-    timeout: 30000, // 30 seconds
+    timeout: 30000, // 30 seconds default
     headers: {
       'Content-Type': 'application/json',
     },
@@ -167,7 +167,10 @@ export class SentopicAPI {
   }
 
   async createCollections(request: CollectionCreateRequest): Promise<CollectionBatchResponse> {
-    const response = await this.client.post<CollectionBatchResponse>('/collections', request);
+    // Use a much longer timeout for collection requests since they run synchronously
+    const response = await this.client.post<CollectionBatchResponse>('/collections', request, {
+      timeout: 90000000 // 1500 minutes timeout for collections
+    });
     return response.data;
   }
 

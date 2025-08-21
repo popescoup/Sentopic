@@ -157,16 +157,18 @@ export const CollectionCreationModal: React.FC<CollectionCreationModalProps> = (
     return Object.keys(newErrors).length === 0;
   };
 
-  // Collection creation
+  // Handle input submission
   const handleStartCollection = async () => {
     try {
+      // Go to progress step immediately
+      goToStep('progress');
       const result = await createCollectionsMutation.mutateAsync({
         subreddits: formData.subreddits,
         collection_params: formData.parameters
       });
 
       setBatchId(result.batch_id);
-      goToStep('progress');
+      // Already on progress step, just set the batch ID
     } catch (error) {
       console.error('Failed to start collection:', error);
       setErrors({
@@ -368,14 +370,16 @@ export const CollectionCreationModal: React.FC<CollectionCreationModalProps> = (
           </div>
         );
 
-      case 'progress':
-        return (
-          <CollectionProgress
-            batchId={batchId!}
-            batchStatus={batchStatus}
-            isLoading={isLoadingStatus}
-          />
-        );
+        case 'progress':
+            return (
+              <CollectionProgress
+                batchId={batchId!}
+                batchStatus={batchStatus}
+                isLoading={isLoadingStatus}
+                subreddits={formData.subreddits}
+                collectionParams={formData.parameters}
+              />
+            );
 
       default:
         return null;
