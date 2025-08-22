@@ -68,24 +68,24 @@ export const useCollectionProgress = (
     const { sort_method, time_period } = collectionParams;
     
     const timeCoefficients: Record<string, any> = {
-      'new': 0.6,
-      'hot': 2.9,
-      'rising': 2.9,
+      'new': 0.65,
+      'hot': 2.7,
+      'rising': 2.7,
       'top': {
-        'hour': 0.7,
-        'day': 3.1,
-        'week': 3.6,
-        'month': 3.6,
-        'year': 4.0,
-        'all': 4.0
+        'hour': 0.75,
+        'day': 2.9,
+        'week': 3.4,
+        'month': 3.4,
+        'year': 3.8,
+        'all': 3.8
       },
       'controversial': {
-        'hour': 0.6,
+        'hour': 0.65,
         'day': 0.75,
-        'week': 1.1,
-        'month': 1.65,
-        'year': 2.3,
-        'all': 3.0
+        'week': 0.9,
+        'month': 1.55,
+        'year': 2.1,
+        'all': 2.8
       }
     };
 
@@ -257,7 +257,7 @@ export const useCollectionProgress = (
           if (batchStatus?.status === 'completed') return;
           
           setOverallProgress(i);
-        }, currentTime + ((i - 90) * 1000)) // 1 second per percent
+        }, currentTime + ((i - 90) * 10000)) // 1 second per percent
       );
     }
 
