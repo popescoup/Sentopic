@@ -369,9 +369,9 @@ const CollectionManager: React.FC = () => {
   title="Delete Collection"
   message={
     deleteModal.collections
-      ? `Are you sure you want to delete ${deleteModal.collections.length} collections? This will permanently remove all collected posts and comments from: ${deleteModal.collections.map(c => `r/${c.subreddit}`).join(', ')}. This action cannot be undone.`
+      ? `Are you sure you want to delete ${deleteModal.collections.length} collections from: ${deleteModal.collections.map(c => `r/${c.subreddit}`).join(', ')}? Deleting these collections may leave orphaned data in projects and will permanently remove all collected posts and comments.`
       : deleteModal.collection
-      ? `Are you sure you want to delete the collection from r/${deleteModal.collection.subreddit}? This will permanently remove all collected posts and comments. This action cannot be undone.`
+      ? `Are you sure you want to delete the collection from r/${deleteModal.collection.subreddit}? Deleting this collection may leave orphaned data in projects and will permanently remove all collected posts and comments.`
       : ''
   }
   confirmText={deleteModal.collections ? `Delete ${deleteModal.collections.length} Collections` : "Delete Collection"}
