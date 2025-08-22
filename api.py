@@ -13,7 +13,7 @@ from src.api.services import ProjectService, CollectionService
 from src.api.models import (
     ProjectListResponse, ProjectCreate, ProjectResponse, APIError,
     ChatMessageCreate, ChatResponse, ChatSessionListResponse, ChatHistoryResponse,
-    KeywordSuggestionRequest, KeywordSuggestionResponse, AIStatusResponse,
+    KeywordSuggestionRequest, KeywordSuggestionResponse, SubredditSuggestionRequest, SubredditSuggestionResponse, AIStatusResponse,
     CollectionCreateRequest, CollectionBatchResponse, CollectionBatchStatusResponse,
     CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse,
     FilteredContextsResponse, TrendsResponse
@@ -1867,6 +1867,76 @@ async def suggest_keywords(suggestion_request: KeywordSuggestionRequest) -> Keyw
             detail={
                 "error": "server_error",
                 "message": "An unexpected error occurred while generating keyword suggestions",
+                "details": {}
+            }
+        )
+    
+@app.post("/ai/subreddits/suggest",
+          response_model=SubredditSuggestionResponse,
+          responses={
+              400: {"model": APIError, "description": "Invalid request or AI unavailable"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["ai"],
+          summary="Get AI Subreddit Suggestions",
+          description="Get AI-powered subreddit suggestions for research topics")
+async def suggest_subreddits(suggestion_request: SubredditSuggestionRequest) -> SubredditSuggestionResponse:
+    """
+    **AI-Powered Subreddit Suggestions**
+    
+    Get intelligent subreddit suggestions from AI based on your research description.
+    
+    **How It Works**:
+    * Describe what you want to research in natural language
+    * AI analyzes your description and suggests relevant subreddit communities
+    * Suggestions prioritize relevance first, with larger communities preferred when equally relevant
+    * Focuses on active, discussion-rich communities where your research topic would be discussed
+    
+    **Use Case**: Powers the "AI Suggest" feature in collection creation wizard.
+    Helps users discover relevant communities they might not have considered.
+    
+    **Request Body**:
+    * **research_description**: Natural language description of what you want to research
+    * **max_subreddits**: Maximum number of subreddits to suggest (1-15, default: 10)
+    
+    **Response**: List of AI-suggested subreddit names with generation metadata
+    
+    **Example**: 
+    Input: "I want to analyze discussions about electric vehicle charging problems and infrastructure issues"
+    Output: ["electricvehicles", "teslamotors", "TeslaModel3", "leaf", "BMW_i3", "Polestar"]
+    """
+    try:
+        suggestions = await ProjectService.suggest_subreddits(suggestion_request)
+        return suggestions
+        
+    except ValueError as e:
+        error_message = str(e)
+        if "not available" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "ai_not_available",
+                    "message": error_message,
+                    "details": {}
+                }
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "suggestion_error",
+                    "message": error_message,
+                    "details": {}
+                }
+            )
+    
+    except Exception as e:
+        print(f"Unexpected error in suggest_subreddits endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "An unexpected error occurred while generating subreddit suggestions",
                 "details": {}
             }
         )

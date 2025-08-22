@@ -26,7 +26,7 @@ from .models import (
     ProjectResponse, ProjectStats, ProjectSummary, ProjectCreate,
     ChatResponse, ChatMessage, ChatSessionInfo, ChatSessionListResponse, 
     ChatHistoryResponse, ChatMessageCreate, KeywordSuggestionRequest,
-    KeywordSuggestionResponse, AIStatusResponse, CollectionCreateRequest,
+    KeywordSuggestionResponse, SubredditSuggestionRequest, SubredditSuggestionResponse, AIStatusResponse, CollectionCreateRequest,
     CollectionResponse, CollectionBatchResponse, CollectionBatchStatusResponse,
     CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse,
     FilteredContextsResponse, ContextInstance, PaginationInfo,
@@ -556,6 +556,71 @@ Return only the keywords, separated by commas, with no additional explanation.""
         except Exception as e:
             print(f"Error in suggest_keywords: {e}")
             raise ValueError(f"Failed to generate keyword suggestions: {str(e)}")
+        
+    @staticmethod
+    async def suggest_subreddits(suggestion_request: SubredditSuggestionRequest) -> SubredditSuggestionResponse:
+        """
+        Get AI subreddit suggestions for research.
+        
+        Args:
+            suggestion_request: Request with research description
+            
+        Returns:
+            SubredditSuggestionResponse with suggested subreddits
+        """
+        try:
+            # Check if LLM is available
+            if not is_llm_available():
+                raise ValueError("AI subreddit suggestion features are not available. Please check LLM configuration.")
+            
+            # Get LLM provider
+            provider = get_llm_provider()
+            if not provider:
+                raise ValueError("No LLM provider available for subreddit suggestions.")
+            
+            # Create subreddit suggestion prompt
+            system_prompt = """You are a helpful assistant that suggests relevant subreddit communities for analyzing Reddit discussions. 
+Given a research goal or topic, suggest 8-12 specific subreddit names where this topic would be actively discussed.
+
+Guidelines:
+- Suggest ONLY subreddit names without the "r/" prefix (e.g. "technology" not "r/technology")
+- Prioritize relevance to the research topic above all else
+- When multiple subreddits are equally relevant, prefer larger/more active communities
+- Include both broad and niche communities if they're relevant to the topic
+- Suggest well-established, active subreddits that are likely to exist
+- Avoid NSFW, quarantined, banned, or highly controversial subreddits
+- Consider communities where substantive discussions about this topic would occur
+- Include variety: mix of general communities and topic-specific ones
+
+Return only the subreddit names, separated by commas, with no additional explanation."""
+            
+            user_prompt = f"Research goal: {suggestion_request.research_description}\n\nSuggest relevant subreddit communities for Reddit analysis:"
+            
+            # Generate subreddits
+            response = provider.generate(user_prompt, system_prompt)
+            
+            if not response.content:
+                raise ValueError("No subreddit suggestions were generated. Please try rephrasing your research description.")
+            
+            # Parse subreddits from response
+            subreddits = [sub.strip().strip('"\'').replace('r/', '') for sub in response.content.split(',')]
+            subreddits = [sub for sub in subreddits if sub]  # Remove empty strings
+            subreddits = subreddits[:suggestion_request.max_subreddits]  # Limit to requested number
+            
+            return SubredditSuggestionResponse(
+                subreddits=subreddits,
+                research_description=suggestion_request.research_description,
+                provider=response.provider,
+                model=response.model,
+                tokens_used=response.tokens_used,
+                cost_estimate=response.cost_estimate
+            )
+            
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            print(f"Error in suggest_subreddits: {e}")
+            raise ValueError(f"Failed to generate subreddit suggestions: {str(e)}")
     
     @staticmethod
     async def get_ai_status() -> AIStatusResponse:

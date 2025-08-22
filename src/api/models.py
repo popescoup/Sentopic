@@ -369,6 +369,47 @@ class KeywordSuggestionResponse(BaseModel):
             }
         }
 
+class SubredditSuggestionRequest(BaseModel):
+    """Request for AI subreddit suggestions."""
+    research_description: str = Field(..., description="Description of what you want to research", min_length=1, max_length=1000)
+    max_subreddits: int = Field(10, description="Maximum number of subreddits to suggest", ge=1, le=15)
+    
+    @validator('research_description')
+    def validate_research_description(cls, v):
+        """Ensure research description is not just whitespace."""
+        if not v.strip():
+            raise ValueError("Research description cannot be empty")
+        return v.strip()
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "research_description": "I want to analyze discussions about electric vehicle charging problems and infrastructure issues",
+                "max_subreddits": 10
+            }
+        }
+
+
+class SubredditSuggestionResponse(BaseModel):
+    """Response with AI-suggested subreddits."""
+    subreddits: List[str] = Field(..., description="AI-suggested subreddit names (without r/ prefix)")
+    research_description: str = Field(..., description="Original research description")
+    provider: str = Field(..., description="AI provider used for suggestions")
+    model: str = Field(..., description="AI model used")
+    tokens_used: int = Field(0, description="Tokens used for generation")
+    cost_estimate: float = Field(0.0, description="Estimated cost for this request")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "subreddits": ["electricvehicles", "teslamotors", "TeslaModel3", "leaf", "BMW_i3", "Polestar", "electriccars", "EVs"],
+                "research_description": "I want to analyze discussions about electric vehicle charging problems and infrastructure issues",
+                "provider": "anthropic",
+                "model": "claude-3-5-sonnet-20240620",
+                "tokens_used": 145,
+                "cost_estimate": 0.0007
+            }
+        }
 
 class AIStatusResponse(BaseModel):
     """Response about AI system status and capabilities."""

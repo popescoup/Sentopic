@@ -189,6 +189,20 @@ export interface ProjectStats {
     tokens_used: number;
     cost_estimate: number;
   }
+
+  export interface SubredditSuggestionRequest {
+    research_description: string;
+    max_subreddits?: number;
+  }
+  
+  export interface SubredditSuggestionResponse {
+    subreddits: string[];
+    research_description: string;
+    provider: string;
+    model: string;
+    tokens_used: number;
+    cost_estimate: number;
+  }
   
   export interface AIStatusResponse {
     ai_available: boolean;

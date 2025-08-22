@@ -18,6 +18,8 @@ import type {
   ChatHistoryResponse,
   KeywordSuggestionRequest,
   KeywordSuggestionResponse,
+  SubredditSuggestionRequest,
+  SubredditSuggestionResponse,
   AIStatusResponse,
   AnalysisStatusResponse,
   HealthCheckResponse,
@@ -204,6 +206,11 @@ export class SentopicAPI {
 
   async suggestKeywords(request: KeywordSuggestionRequest): Promise<KeywordSuggestionResponse> {
     const response = await this.client.post<KeywordSuggestionResponse>('/ai/keywords/suggest', request);
+    return response.data;
+  }
+
+  async suggestSubreddits(request: SubredditSuggestionRequest): Promise<SubredditSuggestionResponse> {
+    const response = await this.client.post<SubredditSuggestionResponse>('/ai/subreddits/suggest', request);
     return response.data;
   }
 

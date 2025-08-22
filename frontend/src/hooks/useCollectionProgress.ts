@@ -257,7 +257,7 @@ export const useCollectionProgress = (
           if (batchStatus?.status === 'completed') return;
           
           setOverallProgress(i);
-        }, currentTime + ((i - 90) * 10000)) // 1 second per percent
+        }, currentTime + ((i - 90) * 10000)) // 10 second per percent
       );
     }
 

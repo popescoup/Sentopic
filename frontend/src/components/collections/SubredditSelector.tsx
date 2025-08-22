@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import { SubredditSuggestions } from './SubredditSuggestions';
 
 interface SubredditSelectorProps {
   selectedSubreddits: string[];
@@ -234,32 +235,13 @@ export const SubredditSelector: React.FC<SubredditSelectorProps> = ({
         </div>
       )}
 
-      {/* Quick Add Popular Subreddits */}
+      {/* AI Subreddit Suggestions */}
       {selectedSubreddits.length < maxSubreddits && (
-        <div>
-          <h4 className="font-subsection text-text-primary mb-3">
-            Quick Add Popular Subreddits
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {POPULAR_SUBREDDITS
-              .filter(subreddit => 
-                !selectedSubreddits.some(selected => 
-                  selected.toLowerCase() === subreddit.toLowerCase()
-                )
-              )
-              .slice(0, 12)
-              .map((subreddit) => (
-                <button
-                  key={subreddit}
-                  onClick={() => addSubreddit(subreddit)}
-                  disabled={selectedSubreddits.length >= maxSubreddits}
-                  className="px-3 py-1 text-sm bg-hover-blue text-accent border border-accent rounded-full hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
-                >
-                  r/{subreddit}
-                </button>
-              ))}
-          </div>
-        </div>
+        <SubredditSuggestions
+          onSubredditAdd={addSubreddit}
+          isDisabled={selectedSubreddits.length >= maxSubreddits}
+          selectedSubreddits={selectedSubreddits}
+        />
       )}
 
       {/* Global Error Display */}
