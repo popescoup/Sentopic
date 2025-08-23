@@ -1483,6 +1483,335 @@ async def delete_collection(
                 "details": {"collection_id": collection_id}
             }
         )
+    
+# ============================================================================
+# CONFIGURATION ENDPOINTS (NEW - PHASE 7.1)
+# ============================================================================
+
+@app.get("/config/status",
+         responses={200: {"description": "Configuration status retrieved"}},
+         tags=["system"],
+         summary="Get Configuration Status",
+         description="Get current API configuration status and connection tests")
+async def get_config_status() -> Dict[str, Any]:
+    """
+    **Get Configuration Status**
+    
+    Returns current configuration status for all APIs including:
+    * Reddit API connection status and credentials validation
+    * LLM providers configuration and connection tests
+    * Feature availability based on current configuration
+    * Detailed error messages for troubleshooting
+    
+    **Use Case**: Powers the Settings interface to show current configuration
+    status and help users troubleshoot connection issues.
+    """
+    try:
+        from src.config import config
+        return config.get_configuration_status()
+        
+    except Exception as e:
+        print(f"Error in get_config_status: {e}")
+        return {
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+@app.post("/config/reddit",
+          responses={
+              200: {"description": "Reddit configuration updated successfully"},
+              400: {"model": APIError, "description": "Invalid configuration"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["system"],
+          summary="Update Reddit Configuration",
+          description="Update Reddit API configuration and test connection")
+async def update_reddit_config(config_data: Dict[str, str]) -> Dict[str, Any]:
+    """
+    **Update Reddit API Configuration**
+    
+    Updates Reddit API credentials and tests the connection.
+    
+    **Request Body**:
+    * **client_id**: Reddit API client ID
+    * **client_secret**: Reddit API client secret  
+    * **user_agent**: Reddit API user agent string
+    
+    **Response**: Configuration update result with connection test
+    """
+    try:
+        from src.config import config
+        
+        # Update configuration
+        success, errors = config.update_reddit_config(config_data)
+        
+        if not success:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "validation_error",
+                    "message": "Invalid Reddit configuration",
+                    "details": {"validation_errors": errors}
+                }
+            )
+        
+        # Test the connection
+        connected, connection_message = config.test_reddit_connection()
+        
+        return {
+            "success": True,
+            "message": "Reddit configuration updated successfully",
+            "connection_test": {
+                "connected": connected,
+                "message": connection_message
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in update_reddit_config: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error", 
+                "message": "Failed to update Reddit configuration",
+                "details": {"error": str(e)}
+            }
+        )
+
+@app.post("/config/llm",
+          responses={
+              200: {"description": "LLM configuration updated successfully"},
+              400: {"model": APIError, "description": "Invalid configuration"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["system"],
+          summary="Update LLM Configuration",
+          description="Update LLM provider configuration and test connections")
+async def update_llm_config(config_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    **Update LLM Configuration**
+    
+    Updates LLM provider configuration and tests connections.
+    
+    **Request Body**: Complete LLM configuration object
+    
+    **Response**: Configuration update result with provider connection tests
+    """
+    try:
+        from src.config import config
+        
+        # Update configuration  
+        success, errors = config.update_llm_config(config_data)
+        
+        if not success:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "validation_error",
+                    "message": "Invalid LLM configuration",
+                    "details": {"validation_errors": errors}
+                }
+            )
+        
+        # Test provider connections
+        provider_tests = config.test_llm_providers()
+        
+        return {
+            "success": True,
+            "message": "LLM configuration updated successfully",
+            "provider_tests": provider_tests,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in update_llm_config: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "Failed to update LLM configuration", 
+                "details": {"error": str(e)}
+            }
+        )
+
+@app.post("/config/test-connections",
+          responses={
+              200: {"description": "Connection tests completed"},
+              500: {"model": APIError, "description": "Server error"}
+          },
+          tags=["system"],
+          summary="Test All API Connections",
+          description="Test connections to all configured APIs")
+async def test_all_connections() -> Dict[str, Any]:
+    """
+    **Test All API Connections**
+    
+    Tests connections to Reddit API and all configured LLM providers.
+    
+    **Response**: Test results for all configured APIs
+    """
+    try:
+        from src.config import config
+        
+        results = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "reddit": {"connected": False, "message": "Not tested"},
+            "llm_providers": {}
+        }
+        
+        # Test Reddit connection
+        try:
+            reddit_connected, reddit_message = config.test_reddit_connection()
+            results["reddit"] = {
+                "connected": reddit_connected,
+                "message": reddit_message
+            }
+        except Exception as e:
+            results["reddit"] = {
+                "connected": False,
+                "message": f"Test failed: {str(e)}"
+            }
+        
+        # Test LLM providers
+        try:
+            provider_tests = config.test_llm_providers()
+            for provider_name, (success, message) in provider_tests.items():
+                results["llm_providers"][provider_name] = {
+                    "connected": success,
+                    "message": message
+                }
+        except Exception as e:
+            results["llm_providers"]["error"] = {
+                "connected": False,
+                "message": f"LLM tests failed: {str(e)}"
+            }
+        
+        return results
+        
+    except Exception as e:
+        print(f"Error in test_all_connections: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "Failed to test connections",
+                "details": {"error": str(e)}
+            }
+        )
+
+@app.delete("/config/reset",
+           responses={
+               200: {"description": "Configuration reset successfully"},
+               500: {"model": APIError, "description": "Server error"}
+           },
+           tags=["system"],
+           summary="Reset Configuration",
+           description="Reset configuration to defaults")
+async def reset_configuration() -> Dict[str, Any]:
+    """
+    **Reset Configuration to Defaults**
+    
+    Resets all configuration to default values from config.example.json.
+    Creates a backup of current configuration before resetting.
+    
+    **⚠️ Warning**: This will reset all API keys and settings to defaults.
+    
+    **Response**: Reset operation result with backup information
+    """
+    try:
+        from src.config import config
+        
+        success, message = config.reset_configuration()
+        
+        if not success:
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "reset_failed",
+                    "message": message,
+                    "details": {}
+                }
+            )
+        
+        return {
+            "success": True,
+            "message": message,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in reset_configuration: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "Failed to reset configuration",
+                "details": {"error": str(e)}
+            }
+        )
+
+@app.delete("/config/clear-data",
+           responses={
+               200: {"description": "Data cleared successfully"},
+               500: {"model": APIError, "description": "Server error"}
+           },
+           tags=["system"],
+           summary="Clear All Data",
+           description="Clear all application data (projects, collections, chat history)")
+async def clear_all_data() -> Dict[str, Any]:
+    """
+    **Clear All Application Data**
+    
+    Permanently deletes all:
+    * Research projects and analysis sessions
+    * Reddit data collections (posts and comments)
+    * Chat sessions and message history
+    * AI summaries and embeddings
+    
+    **⚠️ Warning**: This operation cannot be undone.
+    
+    **Response**: Data clearing operation result
+    """
+    try:
+        from src.config import config
+        
+        success, message = config.clear_all_data()
+        
+        if not success:
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "clear_failed",
+                    "message": message,
+                    "details": {}
+                }
+            )
+        
+        return {
+            "success": True,
+            "message": message,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in clear_all_data: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "server_error",
+                "message": "Failed to clear data",
+                "details": {"error": str(e)}
+            }
+        )
 
 # ============================================================================
 # CHAT AND AI ENDPOINTS (EXISTING - STEP 4)

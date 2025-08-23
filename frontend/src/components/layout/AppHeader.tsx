@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import ASCIILogo from '@/components/branding/ASCIILogo';
 import Button from '@/components/ui/Button';
+import SettingsModal from '@/components/settings/SettingsModal';
 
 interface AppHeaderProps {
   /** Additional CSS classes */
@@ -80,38 +81,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ className = '' }) => {
         </div>
       </div>
 
-      {/* Settings Modal Placeholder */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-modal">
-          <div className="bg-content rounded-default p-6 max-w-md w-full mx-4 shadow-modal">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-section-header text-text-primary">Settings</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsSettingsOpen(false)}
-                className="text-text-secondary hover:text-text-primary"
-              >
-                ✕
-              </Button>
-            </div>
-            <div className="text-text-secondary">
-              <p className="mb-4">Settings interface will be implemented in Phase 7.</p>
-              <p className="font-small text-text-tertiary">
-                This will include Reddit API configuration, LLM settings, and application preferences.
-              </p>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <Button
-                variant="primary"
-                onClick={() => setIsSettingsOpen(false)}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Settings Modal */}
+      <SettingsModal 
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
 
       {/* Help Modal Placeholder */}
       {isHelpOpen && (

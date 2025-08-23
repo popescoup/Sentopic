@@ -29,7 +29,13 @@ import type {
   IndexingResponse,
   IndexingStatusResponse,
   AggregatedFilteredContextsResponse,
-  TrendsResponse
+  TrendsResponse,
+  ConfigurationStatus,
+  RedditConfigUpdate,
+  LLMConfigUpdate,
+  ConfigUpdateResponse,
+  ConnectionTestResult,
+  DataClearResponse
 } from '@/types/api';
 
 // Create axios instance with base configuration
@@ -286,7 +292,39 @@ export class SentopicAPI {
     );
     return response.data;
   }
+
+  async getConfigStatus(): Promise<ConfigurationStatus> {
+    const response = await this.client.get<ConfigurationStatus>('/config/status');
+    return response.data;
+  }
+
+  async updateRedditConfig(config: RedditConfigUpdate): Promise<ConfigUpdateResponse> {
+    const response = await this.client.post<ConfigUpdateResponse>('/config/reddit', config);
+    return response.data;
+  }
+
+  async updateLLMConfig(config: LLMConfigUpdate): Promise<ConfigUpdateResponse> {
+    const response = await this.client.post<ConfigUpdateResponse>('/config/llm', config);
+    return response.data;
+  }
+
+  async testAllConnections(): Promise<ConnectionTestResult> {
+    const response = await this.client.post<ConnectionTestResult>('/config/test-connections');
+    return response.data;
+  }
+
+  async resetConfiguration(): Promise<DataClearResponse> {
+    const response = await this.client.delete<DataClearResponse>('/config/reset');
+    return response.data;
+  }
+
+  async clearAllData(): Promise<DataClearResponse> {
+    const response = await this.client.delete<DataClearResponse>('/config/clear-data');
+    return response.data;
+  }
+
 }
+
 
 // Export singleton instance
 export const api = new SentopicAPI();

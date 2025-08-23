@@ -417,3 +417,89 @@ export interface TrendsResponse {
   chart_data: TrendsDataPoint[];
   summary: TrendsSummary;
 }
+
+export interface ConfigurationStatus {
+  timestamp: string;
+  reddit: {
+    configured: boolean;
+    connected: boolean;
+    error?: string;
+  };
+  llm: {
+    enabled: boolean;
+    providers: Record<string, {
+      configured: boolean;
+      connected: boolean;
+      error?: string;
+    }>;
+    features: {
+      keyword_suggestion: boolean;
+      summarization: boolean;
+      rag_search: boolean;
+      chat_agent: boolean;
+    };
+    error?: string;
+  };
+}
+
+export interface RedditConfigUpdate {
+  client_id: string;
+  client_secret: string;
+  user_agent: string;
+}
+
+export interface LLMProvider {
+  api_key: string;
+  model: string;
+  max_tokens?: number;
+  temperature?: number;
+}
+
+export interface LLMConfigUpdate {
+  enabled: boolean;
+  default_provider?: string;
+  providers: Record<string, LLMProvider>;
+  features?: {
+    keyword_suggestion: boolean;
+    summarization: boolean;
+    rag_search: boolean;
+    chat_agent: boolean;
+  };
+  embeddings?: {
+    provider: string;
+    model: string;
+    storage: string;
+  };
+}
+
+export interface ConfigUpdateResponse {
+  success: boolean;
+  message: string;
+  timestamp: string;
+  connection_test?: {
+    connected: boolean;
+    message: string;
+  };
+  provider_tests?: Record<string, {
+    connected: boolean;
+    message: string;
+  }>;
+}
+
+export interface ConnectionTestResult {
+  timestamp: string;
+  reddit: {
+    connected: boolean;
+    message: string;
+  };
+  llm_providers: Record<string, {
+    connected: boolean;
+    message: string;
+  }>;
+}
+
+export interface DataClearResponse {
+  success: boolean;
+  message: string;
+  timestamp: string;
+}

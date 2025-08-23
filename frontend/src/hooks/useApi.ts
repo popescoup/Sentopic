@@ -5,6 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
+export { settingsQueryKeys } from './useSettings';
 import type {
   ProjectResponse,
   ProjectCreate,

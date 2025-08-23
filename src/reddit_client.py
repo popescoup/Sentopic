@@ -2,6 +2,7 @@ import praw
 import time
 from typing import Optional, List, Dict, Any
 from .config import config
+from typing import Tuple
 
 
 class RedditClient:
@@ -9,6 +10,35 @@ class RedditClient:
         self.reddit = None
         self._initialize_client()
         self.rate_limit_delay = 0.5  # Seconds between requests
+
+    def test_connection(self) -> Tuple[bool, str]:
+        """
+        Test Reddit API connection.
+        
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        try:
+            # Make a simple API call to test authentication
+            response = requests.get(
+                'https://oauth.reddit.com/api/v1/me',
+                headers={'Authorization': f'Bearer {self._get_access_token()}'},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                user_data = response.json()
+                username = user_data.get('name', 'unknown')
+                return True, f"Connected successfully as u/{username}"
+            else:
+                return False, f"Authentication failed: HTTP {response.status_code}"
+                
+        except requests.exceptions.Timeout:
+            return False, "Connection timeout - Reddit API may be unreachable"
+        except requests.exceptions.ConnectionError:
+            return False, "Connection error - Check your internet connection"
+        except Exception as e:
+            return False, f"Connection test failed: {str(e)}"
     
     def _initialize_client(self):
         """Initialize the PRAW Reddit client."""
