@@ -361,6 +361,7 @@ export const ConfigurationTab: React.FC<ConfigurationTabProps> = ({
                         anthropic: { ...prev.providers.anthropic, model: e.target.value }
                       }
                     }))}
+                    placeholder="e.g., claude-3-5-sonnet-20240620, claude-3-5-haiku-20241022, claude-3-opus-20240229"
                     fullWidth
                   />
                 </div>
@@ -411,6 +412,7 @@ export const ConfigurationTab: React.FC<ConfigurationTabProps> = ({
                         openai: { ...prev.providers.openai, model: e.target.value }
                       }
                     }))}
+                    placeholder="e.g., gpt-4o, gpt-4o-mini, gpt-4-turbo, o1-preview, o1-mini"
                     fullWidth
                   />
                 </div>
