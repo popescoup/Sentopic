@@ -245,8 +245,8 @@ class Config:
             # Import here to avoid circular imports
             from src.reddit_client import RedditClient
             
-            # Create Reddit client and test connection
-            reddit_client = RedditClient(reddit_config)
+            # Create Reddit client and test connection (no parameters needed)
+            reddit_client = RedditClient()
             return reddit_client.test_connection()
             
         except ValueError as e:
@@ -287,6 +287,11 @@ class Config:
         try:
             reddit_config = self.get_reddit_config()
             status["reddit"]["configured"] = True
+            status["reddit"]["current_config"] = {
+                "client_id": reddit_config.get("client_id", ""),
+                "client_secret": reddit_config.get("client_secret", ""),
+                "user_agent": reddit_config.get("user_agent", "")
+            }
             
             # Test connection
             reddit_success, reddit_message = self.test_reddit_connection()
@@ -301,6 +306,23 @@ class Config:
         try:
             if self.is_llm_enabled():
                 status["llm"]["enabled"] = True
+                
+                # Get current LLM configuration
+                llm_config_data = self.get_llm_config()
+                status["llm"]["current_config"] = {
+                    "default_provider": llm_config_data.get("default_provider", "anthropic"),
+                    "providers": {}
+                }
+                
+                # Include provider configurations (with API keys for local use)
+                providers = llm_config_data.get("providers", {})
+                for provider_name, provider_config in providers.items():
+                    status["llm"]["current_config"]["providers"][provider_name] = {
+                        "api_key": provider_config.get("api_key", ""),
+                        "model": provider_config.get("model", ""),
+                        "max_tokens": provider_config.get("max_tokens", 4000),
+                        "temperature": provider_config.get("temperature", 0.1)
+                    }
                 
                 # Get provider test results
                 provider_tests = self.test_llm_providers()

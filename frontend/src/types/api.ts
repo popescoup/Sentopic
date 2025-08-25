@@ -424,6 +424,11 @@ export interface ConfigurationStatus {
     configured: boolean;
     connected: boolean;
     error?: string;
+    current_config?: {
+      client_id: string;
+      client_secret: string;
+      user_agent: string;
+    };
   };
   llm: {
     enabled: boolean;
@@ -439,6 +444,15 @@ export interface ConfigurationStatus {
       chat_agent: boolean;
     };
     error?: string;
+    current_config?: {
+      default_provider: string;
+      providers: Record<string, {
+        api_key: string;
+        model: string;
+        max_tokens: number;
+        temperature: number;
+      }>;
+    };
   };
 }
 
