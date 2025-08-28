@@ -502,12 +502,12 @@ export const CollectionCreationModal: React.FC<CollectionCreationModalProps> = (
           <div>
             {canGoPrevious() && (
               <Button
-                variant="ghost"
-                onClick={goToPreviousStep}
-                disabled={createCollectionsMutation.isPending}
-              >
-                ← Previous
-              </Button>
+              variant="secondary"
+              onClick={goToPreviousStep}
+              disabled={createCollectionsMutation.isPending}
+            >
+              ← PREVIOUS
+            </Button>
             )}
           </div>
 

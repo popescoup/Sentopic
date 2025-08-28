@@ -1,30 +1,26 @@
 /**
- * Input Component
- * Professional input fields with sophisticated styling and validation
+ * Terminal Input Component
+ * Sharp, monospace form fields with terminal aesthetics
  */
 
 import React from 'react';
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
-    /** Input label */
-    label?: string;
-    /** Error message to display */
-    error?: string;
-    /** Help text to display below input */
-    helpText?: string;
-    /** Whether the input is in an error state */
-    hasError?: boolean;
-    /** Input size variant */
-    size?: 'sm' | 'md' | 'lg';
-    /** Whether the input spans full width */
-    fullWidth?: boolean;
-    /** Icon to display before input text */
-    startIcon?: React.ReactNode;
-    /** Icon to display after input text */
-    endIcon?: React.ReactNode;
-    /** Additional CSS classes */
-    className?: string;
-  }
+  /** Input label */
+  label?: string;
+  /** Error message to display */
+  error?: string;
+  /** Help text to display below input */
+  helpText?: string;
+  /** Whether the input is in an error state */
+  hasError?: boolean;
+  /** Input size variant - terminal sizes */
+  size?: 'sm' | 'md' | 'lg';
+  /** Whether the input spans full width */
+  fullWidth?: boolean;
+  /** Additional CSS classes */
+  className?: string;
+}
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({
@@ -34,8 +30,6 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     hasError,
     size = 'md',
     fullWidth = false,
-    startIcon,
-    endIcon,
     className = '',
     id,
     ...props
@@ -43,32 +37,34 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
     const isError = hasError || !!error;
 
-    // Size classes
+    // Terminal size classes - dense spacing
     const sizeClasses = {
-      sm: 'px-3 py-1.5 text-sm',
-      md: 'px-3 py-2 text-body',
-      lg: 'px-4 py-3 text-base'
+      sm: 'px-1.5 py-1 text-small',
+      md: 'px-2 py-1 text-body',
+      lg: 'px-2 py-1.5 text-large'
     };
 
-    // Base input classes
+    // Base terminal input classes
     const baseInputClasses = [
-      'border rounded-input transition-all duration-150',
+      'terminal-input',
+      'border transition-all duration-100',
       'focus:outline-none focus:ring-2 focus:ring-offset-1',
       'disabled:opacity-50 disabled:cursor-not-allowed',
-      'placeholder:text-text-tertiary',
+      'placeholder:text-text-tertiary placeholder:uppercase',
+      'font-terminal',
       sizeClasses[size],
       fullWidth ? 'w-full' : ''
     ];
 
-    // Conditional classes based on state
+    // State-based classes
     const stateClasses = isError
       ? [
           'border-danger bg-red-50',
           'focus:border-danger focus:ring-danger'
         ]
       : [
-          'border-border-secondary bg-content',
-          'hover:border-border-emphasis',
+          'border-border bg-content',
+          'hover:border-border-dark',
           'focus:border-accent focus:ring-accent'
         ];
 
@@ -76,70 +72,37 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       .filter(Boolean)
       .join(' ');
 
-    // Wrapper classes for icons
-    const hasIcons = startIcon || endIcon;
-    const wrapperClasses = hasIcons
-      ? 'relative flex items-center'
-      : '';
-
-    const inputElement = (
-      <input
-        ref={ref}
-        id={inputId}
-        className={inputClasses}
-        {...props}
-      />
-    );
-
-    const inputWithIcons = hasIcons ? (
-      <div className={`${wrapperClasses} ${fullWidth ? 'w-full' : ''}`}>
-        {startIcon && (
-          <div className="absolute left-3 flex items-center pointer-events-none text-text-tertiary">
-            {startIcon}
-          </div>
-        )}
-        
-        <input
-          ref={ref}
-          id={inputId}
-          className={`${inputClasses} ${startIcon ? 'pl-10' : ''} ${endIcon ? 'pr-10' : ''}`}
-          {...props}
-        />
-        
-        {endIcon && (
-          <div className="absolute right-3 flex items-center pointer-events-none text-text-tertiary">
-            {endIcon}
-          </div>
-        )}
-      </div>
-    ) : inputElement;
-
     return (
       <div className={fullWidth ? 'w-full' : ''}>
-        {/* Label */}
+        {/* Terminal label */}
         {label && (
           <label
             htmlFor={inputId}
-            className="block font-medium text-text-primary mb-2"
+            className="block font-small text-text-primary mb-1 font-bold tracking-terminal-wide"
           >
-            {label}
+            {label.toUpperCase()}
           </label>
         )}
 
-        {/* Input */}
-        {inputWithIcons}
+        {/* Input field */}
+        <input
+          ref={ref}
+          id={inputId}
+          className={inputClasses}
+          {...props}
+        />
 
-        {/* Error message */}
+        {/* Error message - terminal style */}
         {error && (
-          <p className="mt-1 text-sm text-danger">
-            {error}
+          <p className="mt-1 font-caption text-danger font-bold tracking-terminal-wide">
+            ERROR: {error.toUpperCase()}
           </p>
         )}
 
-        {/* Help text */}
+        {/* Help text - terminal style */}
         {helpText && !error && (
-          <p className="mt-1 text-sm text-text-tertiary">
-            {helpText}
+          <p className="mt-1 font-caption text-text-tertiary tracking-terminal-wide">
+            {helpText.toUpperCase()}
           </p>
         )}
       </div>
@@ -149,7 +112,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
 Input.displayName = 'Input';
 
-// Textarea component with similar styling
+// Terminal Textarea component
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
@@ -175,7 +138,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
     const isError = hasError || !!error;
 
-    // Resize classes
+    // Terminal resize classes
     const resizeClasses = {
       none: 'resize-none',
       vertical: 'resize-y',
@@ -183,25 +146,27 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       both: 'resize'
     };
 
-    // Base textarea classes
+    // Base terminal textarea classes
     const baseClasses = [
-      'px-3 py-2 text-body border rounded-input transition-all duration-150',
+      'terminal-input',
+      'px-2 py-1 text-body border transition-all duration-100',
       'focus:outline-none focus:ring-2 focus:ring-offset-1',
       'disabled:opacity-50 disabled:cursor-not-allowed',
-      'placeholder:text-text-tertiary',
+      'placeholder:text-text-tertiary placeholder:uppercase',
+      'font-terminal',
       resizeClasses[resize],
       fullWidth ? 'w-full' : ''
     ];
 
-    // Conditional classes based on state
+    // State-based classes
     const stateClasses = isError
       ? [
           'border-danger bg-red-50',
           'focus:border-danger focus:ring-danger'
         ]
       : [
-          'border-border-secondary bg-content',
-          'hover:border-border-emphasis',
+          'border-border bg-content',
+          'hover:border-border-dark',
           'focus:border-accent focus:ring-accent'
         ];
 
@@ -211,17 +176,17 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
     return (
       <div className={fullWidth ? 'w-full' : ''}>
-        {/* Label */}
+        {/* Terminal label */}
         {label && (
           <label
             htmlFor={textareaId}
-            className="block font-medium text-text-primary mb-2"
+            className="block font-small text-text-primary mb-1 font-bold tracking-terminal-wide"
           >
-            {label}
+            {label.toUpperCase()}
           </label>
         )}
 
-        {/* Textarea */}
+        {/* Textarea field */}
         <textarea
           ref={ref}
           id={textareaId}
@@ -229,17 +194,17 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
 
-        {/* Error message */}
+        {/* Error message - terminal style */}
         {error && (
-          <p className="mt-1 text-sm text-danger">
-            {error}
+          <p className="mt-1 font-caption text-danger font-bold tracking-terminal-wide">
+            ERROR: {error.toUpperCase()}
           </p>
         )}
 
-        {/* Help text */}
+        {/* Help text - terminal style */}
         {helpText && !error && (
-          <p className="mt-1 text-sm text-text-tertiary">
-            {helpText}
+          <p className="mt-1 font-caption text-text-tertiary tracking-terminal-wide">
+            {helpText.toUpperCase()}
           </p>
         )}
       </div>

@@ -149,16 +149,16 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
           </p>
           {onManageCollectionsClick ? (
             <Button 
-              variant="outline" 
+              variant="secondary" 
               size="sm"
               onClick={onManageCollectionsClick}
             >
-              Manage Collections
+              MANAGE COLLECTIONS
             </Button>
           ) : (
             <Link to="/collections">
-              <Button variant="outline" size="sm">
-                Manage Collections
+              <Button variant="secondary" size="sm">
+                MANAGE COLLECTIONS
               </Button>
             </Link>
           )}
@@ -178,27 +178,27 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
         </div>
         
         <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSelectAllToggle}
-            disabled={disabled}
-          >
-            {selectAll ? 'Deselect All' : 'Select All'}
-          </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleSelectAllToggle}
+          disabled={disabled}
+        >
+          {selectAll ? 'DESELECT ALL' : 'SELECT ALL'}
+        </Button>
           
           {onManageCollectionsClick ? (
             <Button 
-              variant="outline" 
-              size="sm"
-              onClick={onManageCollectionsClick}
-            >
-              Manage Collections
-            </Button>
+            variant="secondary" 
+            size="sm"
+            onClick={onManageCollectionsClick}
+          >
+            MANAGE COLLECTIONS
+          </Button>
           ) : (
             <Link to="/collections">
-              <Button variant="outline" size="sm">
-                Manage Collections
+              <Button variant="secondary" size="sm">
+                MANAGE COLLECTIONS
               </Button>
             </Link>
           )}
@@ -213,13 +213,13 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
               {selectedCollections.length} collection{selectedCollections.length !== 1 ? 's' : ''} selected
             </span>
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={() => onSelectionChange([])}
               disabled={disabled}
               className="text-text-tertiary hover:text-danger"
             >
-              Clear Selection
+              CLEAR SELECTION
             </Button>
           </div>
         </div>

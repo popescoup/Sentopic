@@ -1,7 +1,6 @@
 /**
- * Modal Component
- * Professional modal system with overlay and focus management
- * Foundation for Phase 5 deep-dive modals
+ * Terminal Modal Component
+ * Sharp, database-style dialog windows with terminal aesthetics
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -17,16 +16,14 @@ export interface ModalProps {
   title?: string;
   /** Modal content */
   children: React.ReactNode;
-  /** Modal size */
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  /** Modal size - terminal sizes */
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   /** Whether clicking overlay closes modal */
   closeOnOverlayClick?: boolean;
   /** Whether escape key closes modal */
   closeOnEscape?: boolean;
   /** Whether to show close button */
   showCloseButton?: boolean;
-  /** Custom close button content */
-  closeButtonContent?: React.ReactNode;
   /** Additional CSS classes for modal content */
   className?: string;
   /** Additional CSS classes for overlay */
@@ -42,17 +39,16 @@ export const Modal: React.FC<ModalProps> = ({
   closeOnOverlayClick = true,
   closeOnEscape = true,
   showCloseButton = true,
-  closeButtonContent,
   className = '',
   overlayClassName = ''
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
-  // Size classes
+  // Terminal size classes - more compact
   const sizeClasses = {
     sm: 'max-w-md',
-    md: 'max-w-lg',
+    md: 'max-w-lg', 
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
     full: 'max-w-none mx-4'
@@ -115,77 +111,63 @@ export const Modal: React.FC<ModalProps> = ({
     <div
       className={`fixed inset-0 z-modal flex items-center justify-center p-4 ${overlayClassName}`}
       onClick={handleOverlayClick}
-      style={{ backgroundColor: 'rgba(27, 31, 35, 0.5)' }}
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }} // Darker overlay for terminal feel
     >
       <div
         ref={modalRef}
         className={`
-          bg-content rounded-default shadow-modal w-full
+          terminal-panel bg-content w-full
           ${sizeClasses[size]}
           ${className}
-          transform transition-all duration-200 ease-out
-          animate-fade-in
+          transform transition-all duration-100 ease-out
+          animate-terminal-fade
         `}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
       >
-        {/* Header */}
+        {/* Terminal Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-6 border-b border-border-primary">
+          <div className="terminal-panel-header flex items-center justify-between">
             {title && (
-              <h2 id="modal-title" className="font-section-header text-text-primary">
-                {title}
+              <h2 id="modal-title" className="font-large text-text-primary text-command">
+                {title.toUpperCase()}
               </h2>
             )}
             
             {showCloseButton && (
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onClick={onClose}
-                className="text-text-secondary hover:text-text-primary -mr-2"
-                aria-label="Close modal"
+                className="text-text-secondary hover:text-text-primary"
+                aria-label="Close dialog"
               >
-                {closeButtonContent || (
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                )}
+                X
               </Button>
             )}
           </div>
         )}
 
         {/* Content */}
-        <div className="p-6">
+        <div className="terminal-panel-content">
           {children}
         </div>
       </div>
     </div>
   );
 
-  // Render modal in portal to avoid z-index issues
+  // Render modal in portal
   return createPortal(modalContent, document.body);
 };
 
-// Modal sub-components for structured content
+// Terminal Modal sub-components
 export const ModalHeader: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = '' }) => (
-  <div className={`pb-4 border-b border-border-primary ${className}`}>
+  <div className={`pb-1.5 border-b border-border ${className}`}>
     {children}
   </div>
 );
@@ -194,7 +176,7 @@ export const ModalBody: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = '' }) => (
-  <div className={`py-4 ${className}`}>
+  <div className={`py-1.5 ${className}`}>
     {children}
   </div>
 );
@@ -203,12 +185,12 @@ export const ModalFooter: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = '' }) => (
-  <div className={`pt-4 border-t border-border-primary flex items-center justify-end space-x-3 ${className}`}>
+  <div className={`pt-1.5 border-t border-border flex items-center justify-end space-x-1.5 ${className}`}>
     {children}
   </div>
 );
 
-// Confirmation modal for common use cases
+// Terminal confirmation modal
 export interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -217,7 +199,7 @@ export interface ConfirmModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'danger' | 'warning' | 'info';
+  variant?: 'danger' | 'warning' | 'primary';
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -226,25 +208,32 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onConfirm,
   title,
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
-  variant = 'info'
+  confirmText = 'CONFIRM',
+  cancelText = 'CANCEL',
+  variant = 'primary'
 }) => {
   const handleConfirm = () => {
     onConfirm();
     onClose();
   };
 
-  const variantStyles = {
+  // Terminal status symbols
+  const variantSymbols = {
+    danger: '[!]',
+    warning: '[?]',
+    primary: '[i]'
+  };
+
+  const variantColors = {
     danger: 'text-danger',
     warning: 'text-warning',
-    info: 'text-accent'
+    primary: 'text-accent'
   };
 
   const buttonVariants = {
     danger: 'danger' as const,
-    warning: 'secondary' as const,
-    info: 'primary' as const
+    warning: 'warning' as const,
+    primary: 'primary' as const
   };
 
   return (
@@ -254,50 +243,19 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       title={title}
       size="sm"
     >
-      <div className="text-center">
-        <div className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4 ${
-          variant === 'danger' ? 'bg-red-100' :
-          variant === 'warning' ? 'bg-yellow-100' :
-          'bg-blue-100'
-        }`}>
-          <svg
-            className={`h-6 w-6 ${variantStyles[variant]}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {variant === 'danger' && (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            )}
-            {variant === 'warning' && (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            )}
-            {variant === 'info' && (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            )}
-          </svg>
+      <div className="text-center font-terminal">
+        {/* Terminal status indicator */}
+        <div className="mb-2">
+          <span className={`font-header ${variantColors[variant]}`}>
+            {variantSymbols[variant]}
+          </span>
         </div>
         
-        <p className="font-body text-text-secondary mb-6">
-          {message}
+        <p className="font-body text-text-secondary mb-4 leading-terminal-relaxed">
+          {message.toUpperCase()}
         </p>
         
-        <div className="flex space-x-3 justify-center">
+        <div className="flex space-x-1.5 justify-center">
           <Button
             variant="secondary"
             onClick={onClose}

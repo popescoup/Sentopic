@@ -175,20 +175,20 @@ export const SubredditSelector: React.FC<SubredditSelectorProps> = ({
             onFocus={() => setShowSuggestions(filteredSuggestions.length > 0)}
             error={inputError}
             helpText={`${selectedSubreddits.length}/${maxSubreddits} subreddits selected`}
-            endIcon={
-              <Button
-                type="submit"
-                variant="ghost"
-                size="sm"
-                disabled={!inputValue.trim() || selectedSubreddits.length >= maxSubreddits}
-                className="text-accent hover:text-blue-700"
-              >
-                Add
-              </Button>
-            }
             fullWidth
             className="mx-1"
           />
+          <div className="flex justify-end mt-1">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={!inputValue.trim() || selectedSubreddits.length >= maxSubreddits}
+              className="text-accent hover:text-blue-700"
+            >
+              ADD
+            </Button>
+          </div>
         </form>
 
         {/* Suggestions Dropdown */}

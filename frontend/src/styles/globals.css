@@ -1,5 +1,7 @@
 /* Global Styles - Sentopic */
 
+/* Global Styles - Sentopic ASCII + SQLite Terminal Theme */
+
 /* Import design system variables */
 @import './variables.css';
 
@@ -8,11 +10,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+/* NO Google Fonts - Using system monospace fonts only */
+/* Terminal aesthetic relies on built-in monospace fonts */
 
-/* Base Styles */
+/* === BASE STYLES === */
 *,
 *::before,
 *::after {
@@ -25,62 +26,361 @@
 
 html {
   height: 100%;
-  font-size: 16px;
+  font-size: 16px; /* Base for rem calculations */
 }
 
 body {
   height: 100%;
-  font-family: var(--font-family-sans);
+  font-family: var(--font-family-primary); /* Monospace everywhere */
   font-size: var(--font-size-body);
-  line-height: var(--line-height-body);
+  line-height: var(--line-height-normal);
   color: var(--color-text-primary);
   background-color: var(--color-background);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Remove font smoothing for sharper terminal look */
 }
 
 #root {
   height: 100%;
 }
 
-/* Typography Utilities */
-.font-page-title {
-  font-size: var(--font-size-page-title);
-  font-weight: 600;
-  line-height: var(--line-height-headings);
-  letter-spacing: var(--letter-spacing-page-title);
-}
+/* === TERMINAL TYPOGRAPHY UTILITIES === */
 
-.font-section-header {
-  font-size: var(--font-size-section-header);
-  font-weight: 600;
-  line-height: var(--line-height-headings);
-  letter-spacing: var(--letter-spacing-section-header);
-}
-
-.font-subsection {
-  font-size: var(--font-size-subsection);
-  font-weight: 600;
-  line-height: var(--line-height-headings);
-}
-
-.font-body {
-  font-size: var(--font-size-body);
-  font-weight: 400;
-  line-height: var(--line-height-body);
+/* Terminal font sizes with proper line heights */
+.font-caption {
+  font-size: var(--font-size-caption);
+  font-weight: bold;
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
 }
 
 .font-small {
   font-size: var(--font-size-small);
-  font-weight: 400;
-  line-height: var(--line-height-technical);
+  font-weight: normal;
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.font-body {
+  font-size: var(--font-size-body);
+  font-weight: normal;
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+.font-large {
+  font-size: var(--font-size-large);
+  font-weight: bold;
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.font-title {
+  font-size: var(--font-size-title);
+  font-weight: bold;
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+}
+
+.font-header {
+  font-size: var(--font-size-header);
+  font-weight: bold;
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  text-transform: uppercase;
+}
+
+/* Legacy compatibility classes */
+.font-page-title {
+  font-size: var(--font-size-header);
+  font-weight: bold;
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  text-transform: uppercase;
+}
+
+.font-section-header {
+  font-size: var(--font-size-title);
+  font-weight: bold;
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+}
+
+.font-subsection {
+  font-size: var(--font-size-large);
+  font-weight: bold;
+  line-height: var(--line-height-normal);
+  text-transform: uppercase;
 }
 
 .font-technical {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-technical);
-  font-weight: 400;
-  line-height: var(--line-height-technical);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-body);
+  font-weight: normal;
+  line-height: var(--line-height-normal);
+}
+
+/* === TERMINAL UI UTILITIES === */
+
+/* Terminal text transformations */
+.text-terminal {
+  font-family: var(--font-family-primary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.text-command {
+  font-family: var(--font-family-primary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-widest);
+  font-weight: bold;
+}
+
+.text-filename {
+  font-family: var(--font-family-primary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+/* Terminal layout utilities */
+.terminal-spacing {
+  padding: var(--spacing-md);
+  gap: var(--spacing-md);
+}
+
+.terminal-border {
+  border: var(--border-width-thin) solid var(--color-border);
+}
+
+.terminal-panel {
+  background: var(--color-panel);
+  border-bottom: var(--border-width-thin) solid var(--color-border);
+  padding: var(--panel-header-padding);
+}
+
+/* === ACCESSIBILITY === */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus styles for terminal accessibility */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Terminal selection styles */
+::selection {
+  background-color: var(--color-hover-blue);
+  color: var(--color-text-primary);
+}
+
+/* === TERMINAL SCROLLBAR === */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-panel);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 0px; /* Sharp scrollbar */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-dark);
+}
+
+/* === TERMINAL ANIMATIONS === */
+
+/* Sharp spin animation for loading */
+@keyframes terminal-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-terminal-spin {
+  animation: terminal-spin 1s linear infinite;
+}
+
+/* Instant fade-in - no easing */
+@keyframes terminal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-terminal-fade {
+  animation: terminal-fade-in 0.1s ease;
+}
+
+/* Terminal hover effect - minimal lift */
+@keyframes terminal-lift {
+  from {
+    transform: translateY(0);
+    box-shadow: var(--shadow-light);
+  }
+  to {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-medium);
+  }
+}
+
+.terminal-hover-lift:hover {
+  animation: terminal-lift 0.1s ease forwards;
+}
+
+/* === TERMINAL COMPONENT BASE CLASSES === */
+
+/* Terminal buttons */
+.terminal-btn {
+  background: var(--color-content);
+  border: var(--border-width-thin) solid var(--color-border);
+  padding: var(--button-padding-md);
+  font-size: var(--button-font-size-md);
+  font-family: var(--font-family-primary);
+  text-transform: uppercase;
+  font-weight: normal;
+  cursor: pointer;
+  border-radius: 0px;
+  transition: var(--transition-instant);
+}
+
+.terminal-btn:hover {
+  background: var(--color-hover-panel);
+  border-color: var(--color-border-dark);
+}
+
+/* Terminal panels */
+.terminal-panel {
+  background: var(--color-content);
+  border: var(--border-width-thin) solid var(--color-border);
+  margin-bottom: var(--panel-margin-bottom);
+}
+
+.terminal-panel-header {
+  background: var(--color-panel);
+  border-bottom: var(--border-width-thin) solid var(--color-border);
+  padding: var(--panel-header-padding);
+  font-size: var(--font-size-small);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-widest);
+}
+
+.terminal-panel-content {
+  padding: var(--panel-content-padding);
+}
+
+/* Terminal inputs */
+.terminal-input {
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: 0px;
+  padding: var(--input-padding);
+  font-family: var(--font-family-primary);
+  font-size: var(--input-font-size);
+  background: var(--color-content);
+  color: var(--color-text-primary);
+}
+
+.terminal-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* Terminal tables */
+.terminal-table {
+  width: 100%;
+  border: var(--border-width-thin) solid var(--color-border);
+  border-collapse: collapse;
+  font-size: var(--table-font-size);
+  font-family: var(--font-family-primary);
+}
+
+.terminal-table th {
+  background: var(--color-panel);
+  border: var(--border-width-thin) solid var(--color-border);
+  padding: var(--table-header-padding);
+  text-align: left;
+  font-weight: bold;
+  font-size: var(--table-header-font-size);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.terminal-table td {
+  border: var(--border-width-thin) solid var(--color-border);
+  padding: var(--table-cell-padding);
+  vertical-align: top;
+}
+
+.terminal-table tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+.terminal-table tr:hover {
+  background: var(--color-panel);
+}
+
+/* === TERMINAL STATUS INDICATORS === */
+
+.terminal-status {
+  display: inline-block;
+  padding: 1px 4px;
+  font-size: var(--font-size-caption);
+  border: var(--border-width-thin) solid;
+  text-transform: uppercase;
+  font-weight: bold;
+  font-family: var(--font-family-primary);
+  letter-spacing: var(--letter-spacing-wide);
+  border-radius: 0px;
+}
+
+.terminal-status-completed {
+  background: rgba(0, 255, 65, 0.1);
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.terminal-status-running {
+  background: rgba(255, 176, 0, 0.1);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+
+.terminal-status-failed {
+  background: rgba(204, 0, 0, 0.1);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.terminal-status-pending {
+  background: rgba(102, 102, 102, 0.1);
+  color: var(--color-text-tertiary);
+  border-color: var(--color-text-tertiary);
 }
 
 /* Accessibility */

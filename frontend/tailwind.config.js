@@ -7,72 +7,143 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Primary colors from the specification
-        background: '#f5f6f7',
+        // Terminal color palette
+        background: '#f0f0f0',
         content: '#ffffff',
-        panel: '#fafbfc',
+        panel: '#e8e8e8',
         border: {
-          primary: '#e1e4e8',
-          secondary: '#d1d5da', 
-          emphasis: '#c6cbd1'
+          DEFAULT: '#c0c0c0',
+          primary: '#c0c0c0',
+          secondary: '#d4d4d4', 
+          emphasis: '#808080',
+          dark: '#808080',
+          light: '#d4d4d4'
         },
         text: {
-          primary: '#24292e',
-          secondary: '#586069',
-          tertiary: '#6a737d'
+          primary: '#000000',
+          secondary: '#333333',
+          tertiary: '#666666'
         },
-        accent: '#0366d6',
-        success: '#28a745',
-        warning: '#ffd33d',
-        danger: '#d73a49',
+        // Terminal accent colors
+        accent: '#0066cc',
+        success: '#00ff41',  // Terminal green
+        warning: '#ffb000',  // Amber
+        danger: '#cc0000',   // Bold red
+        info: '#00ffff',     // Cyan
+        // Sentiment colors
+        sentiment: {
+          positive: '#00ff41',
+          negative: '#cc0000',
+          neutral: '#666666'
+        },
         // Hover states
         hover: {
-          blue: 'rgba(3, 102, 214, 0.08)',
-          green: 'rgba(40, 167, 69, 0.08)'
+          blue: 'rgba(0, 102, 204, 0.1)',
+          green: 'rgba(0, 255, 65, 0.1)',
+          panel: '#e0e0e0'
         }
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Consolas', 'monospace']
+        // Terminal fonts - monospace everywhere
+        sans: ['Courier New', 'Courier', 'monospace'],
+        mono: ['Courier New', 'SF Mono', 'Monaco', 'Consolas', 'monospace'],
+        terminal: ['Courier New', 'Courier', 'monospace'],
+        primary: ['Courier New', 'Courier', 'monospace']
       },
       fontSize: {
-        'page-title': ['32px', { lineHeight: '1.2', letterSpacing: '-0.02em' }],
-        'section-header': ['20px', { lineHeight: '1.2', letterSpacing: '-0.01em' }],
-        'subsection': ['16px', { lineHeight: '1.2' }],
-        'body': ['14px', { lineHeight: '1.5' }],
-        'small': ['12px', { lineHeight: '1.4' }],
-        'technical': ['13px', { lineHeight: '1.4' }]
+        // Terminal font scale - dense information display
+        'caption': ['8px', { lineHeight: '1.1', letterSpacing: '0.5px' }],
+        'small': ['9px', { lineHeight: '1.3', letterSpacing: '0.5px' }],
+        'body': ['10px', { lineHeight: '1.3' }],
+        'large': ['11px', { lineHeight: '1.3' }],
+        'title': ['12px', { lineHeight: '1.1', letterSpacing: '1px' }],
+        'header': ['14px', { lineHeight: '1.1', letterSpacing: '-0.5px' }],
+        
+        // Legacy aliases for gradual migration
+        'page-title': ['12px', { lineHeight: '1.1', letterSpacing: '1px' }],
+        'section-header': ['11px', { lineHeight: '1.3', letterSpacing: '1px' }],
+        'subsection': ['10px', { lineHeight: '1.3' }],
+        'technical': ['10px', { lineHeight: '1.3' }]
       },
       spacing: {
-        // 4px base unit system
-        '1': '4px',
-        '2': '8px',
-        '3': '12px',
-        '4': '16px',
-        '5': '20px',
-        '6': '24px',
-        '8': '32px',
-        '10': '40px',
-        '12': '48px',
-        '16': '64px'
+        // Terminal spacing scale - dense layout (4px base)
+        '1': '4px',    // xs
+        '1.5': '6px',  // sm 
+        '2': '8px',    // md - most common
+        '3': '12px',   // lg
+        '4': '16px',   // xl
+        '6': '24px',   // xxl
+        
+        // Component-specific spacing
+        'button-sm': '6px',
+        'button-md': '8px', 
+        'button-lg': '12px',
+        'panel': '8px',
+        'input': '6px'
       },
       borderRadius: {
-        'default': '6px',
-        'input': '4px'
+        // Terminal geometry - sharp edges everywhere
+        'none': '0px',
+        'default': '0px',
+        'input': '0px',
+        'sm': '0px',
+        'md': '0px',
+        'lg': '0px',
+        'full': '0px'
+      },
+      borderWidth: {
+        // Terminal definition
+        'thin': '1px',
+        'medium': '2px', 
+        'thick': '3px',
+        DEFAULT: '1px'
       },
       boxShadow: {
-        'card': '0 1px 3px rgba(27, 31, 35, 0.12), 0 1px 0 rgba(255, 255, 255, 0.02)',
-        'card-hover': '0 2px 8px rgba(27, 31, 35, 0.15), 0 1px 0 rgba(255, 255, 255, 0.02)',
-        'modal': '0 16px 64px rgba(27, 31, 35, 0.15), 0 0 0 1px rgba(27, 31, 35, 0.1)',
-        'focus': '0 0 0 3px rgba(3, 102, 214, 0.3)'
+        // Terminal depth - minimal shadows
+        'none': 'none',
+        'light': '1px 1px 2px rgba(0,0,0,0.1)',
+        'medium': '2px 2px 4px rgba(0,0,0,0.15)',
+        'card': '1px 1px 2px rgba(0,0,0,0.1)',
+        'card-hover': '2px 2px 4px rgba(0,0,0,0.15)',
+        'modal': '2px 2px 8px rgba(0,0,0,0.2)',
+        'focus': '0 0 0 2px #0066cc'
       },
       transitionTimingFunction: {
-        'sophisticated': 'cubic-bezier(0.4, 0, 0.2, 1)'
+        // Terminal responsiveness
+        'instant': 'ease',
+        'terminal': 'ease'
+      },
+      transitionDuration: {
+        // Fast terminal feedback
+        'instant': '100ms',
+        'quick': '150ms',
+        'normal': '200ms'
       },
       backgroundImage: {
-        'gradient-panel': 'linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)',
-        'gradient-header': 'linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)',
-        'gradient-subtle': 'linear-gradient(180deg, #fafbfc 0%, #f6f8fa 100%)'
+        // Remove gradients - flat terminal aesthetic
+        'gradient-panel': 'none',
+        'gradient-header': 'none', 
+        'gradient-subtle': 'none'
+      },
+      letterSpacing: {
+        // Terminal text spacing
+        'terminal-tight': '-0.5px',
+        'terminal': '0px',
+        'terminal-wide': '0.5px',
+        'terminal-widest': '1px'
+      },
+      lineHeight: {
+        // Terminal density
+        'terminal-tight': '1.1',
+        'terminal': '1.3',
+        'terminal-relaxed': '1.4'
+      },
+      zIndex: {
+        // Clean z-index scale
+        'dropdown': '200',
+        'tooltip': '300', 
+        'header': '100',
+        'modal': '1000'
       }
     },
   },

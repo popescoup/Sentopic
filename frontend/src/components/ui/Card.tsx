@@ -1,6 +1,6 @@
 /**
- * Card Component
- * Professional card component with sophisticated styling and variants
+ * Terminal Card/Panel Component
+ * Sharp, database-style panels with terminal aesthetics
  */
 
 import React from 'react';
@@ -10,10 +10,10 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   hover?: boolean;
   /** Whether the card is clickable */
   clickable?: boolean;
-  /** Card variant styling */
-  variant?: 'default' | 'outlined' | 'elevated' | 'panel';
-  /** Card padding size */
-  padding?: 'none' | 'sm' | 'md' | 'lg';
+  /** Card variant styling - simplified for terminal */
+  variant?: 'default' | 'panel' | 'data';
+  /** Card padding size - terminal density */
+  padding?: 'none' | 'sm' | 'md';
   /** Additional CSS classes */
   className?: string;
   /** Card content */
@@ -31,30 +31,25 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     onClick,
     ...props 
   }, ref) => {
-    // Base card classes
-    const baseClasses = 'rounded-default transition-all duration-150';
-    
-    // Variant classes
+    // Terminal card variants
     const variantClasses = {
-      default: 'bg-content border border-border-primary shadow-card',
-      outlined: 'bg-content border border-border-secondary',
-      elevated: 'bg-content border border-border-primary shadow-card-hover',
-      panel: 'bg-panel border border-border-primary'
+      default: 'terminal-panel bg-content',
+      panel: 'bg-panel border-border-dark',
+      data: 'bg-content border-border' // For data tables
     };
 
-    // Padding classes
+    // Terminal padding - dense spacing
     const paddingClasses = {
       none: '',
-      sm: 'p-3',
-      md: 'p-4',
-      lg: 'p-6'
+      sm: 'p-1.5',
+      md: 'p-2'
     };
 
-    // Hover and clickable classes
+    // Interactive classes
     const interactiveClasses = [];
     
     if (hover || clickable) {
-      interactiveClasses.push('hover-lift');
+      interactiveClasses.push('terminal-hover-lift');
     }
     
     if (clickable) {
@@ -62,13 +57,12 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
         'cursor-pointer',
         'focus:outline-none',
         'focus:ring-2',
-        'focus:ring-accent',
-        'focus:ring-offset-2'
+        'focus:ring-accent'
       );
     }
 
     const allClasses = [
-      baseClasses,
+      'terminal-border',
       variantClasses[variant],
       paddingClasses[padding],
       ...interactiveClasses,
@@ -106,12 +100,12 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
 Card.displayName = 'Card';
 
-// Card sub-components for structured content
+// Terminal Panel sub-components
 export const CardHeader: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = '' }) => (
-  <div className={`pb-3 border-b border-border-primary ${className}`}>
+  <div className={`terminal-panel-header ${className}`}>
     {children}
   </div>
 );
@@ -120,7 +114,7 @@ export const CardTitle: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = '' }) => (
-  <h3 className={`font-subsection text-text-primary ${className}`}>
+  <h3 className={`font-large text-text-primary text-command ${className}`}>
     {children}
   </h3>
 );
@@ -129,7 +123,7 @@ export const CardDescription: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = '' }) => (
-  <p className={`font-body text-text-secondary mt-1 ${className}`}>
+  <p className={`font-small text-text-secondary mt-1 ${className}`}>
     {children}
   </p>
 );
@@ -138,7 +132,7 @@ export const CardContent: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = '' }) => (
-  <div className={`pt-3 ${className}`}>
+  <div className={`terminal-panel-content ${className}`}>
     {children}
   </div>
 );
@@ -147,27 +141,25 @@ export const CardFooter: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ children, className = '' }) => (
-  <div className={`pt-3 mt-3 border-t border-border-primary flex items-center justify-between ${className}`}>
+  <div className={`pt-1.5 mt-1.5 border-t border-border flex items-center justify-between ${className}`}>
     {children}
   </div>
 );
 
-// Insight Card
+// Terminal Insight Card - Updated for ASCII aesthetic
 export const InsightCard: React.FC<{
   title: string;
   value: string | number;
   description?: string;
   trend?: 'up' | 'down' | 'neutral';
-  trendValue?: string;
   onClick?: () => void;
   className?: string;
-  isArrowCard?: boolean; // New prop for arrow-based cards
+  isArrowCard?: boolean;
 }> = ({ 
   title, 
   value, 
   description, 
   trend, 
-  trendValue, 
   onClick,
   className = '',
   isArrowCard = false
@@ -178,7 +170,8 @@ export const InsightCard: React.FC<{
     neutral: 'text-text-tertiary'
   };
 
-  const trendIcons = {
+  // Terminal trend symbols
+  const trendSymbols = {
     up: '↗',
     down: '↘',
     neutral: '→'
@@ -189,32 +182,33 @@ export const InsightCard: React.FC<{
       clickable={!!onClick}
       hover={!!onClick}
       onClick={onClick}
+      padding="sm"
       className={className}
     >
-      {/* Card header with title */}
-      <div className="mb-3">
-        <h4 className="font-small uppercase text-text-secondary tracking-wider">
-          {title}
+      {/* Terminal title */}
+      <div className="mb-1.5">
+        <h4 className="font-caption text-text-secondary tracking-terminal-widest">
+          {title.toUpperCase()}
         </h4>
       </div>
 
-      {/* Primary value - either number or arrow */}
-      <div className="mb-2">
+      {/* Primary value - terminal styling */}
+      <div className="mb-1">
         {isArrowCard ? (
           <div className="flex items-center">
             <span 
-              className={`text-4xl font-semibold tracking-tight ${
+              className={`text-4xl font-bold font-terminal tracking-tight ${
                 trend ? trendColors[trend] : 'text-text-primary'
               }`}
-              style={{ fontSize: '48px', lineHeight: '1' }}
+              style={{ fontSize: '32px', lineHeight: '1' }}
             >
               {value}
             </span>
           </div>
         ) : (
           <span 
-            className="text-2xl font-semibold text-text-primary tracking-tight"
-            style={{ fontSize: '28px', letterSpacing: '-0.01em' }}
+            className="text-xl font-bold text-text-primary font-terminal tracking-tight"
+            style={{ fontSize: '20px', letterSpacing: '-0.01em' }}
           >
             {typeof value === 'number' ? value.toLocaleString() : value}
           </span>
@@ -222,29 +216,29 @@ export const InsightCard: React.FC<{
       </div>
 
       {/* Description */}
-      <div className="mb-2">
-        {description && (
-          <p className="font-body text-text-secondary leading-relaxed">
-            {description}
+      {description && (
+        <div className="mb-1">
+          <p className="font-small text-text-secondary leading-terminal">
+            {description.toUpperCase()}
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Legacy trend display (for backwards compatibility) */}
-      {!isArrowCard && trend && trendValue && (
-        <div className="flex items-center justify-between">
-          <div className={`font-small ${trendColors[trend]} flex items-center`}>
-            <span className="mr-1">{trendIcons[trend]}</span>
-            {trendValue}
+      {/* Terminal trend display */}
+      {!isArrowCard && trend && (
+        <div className="flex items-center justify-start">
+          <div className={`font-caption ${trendColors[trend]} flex items-center`}>
+            <span className="mr-1">{trendSymbols[trend]}</span>
+            <span className="text-command">TREND</span>
           </div>
         </div>
       )}
 
-      {/* Click indicator */}
+      {/* Click indicator - terminal style */}
       {onClick && (
-        <div className="mt-3 pt-2 border-t border-border-primary">
-          <span className="font-small text-accent">
-            Click to explore →
+        <div className="mt-1.5 pt-1 border-t border-border">
+          <span className="font-caption text-accent text-command">
+          {">"} VIEW_DETAILS
           </span>
         </div>
       )}

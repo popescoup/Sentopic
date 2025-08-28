@@ -228,7 +228,7 @@ export const ConfigurationTab: React.FC<ConfigurationTabProps> = ({
             required
           />
 
-          <div className="relative">
+            <div>
             <Input
               label="Client Secret"
               type={showPasswords.reddit_client_secret ? "text" : "password"}
@@ -237,21 +237,17 @@ export const ConfigurationTab: React.FC<ConfigurationTabProps> = ({
               placeholder="Your Reddit API Client Secret"
               fullWidth
               required
-              endIcon={
-                <button
-                  type="button"
-                  onClick={() => togglePasswordVisibility('reddit_client_secret')}
-                  className="text-text-tertiary hover:text-text-primary cursor-pointer flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 transition-colors"
-                  style={{ pointerEvents: 'auto' }}
-                >
-                  {showPasswords.reddit_client_secret ? (
-                    <Eye className="h-4 w-4" />
-                  ) : (
-                    <EyeOff className="h-4 w-4" />
-                  )}
-                </button>
-              }
             />
+            <div className="flex justify-end mt-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => togglePasswordVisibility('reddit_client_secret')}
+                className="text-text-tertiary hover:text-text-primary"
+              >
+                {showPasswords.reddit_client_secret ? 'HIDE' : 'SHOW'}
+              </Button>
+            </div>
           </div>
 
           <Input
@@ -320,7 +316,7 @@ export const ConfigurationTab: React.FC<ConfigurationTabProps> = ({
               <div className="bg-panel border border-border-primary rounded-default p-4">
                 <h4 className="font-medium text-text-primary mb-3">Anthropic (Claude)</h4>
                 <div className="space-y-3">
-                  <div className="relative">
+                <div>
                     <Input
                       label="API Key"
                       type={showPasswords.anthropic_api_key ? "text" : "password"}
@@ -334,21 +330,17 @@ export const ConfigurationTab: React.FC<ConfigurationTabProps> = ({
                       }))}
                       placeholder="sk-ant-api03-..."
                       fullWidth
-                      endIcon={
-                        <button
-                          type="button"
-                          onClick={() => togglePasswordVisibility('anthropic_api_key')}
-                          className="text-text-tertiary hover:text-text-primary cursor-pointer flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 transition-colors"
-                          style={{ pointerEvents: 'auto' }}
-                        >
-                          {showPasswords.anthropic_api_key ? (
-                            <Eye className="h-4 w-4" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
-                        </button>
-                      }
                     />
+                    <div className="flex justify-end mt-1">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => togglePasswordVisibility('anthropic_api_key')}
+                        className="text-text-tertiary hover:text-text-primary"
+                      >
+                        {showPasswords.anthropic_api_key ? 'HIDE' : 'SHOW'}
+                      </Button>
+                    </div>
                   </div>
                   <Input
                     label="Model"
@@ -371,7 +363,7 @@ export const ConfigurationTab: React.FC<ConfigurationTabProps> = ({
               <div className="bg-panel border border-border-primary rounded-default p-4">
                 <h4 className="font-medium text-text-primary mb-3">OpenAI (ChatGPT)</h4>
                 <div className="space-y-3">
-                  <div className="relative">
+                <div>
                     <Input
                       label="API Key"
                       type={showPasswords.openai_api_key ? "text" : "password"}
@@ -385,21 +377,17 @@ export const ConfigurationTab: React.FC<ConfigurationTabProps> = ({
                       }))}
                       placeholder="sk-..."
                       fullWidth
-                      endIcon={
-                        <button
-                          type="button"
-                          onClick={() => togglePasswordVisibility('openai_api_key')}
-                          className="text-text-tertiary hover:text-text-primary cursor-pointer flex items-center justify-center w-8 h-8 rounded hover:bg-gray-100 transition-colors"
-                          style={{ pointerEvents: 'auto' }}
-                        >
-                          {showPasswords.openai_api_key ? (
-                            <Eye className="h-4 w-4" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
-                        </button>
-                      }
                     />
+                    <div className="flex justify-end mt-1">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => togglePasswordVisibility('openai_api_key')}
+                        className="text-text-tertiary hover:text-text-primary"
+                      >
+                        {showPasswords.openai_api_key ? 'HIDE' : 'SHOW'}
+                      </Button>
+                    </div>
                   </div>
                   <Input
                     label="Model"
@@ -481,14 +469,14 @@ export const ConfigurationTab: React.FC<ConfigurationTabProps> = ({
         </div>
 
         <div className="flex justify-end">
-          <Button
-            variant="outline"
+        <Button
+            variant="secondary"
             onClick={handleTestAllConnections}
             loading={testConnectionsMutation.isPending}
             className="px-6"
-          >
+            >
             Test All Connections
-          </Button>
+            </Button>
         </div>
         </section>
 

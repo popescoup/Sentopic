@@ -89,8 +89,8 @@ const CollectionManager: React.FC = () => {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <p className="font-body text-danger mb-4">Error loading collections: {getErrorMessage(error)}</p>
-            <Button onClick={() => refetch()} variant="outline">
-              Try Again
+            <Button onClick={() => refetch()} variant="secondary">
+              TRY AGAIN
             </Button>
           </div>
         </div>
@@ -156,25 +156,20 @@ const CollectionManager: React.FC = () => {
           </Button>
           {selectedCollections.size > 0 && (
             <Button 
-              variant="danger" 
-              onClick={handleBulkDelete}
-              startIcon={
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              }
-            >
-              Delete Selected ({selectedCollections.size})
-            </Button>
+            variant="danger" 
+            onClick={handleBulkDelete}
+          >
+            X DELETE SELECTED ({selectedCollections.size})
+          </Button>
           )}
           {collections.length > 0 && (
             <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => handleSelectAll(selectedCollections.size !== collections.length)}
-            >
-              {selectedCollections.size === collections.length ? 'Deselect All' : 'Select All'}
-            </Button>
+            variant="secondary" 
+            size="sm"
+            onClick={() => handleSelectAll(selectedCollections.size !== collections.length)}
+          >
+            {selectedCollections.size === collections.length ? 'DESELECT ALL' : 'SELECT ALL'}
+          </Button>
           )}
         </div>
         
@@ -283,7 +278,7 @@ const CollectionManager: React.FC = () => {
                       </h3>
                     </div>
                     <Button 
-                      variant="ghost" 
+                      variant="secondary" 
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -293,9 +288,7 @@ const CollectionManager: React.FC = () => {
                       aria-label="Delete collection"
                       disabled={deleteCollectionMutation.isPending && deleteModal.collection?.id === collection.id}
                     >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      X
                     </Button>
                   </div>
                   <p className="font-small text-text-tertiary">

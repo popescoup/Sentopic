@@ -105,12 +105,12 @@ export const SubredditSuggestions: React.FC<SubredditSuggestionsProps> = ({
           </div>
           
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleGenerateSubreddits}
             disabled={!researchDescription.trim() || isDisabled || isGeneratingSubreddits}
             loading={isGeneratingSubreddits}
           >
-            {isGeneratingSubreddits ? 'Generating...' : 'Suggest'}
+            {isGeneratingSubreddits ? 'GENERATING...' : 'SUGGEST'}
           </Button>
         </div>
       </div>

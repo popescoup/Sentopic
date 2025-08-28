@@ -82,14 +82,14 @@ interface ConnectionTestProps {
         
         {showTestButton && (
           <Button
-            variant="outline"
-            size="sm"
-            onClick={onTest}
-            loading={isTesting}
-            disabled={!isConfigured || isTesting}
-          >
-            Test Connection
-          </Button>
+          variant="secondary"
+          size="sm"
+          onClick={onTest}
+          loading={isTesting}
+          disabled={!isConfigured || isTesting}
+        >
+          Test Connection
+        </Button>
         )}
       </div>
       

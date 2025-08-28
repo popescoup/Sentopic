@@ -1,86 +1,140 @@
-/* Design System Variables - Sentopic */
+/* Design System Variables - Sentopic ASCII + SQLite Terminal Theme */
 
 :root {
-    /* Primary Colors */
-    --color-background: #f5f6f7;
-    --color-content: #ffffff;
-    --color-panel: #fafbfc;
-    
-    /* Border Colors */
-    --color-border-primary: #e1e4e8;
-    --color-border-secondary: #d1d5da;
-    --color-border-emphasis: #c6cbd1;
-    
-    /* Text Colors */
-    --color-text-primary: #24292e;
-    --color-text-secondary: #586069;
-    --color-text-tertiary: #6a737d;
-    
-    /* Accent Colors */
-    --color-accent: #0366d6;
-    --color-success: #28a745;
-    --color-warning: #ffd33d;
-    --color-danger: #d73a49;
-    --color-info: #17a2b8;
-    
-    /* Hover States */
-    --color-hover-blue: rgba(3, 102, 214, 0.08);
-    --color-hover-green: rgba(40, 167, 69, 0.08);
-    
-    /* Typography */
-    --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    --font-family-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Consolas', monospace;
-    
-    /* Font Sizes */
-    --font-size-page-title: 32px;
-    --font-size-section-header: 20px;
-    --font-size-subsection: 16px;
-    --font-size-body: 14px;
-    --font-size-small: 12px;
-    --font-size-technical: 13px;
-    
-    /* Line Heights */
-    --line-height-headings: 1.2;
-    --line-height-body: 1.5;
-    --line-height-technical: 1.4;
-    
-    /* Letter Spacing */
-    --letter-spacing-page-title: -0.02em;
-    --letter-spacing-section-header: -0.01em;
-    
-    /* Spacing (4px base unit) */
-    --spacing-1: 4px;
-    --spacing-2: 8px;
-    --spacing-3: 12px;
-    --spacing-4: 16px;
-    --spacing-5: 20px;
-    --spacing-6: 24px;
-    --spacing-8: 32px;
-    --spacing-10: 40px;
-    --spacing-12: 48px;
-    --spacing-16: 64px;
-    
-    /* Border Radius */
-    --border-radius-default: 6px;
-    --border-radius-input: 4px;
-    
-    /* Shadows */
-    --shadow-card: 0 1px 3px rgba(27, 31, 35, 0.12), 0 1px 0 rgba(255, 255, 255, 0.02);
-    --shadow-card-hover: 0 2px 8px rgba(27, 31, 35, 0.15), 0 1px 0 rgba(255, 255, 255, 0.02);
-    --shadow-modal: 0 16px 64px rgba(27, 31, 35, 0.15), 0 0 0 1px rgba(27, 31, 35, 0.1);
-    --shadow-focus: 0 0 0 3px rgba(3, 102, 214, 0.3);
-    
-    /* Gradients */
-    --gradient-panel: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
-    --gradient-header: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
-    --gradient-subtle: linear-gradient(180deg, #fafbfc 0%, #f6f8fa 100%);
-    
-    /* Transitions */
-    --transition-sophisticated: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    
-    /* Z-Index Scale */
-    --z-modal: 1000;
-    --z-header: 100;
-    --z-dropdown: 200;
-    --z-tooltip: 300;
-  }
+  /* === TERMINAL COLOR PALETTE === */
+  
+  /* Base Colors - Terminal Aesthetic */
+  --color-background: #f0f0f0;      /* Main app background */
+  --color-content: #ffffff;         /* Card/panel content */
+  --color-panel: #e8e8e8;           /* Panel headers, toolbars */
+  
+  /* Border Colors - Sharp Definition */
+  --color-border: #c0c0c0;          /* Standard borders */
+  --color-border-dark: #808080;     /* Emphasis borders */
+  --color-border-light: #d4d4d4;    /* Subtle dividers */
+  
+  /* Text Colors - High Contrast */
+  --color-text-primary: #000000;    /* Main content text */
+  --color-text-secondary: #333333;  /* Secondary text */
+  --color-text-tertiary: #666666;   /* Meta text, captions */
+  
+  /* Terminal Accent Colors */
+  --color-accent: #0066cc;          /* Primary actions, links */
+  --color-success: #00ff41;         /* Terminal green, positive */
+  --color-warning: #ffb000;         /* Amber, warnings */
+  --color-danger: #cc0000;          /* Red, errors, delete */
+  --color-info: #00ffff;            /* Cyan, information */
+  
+  /* Sentiment Analysis Colors */
+  --color-sentiment-positive: #00ff41;  /* Terminal green */
+  --color-sentiment-negative: #cc0000;  /* Bold red */
+  --color-sentiment-neutral: #666666;   /* Gray */
+  
+  /* Hover States - Minimal */
+  --color-hover-blue: rgba(0, 102, 204, 0.1);
+  --color-hover-green: rgba(0, 255, 65, 0.1);
+  --color-hover-panel: #e0e0e0;
+  
+  /* === TYPOGRAPHY SYSTEM === */
+  
+  /* Terminal Font Stack */
+  --font-family-primary: 'Courier New', 'Courier', monospace;
+  --font-family-fallback: monospace;
+  --font-family-mono: 'Courier New', 'SF Mono', 'Monaco', 'Consolas', monospace;
+  
+  /* Terminal Font Sizes - Dense Information Display */
+  --font-size-caption: 8px;        /* Table headers, small labels */
+  --font-size-small: 9px;          /* Meta text, help text */    
+  --font-size-body: 10px;          /* Primary UI text */
+  --font-size-large: 11px;         /* Section headers */
+  --font-size-title: 12px;         /* Page titles */
+  --font-size-header: 14px;        /* Main headers */
+  
+  /* Line Heights - Terminal Density */
+  --line-height-tight: 1.1;        /* ASCII logo, dense text */
+  --line-height-normal: 1.3;       /* Standard UI text */
+  --line-height-relaxed: 1.4;      /* Longer content */
+  
+  /* Letter Spacing - Terminal Precision */
+  --letter-spacing-tight: -0.5px;   /* Large headers */
+  --letter-spacing-normal: 0px;     /* Body text */
+  --letter-spacing-wide: 0.5px;     /* Small UI labels */
+  --letter-spacing-widest: 1px;     /* Headers, emphasis */
+  
+  /* === LAYOUT SYSTEM === */
+  
+  /* Terminal Spacing Scale - Dense Layout */
+  --spacing-xs: 4px;     /* Tight spacing, form elements */
+  --spacing-sm: 6px;     /* Small gaps, padding */
+  --spacing-md: 8px;     /* Standard spacing (most common) */
+  --spacing-lg: 12px;    /* Section spacing */
+  --spacing-xl: 16px;    /* Major section breaks */
+  --spacing-xxl: 24px;   /* Page-level spacing */
+  
+  /* Border Geometry - Sharp Terminal Aesthetic */
+  --border-radius-none: 0px;        /* ALL elements use 0px */
+  --border-radius-default: 0px;     /* Override any rounded corners */
+  --border-radius-input: 0px;       /* Sharp form elements */
+  
+  /* Border Widths - Clean Definition */
+  --border-width-thin: 1px;         /* Standard borders */
+  --border-width-medium: 2px;       /* Emphasis, headers */
+  --border-width-thick: 3px;        /* Strong emphasis (rare) */
+  
+  /* Terminal Shadows - Minimal Depth */
+  --shadow-none: none;
+  --shadow-light: 1px 1px 2px rgba(0,0,0,0.1);    /* Minimal depth */
+  --shadow-medium: 2px 2px 4px rgba(0,0,0,0.15);  /* Hover states */
+  --shadow-card: 1px 1px 2px rgba(0,0,0,0.1);
+  --shadow-card-hover: 2px 2px 4px rgba(0,0,0,0.15);
+  --shadow-modal: 2px 2px 8px rgba(0,0,0,0.2);
+  --shadow-focus: 0 0 0 2px var(--color-accent);
+  
+  /* === TRANSITIONS === */
+  
+  /* Terminal Responsiveness - Instant Feedback */
+  --transition-instant: all 0.1s ease;
+  --transition-quick: all 0.15s ease;
+  --transition-normal: all 0.2s ease;
+  
+  /* === COMPONENT SPECIFICATIONS === */
+  
+  /* Button Base Properties */
+  --button-padding-sm: 3px 6px;
+  --button-padding-md: 4px 8px;
+  --button-padding-lg: 6px 12px;
+  --button-font-size-sm: 9px;
+  --button-font-size-md: 10px;
+  --button-font-size-lg: 11px;
+  
+  /* Panel Base Properties */
+  --panel-header-padding: 6px 8px;
+  --panel-content-padding: 8px;
+  --panel-margin-bottom: 8px;
+  
+  /* Input Base Properties */
+  --input-padding: 4px 6px;
+  --input-font-size: 10px;
+  --input-border-width: 1px;
+  
+  /* Table Base Properties */
+  --table-font-size: 10px;
+  --table-header-font-size: 9px;
+  --table-cell-padding: 4px 6px;
+  --table-header-padding: 4px 6px;
+  
+  /* === Z-INDEX SCALE === */
+  --z-modal: 1000;
+  --z-header: 100;
+  --z-dropdown: 200;
+  --z-tooltip: 300;
+  
+  /* === LEGACY COMPATIBILITY === */
+  /* Keep some legacy variables for gradual migration */
+  --color-border-primary: var(--color-border);
+  --color-border-secondary: var(--color-border-light);
+  --color-border-emphasis: var(--color-border-dark);
+  
+  /* Font family aliases */
+  --font-family-sans: var(--font-family-primary);
+}
