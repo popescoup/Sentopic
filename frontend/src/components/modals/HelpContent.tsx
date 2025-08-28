@@ -17,12 +17,53 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
     {
       id: 'getting-started',
       title: 'Getting Started',
-      defaultExpanded: true,
+      defaultExpanded: false,
       content: {
-        'Quick Start Guide (5-minute setup)': (
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-subsection text-text-primary mb-2">1. Configure API Access</h4>
+        'Quick Start Guide': (
+            <div className="space-y-4">
+                <div>
+                <h4 className="font-subsection text-text-primary mb-2">1. Set Up Your API Keys</h4>
+                <p className="text-text-secondary mb-2">
+                    First, you'll need to create API keys for Reddit and optionally for AI providers:
+                </p>
+                
+                <div className="space-y-3">
+                <div>
+                    <h5 className="font-medium text-text-primary mb-1">Reddit API Setup</h5>
+                    <ol className="list-decimal list-inside space-y-1 text-text-secondary ml-4 text-sm">
+                        <li>Go to <a href="https://www.reddit.com/prefs/apps" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">Reddit Apps page</a> (sign in if needed)</li>
+                        <li>Click <strong>"Create App"</strong> or <strong>"Create another app"</strong></li>
+                        <li>Fill out the form:
+                        <ul className="list-disc list-inside ml-4 mt-1 space-y-0.5">
+                            <li><strong>Name:</strong> Any name (e.g., "Sentopic Research Tool")</li>
+                            <li><strong>App type:</strong> Select <strong>"script"</strong></li>
+                            <li><strong>Description:</strong> Optional (e.g., "For Reddit data analysis")</li>
+                            <li><strong>Redirect URI:</strong> Enter <code className="text-xs bg-panel px-1 rounded">http://localhost</code></li>
+                        </ul>
+                        </li>
+                        <li>After creation, copy your <strong>Client ID</strong> (under app name) and <strong>Client Secret</strong></li>
+                        <li>Create a <strong>User Agent</strong> string in this format: <code className="text-xs bg-panel px-1 rounded">appname/version by /u/yourusername</code></li>
+                    </ol>
+                    </div>
+                    
+                    <div>
+                    <h5 className="font-medium text-text-primary mb-1">AI Provider Setup (Recommended)</h5>
+                    <p className="text-text-secondary text-sm mb-2">
+                        For AI features like keyword suggestions and analysis summaries:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 text-text-secondary ml-4 text-sm">
+                        <li><strong>Anthropic:</strong> Visit <a href="https://console.anthropic.com/settings/keys" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">Anthropic Console</a>, create account, add billing, then create API key</li>
+                        <li><strong>OpenAI:</strong> Visit <a href="https://platform.openai.com/settings/organization/api-keys" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">OpenAI Platform</a>, create account, add billing, then create API key</li>
+                    </ul>
+                    </div>
+                </div>
+                </div>
+                
+                <div>
+                <h4 className="font-subsection text-text-primary mb-2">2. Configure API Access</h4>
+                <p className="text-text-secondary mb-2">
+                    Now enter your API credentials in Sentopic:
+                </p>
               <p className="text-text-secondary mb-2">
                 Before you can collect Reddit data, you need to set up API credentials:
               </p>
@@ -36,7 +77,7 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
             </div>
             
             <div>
-              <h4 className="font-subsection text-text-primary mb-2">2. Create Your First Collection</h4>
+              <h4 className="font-subsection text-text-primary mb-2">3. Create Your First Collection</h4>
               <p className="text-text-secondary mb-2">
                 Collections contain Reddit posts and comments from specific subreddits:
               </p>
@@ -50,7 +91,7 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
             </div>
             
             <div>
-              <h4 className="font-subsection text-text-primary mb-2">3. Start Your First Analysis Project</h4>
+              <h4 className="font-subsection text-text-primary mb-2">4. Start Your First Analysis Project</h4>
               <p className="text-text-secondary mb-2">
                 Projects analyze your collections to find business insights:
               </p>
@@ -175,7 +216,7 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
                 <div>
                   <h5 className="font-medium text-text-primary mb-1">Project Dashboard</h5>
                   <p className="text-text-secondary text-sm">
-                    The main landing page shows all your projects with key metrics, creation dates, and AI-generated summaries. 
+                    The main landing page shows all your projects with key metrics, and creation dates. 
                     Click any project to dive into detailed results.
                   </p>
                 </div>
@@ -383,6 +424,78 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
             </div>
           </div>
         ),
+        'Iterative Research Methodology': (
+        <div className="space-y-4">
+            <div>
+            <h4 className="font-subsection text-text-primary mb-2">Building Knowledge Through Sequential Projects</h4>
+            <p className="text-text-secondary mb-3">
+                Effective Reddit analysis involves multiple projects that build upon each other, with each iteration refining your understanding and approach.
+            </p>
+            
+            <div className="space-y-3">
+                <div>
+                <h5 className="font-medium text-text-primary mb-1">The Iterative Cycle</h5>
+                <div className="bg-panel p-3 rounded-default">
+                    <ol className="list-decimal list-inside space-y-1 text-text-secondary text-sm ml-4">
+                    <li><strong>Initial exploration:</strong> Start with broad keywords and diverse subreddit collections</li>
+                    <li><strong>Pattern identification:</strong> Analyze co-occurrences, sentiment clusters, and unexpected themes</li>
+                    <li><strong>Hypothesis formation:</strong> Develop specific questions based on discovered patterns</li>
+                    <li><strong>Targeted investigation:</strong> Create focused follow-up projects with refined parameters</li>
+                    <li><strong>Knowledge synthesis:</strong> Connect findings across projects for comprehensive insights</li>
+                    </ol>
+                </div>
+                </div>
+                
+                <div>
+                <h5 className="font-medium text-text-primary mb-1">Refinement Strategies</h5>
+                <ul className="list-disc list-inside space-y-1 text-text-secondary ml-4">
+                    <li><strong>Keyword evolution:</strong> Use co-occurrence findings to discover relevant terms you hadn't considered</li>
+                    <li><strong>Subreddit optimization:</strong> Identify which communities produce the most valuable discussions for your research focus</li>
+                    <li><strong>Temporal refinement:</strong> Adjust time periods based on when significant discussions or events occurred</li>
+                    <li><strong>Sentiment drilling:</strong> Create targeted projects around specific pain points or positive themes discovered in initial analysis</li>
+                </ul>
+                </div>
+            </div>
+            </div>
+            
+            <div>
+            <h4 className="font-subsection text-text-primary mb-2">Practical Implementation</h4>
+            <p className="text-text-secondary mb-2">
+                Transform insights from each project into actionable improvements for your next analysis:
+            </p>
+            <div className="bg-panel p-4 rounded-default">
+                <div className="space-y-3">
+                <div>
+                    <h6 className="font-medium text-text-primary text-sm mb-1">After Project 1: "What do people think about electric vehicles?"</h6>
+                    <p className="text-text-secondary text-sm">
+                    <strong>Discovery:</strong> High co-occurrence between "charging" and "anxiety" terms<br/>
+                    <strong>Next project:</strong> "What are the specific charging concerns with EVs?" with targeted keywords like "charging speed," "charging stations," "range anxiety"
+                    </p>
+                </div>
+                
+                <div>
+                    <h6 className="font-medium text-text-primary text-sm mb-1">After Project 2: Charging concerns analysis</h6>
+                    <p className="text-text-secondary text-sm">
+                    <strong>Discovery:</strong> Rural vs. urban sentiment differences<br/>
+                    <strong>Next project:</strong> Separate collections from geography-specific subreddits to understand regional variations
+                    </p>
+                </div>
+                </div>
+            </div>
+            </div>
+            
+            <div>
+            <h4 className="font-subsection text-text-primary mb-2">Maximizing Cross-Project Value</h4>
+            <ul className="list-disc list-inside space-y-1 text-text-secondary ml-4">
+                <li>Keep notes on promising themes that emerge but fall outside your current project scope</li>
+                <li>Track which subreddit combinations yield the highest-quality discussions for your domain</li>
+                <li>Build keyword libraries organized by research themes for future investigations</li>
+                <li>Use the AI chat assistant to explore connections between findings across different projects</li>
+                <li>Create project naming conventions that reflect the iterative relationships between analyses</li>
+            </ul>
+            </div>
+        </div>
+        ),
         'Sentiment Analysis Interpretation': (
           <div className="space-y-4">
             <div>
@@ -489,6 +602,7 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
                 <li>Consider external events that might influence discussions</li>
                 <li>Use both mention frequency and sentiment trends together</li>
                 <li>Longer time periods provide more reliable trend indicators</li>
+                <li>Use consistent time periods across collections within the same project to avoid biasing the data</li>
               </ul>
             </div>
           </div>
@@ -619,7 +733,7 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
                 <div className="border-l-4 border-warning pl-4">
                   <h5 className="font-medium text-text-primary mb-1">Analysis Stuck or Taking Too Long</h5>
                   <p className="text-text-secondary text-sm mb-2">
-                    <strong>Possible causes:</strong> Large collections, complex keyword sets, server load
+                    <strong>Possible causes:</strong> Large collections, complex keyword sets
                   </p>
                   <p className="text-text-secondary text-sm">
                     <strong>Solutions:</strong>
@@ -719,13 +833,12 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
                 </div>
                 
                 <div>
-                  <h5 className="font-medium text-text-primary mb-1">Collection Strategy Tips</h5>
-                  <ul className="list-disc list-inside space-y-1 text-text-secondary ml-4">
-                    <li>Collect from multiple smaller subreddits rather than one large one</li>
-                    <li>Use appropriate time periods (don't collect "all time" unless needed)</li>
+                <h5 className="font-medium text-text-primary mb-1">Collection Strategy Tips</h5>
+                <ul className="list-disc list-inside space-y-1 text-text-secondary ml-4">
+                    <li>Use consistent time periods across collections within the same project to avoid biasing the data</li>
                     <li>Set reasonable minimum upvote thresholds to filter quality content</li>
-                    <li>Consider collecting in batches during off-peak hours</li>
-                  </ul>
+                    <li>Mix niche and broad subreddits to balance depth with volume for comprehensive coverage</li>
+                </ul>
                 </div>
               </div>
             </div>
@@ -744,15 +857,15 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
                 </div>
                 
                 <div>
-                  <h5 className="font-medium text-text-primary mb-1">Context Window Settings</h5>
-                  <p className="text-text-secondary text-sm mb-2">
+                <h5 className="font-medium text-text-primary mb-1">Context Window Settings</h5>
+                <p className="text-text-secondary text-sm mb-2">
                     Balance context quality with performance:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-text-secondary ml-4">
-                    <li><strong>50-100 words:</strong> Fast processing, basic context</li>
-                    <li><strong>100-200 words:</strong> Balanced approach (recommended)</li>
-                    <li><strong>200+ words:</strong> Rich context, slower processing</li>
-                  </ul>
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-text-secondary ml-4">
+                    <li><strong>20-80 words:</strong> Immediate context surrounding keywords</li>
+                    <li><strong>81-120 words:</strong> Broader but focused context, balanced approach (recommended)</li>
+                    <li><strong>121-200 words:</strong> Holistic and broad context</li>
+                </ul>
                 </div>
               </div>
             </div>
@@ -846,45 +959,44 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
 
       {/* Footer Links */}
       <div className="mt-8">
-        <div className="border-t border-border-primary pt-4 mt-4">
-          <div className="bg-panel p-4 rounded-default">
+      <div className="border-t border-border-primary pt-4 mt-4">
+        <div className="bg-panel p-4 rounded-default">
             <h4 className="font-medium text-text-primary mb-3">Additional Resources</h4>
             <div className="text-sm">
-              <h5 className="font-medium text-text-primary mb-2">External Documentation</h5>
-              <ul className="space-y-1">
+            <ul className="space-y-1">
                 <li>
-                  <a 
-                    href="https://www.reddit.com/dev/api/" 
+                <a 
+                    href="https://www.reddit.com/prefs/apps" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-accent hover:underline"
-                  >
-                    Reddit API Documentation
-                  </a>
+                >
+                    Create Reddit API App & Keys
+                </a>
                 </li>
                 <li>
-                  <a 
-                    href="https://docs.anthropic.com/claude/docs" 
+                <a 
+                    href="https://console.anthropic.com/settings/keys" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-accent hover:underline"
-                  >
-                    Anthropic Claude API Docs
-                  </a>
+                >
+                    Create Anthropic API Keys
+                </a>
                 </li>
                 <li>
-                  <a 
-                    href="https://platform.openai.com/docs" 
+                <a 
+                    href="https://platform.openai.com/settings/organization/api-keys" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-accent hover:underline"
-                  >
-                    OpenAI API Documentation
-                  </a>
+                >
+                    Create OpenAI API Keys
+                </a>
                 </li>
-              </ul>
+            </ul>
             </div>
-          </div>
+        </div>
         </div>
       </div>
     </div>
