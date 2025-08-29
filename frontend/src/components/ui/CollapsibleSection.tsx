@@ -26,16 +26,16 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
-    <div className={`terminal-panel ${className}`}>
+    <div className={`bg-content border border-border ${className}`}>
       <Button
         variant="secondary"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between terminal-panel-header text-left hover:bg-hover-panel transition-colors duration-100"
+        className="w-full flex items-center justify-between bg-panel text-left hover:bg-hover-panel transition-colors duration-100 border-0"
         aria-expanded={isExpanded}
         aria-controls={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}
       >
-        <span className="font-large text-text-primary text-command">{title.toUpperCase()}</span>
-        <span className="text-text-secondary flex-shrink-0 ml-2 font-terminal">
+        <span className="font-large text-text-primary tracking-terminal-wide font-bold">{title.toUpperCase()}</span>
+        <span className="text-text-secondary flex-shrink-0 ml-2 font-terminal tracking-terminal-wide">
           {isExpanded ? '[-]' : '[+]'}
         </span>
       </Button>
@@ -49,10 +49,8 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           maxHeight: isExpanded ? 'none' : '0',
         }}
       >
-        <div className="terminal-panel-content border-t border-border">
-          <div className="font-terminal">
-            {children}
-          </div>
+        <div className="border-t border-border p-2 font-terminal">
+          {children}
         </div>
       </div>
     </div>

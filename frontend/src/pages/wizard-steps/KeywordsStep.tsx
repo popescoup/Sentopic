@@ -99,7 +99,7 @@ export const KeywordsStep: React.FC<KeywordsStepProps> = ({
             </div>
             
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={handleAIKeywordSuggestion}
               disabled={!formData.researchQuestion.trim() || isGeneratingKeywords}
               loading={isGeneratingKeywords}

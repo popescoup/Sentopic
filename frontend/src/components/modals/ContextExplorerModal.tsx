@@ -314,7 +314,7 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
               {contextData.pagination.total_pages > 1 && (
                 <div className="flex items-center space-x-2">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     disabled={!contextData.pagination.has_previous}
                     onClick={() => goToPage(contextData.pagination.page - 1)}
@@ -327,7 +327,7 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
                   </span>
                   
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     disabled={!contextData.pagination.has_next}
                     onClick={() => goToPage(contextData.pagination.page + 1)}
@@ -359,7 +359,7 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
                 <p className="font-body text-text-secondary mb-4">
                 {errorMessage}
                 </p>
-                <Button variant="outline" onClick={() => refetch()}>
+                <Button variant="secondary" onClick={() => refetch()}>
                 Try Again
                 </Button>
             </div>
@@ -385,7 +385,7 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
                   )}
                 </p>
                 <Button 
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => setFilters(getDefaultFilters())}
                 >
                   Reset Filters
@@ -409,7 +409,7 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
                 <div className="flex items-center justify-center pt-6 mt-6 border-t border-border-primary">
                     <div className="flex items-center space-x-2">
                     <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         disabled={!contextData.pagination.has_previous}
                         onClick={() => goToPage(contextData.pagination.page - 1)}
@@ -422,7 +422,7 @@ export const ContextExplorerModal: React.FC<ContextExplorerModalProps> = ({
                     </span>
                     
                     <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         disabled={!contextData.pagination.has_next}
                         onClick={() => goToPage(contextData.pagination.page + 1)}

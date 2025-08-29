@@ -271,7 +271,7 @@ const ProjectWorkspace: React.FC = () => {
             </p>
           </div>
           <Button 
-            variant="outline" 
+            variant="secondary" 
             size="sm"
             onClick={() => setIsSummaryModalOpen(true)}
           >
@@ -382,7 +382,7 @@ const ProjectWorkspace: React.FC = () => {
 
                     <div className="pt-4 border-t border-border-primary">
                       <Button 
-                        variant="outline" 
+                        variant="secondary" 
                         fullWidth
                         onClick={() => setIsContextExplorerOpen(true)}
                       >
@@ -405,7 +405,7 @@ const ProjectWorkspace: React.FC = () => {
                       Try expanding your keyword list or selecting additional collections.
                     </p>
                     <Button 
-                      variant="outline"
+                      variant="secondary"
                       onClick={() => handleComingSoon('Edit Project')}
                     >
                       Refine Keywords

@@ -35,25 +35,25 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
                         <li>Click <strong>"Create App"</strong> or <strong>"Create another app"</strong></li>
                         <li>Fill out the form:
                         <ul className="list-disc list-inside ml-4 mt-1 space-y-0.5">
-                            <li><strong>Name:</strong> Any name (e.g., "Sentopic Research Tool")</li>
-                            <li><strong>App type:</strong> Select <strong>"script"</strong></li>
-                            <li><strong>Description:</strong> Optional (e.g., "For Reddit data analysis")</li>
-                            <li><strong>Redirect URI:</strong> Enter <code className="text-xs bg-panel px-1 rounded">http://localhost</code></li>
+                        <li><strong>NAME:</strong> Any name (e.g., "SENTOPIC RESEARCH TOOL")</li>
+                        <li><strong>APP TYPE:</strong> Select <strong>"SCRIPT"</strong></li>
+                        <li><strong>DESCRIPTION:</strong> Optional (e.g., "FOR REDDIT DATA ANALYSIS")</li>
+                        <li><strong>REDIRECT URI:</strong> Enter <code className="text-xs bg-panel px-1">HTTP://LOCALHOST</code></li>
                         </ul>
                         </li>
-                        <li>After creation, copy your <strong>Client ID</strong> (under app name) and <strong>Client Secret</strong></li>
-                        <li>Create a <strong>User Agent</strong> string in this format: <code className="text-xs bg-panel px-1 rounded">appname/version by /u/yourusername</code></li>
+                        <li>After creation, copy your <strong>CLIENT ID</strong> (under app name) and <strong>CLIENT SECRET</strong></li>
+                        <li>Create a <strong>USER AGENT</strong> string in this format: <code className="text-xs bg-panel px-1">APPNAME/VERSION BY /U/YOURUSERNAME</code></li>
                     </ol>
                     </div>
                     
                     <div>
-                    <h5 className="font-medium text-text-primary mb-1">AI Provider Setup (Recommended)</h5>
+                    <h5 className="font-medium text-text-primary mb-1">AI PROVIDER SETUP (RECOMMENDED)</h5>
                     <p className="text-text-secondary text-sm mb-2">
-                        For AI features like keyword suggestions and analysis summaries:
+                        FOR AI FEATURES LIKE KEYWORD SUGGESTIONS AND ANALYSIS SUMMARIES:
                     </p>
                     <ul className="list-disc list-inside space-y-1 text-text-secondary ml-4 text-sm">
-                        <li><strong>Anthropic:</strong> Visit <a href="https://console.anthropic.com/settings/keys" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">Anthropic Console</a>, create account, add billing, then create API key</li>
-                        <li><strong>OpenAI:</strong> Visit <a href="https://platform.openai.com/settings/organization/api-keys" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">OpenAI Platform</a>, create account, add billing, then create API key</li>
+                        <li><strong>ANTHROPIC:</strong> Visit <a href="https://console.anthropic.com/settings/keys" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">ANTHROPIC CONSOLE</a>, CREATE ACCOUNT, ADD BILLING, THEN CREATE API KEY</li>
+                        <li><strong>OPENAI:</strong> Visit <a href="https://platform.openai.com/settings/organization/api-keys" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">OPENAI PLATFORM</a>, CREATE ACCOUNT, ADD BILLING, THEN CREATE API KEY</li>
                     </ul>
                     </div>
                 </div>

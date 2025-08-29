@@ -205,7 +205,7 @@ interface TrendsModalProps {
                   <p className="font-body text-text-secondary mb-4">
                     {errorMessage}
                   </p>
-                  <Button variant="outline" onClick={() => refetch()}>
+                  <Button variant="secondary" onClick={() => refetch()}>
                     Try Again
                   </Button>
                 </div>

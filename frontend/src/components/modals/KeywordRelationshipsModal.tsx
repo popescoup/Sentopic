@@ -83,12 +83,12 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
 
   // Sort options for dropdown
   const sortOptions = [
-    { value: 'frequency', label: 'Most Frequent First' },
-    { value: 'alphabetical', label: 'Alphabetical' },
-    { value: 'posts', label: 'Most in Posts First' },
-    { value: 'comments', label: 'Most in Comments First' },
-    { value: 'sentiment_desc', label: 'Most Positive First' },
-    { value: 'sentiment_asc', label: 'Most Negative First' }
+    { value: 'frequency', label: 'MOST FREQUENT FIRST' },
+    { value: 'alphabetical', label: 'ALPHABETICAL' },
+    { value: 'posts', label: 'MOST IN POSTS FIRST' },
+    { value: 'comments', label: 'MOST IN COMMENTS FIRST' },
+    { value: 'sentiment_desc', label: 'MOST POSITIVE FIRST' },
+    { value: 'sentiment_asc', label: 'MOST NEGATIVE FIRST' }
   ];
 
   // Sentiment color helper function (matching other modals)
@@ -341,7 +341,7 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
                         <div className="flex items-center justify-center space-x-2">
                           <div className="relative group">
                             <Button
-                              variant="outline"
+                              variant="secondary"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -357,7 +357,7 @@ const KeywordRelationshipsModal: React.FC<KeywordRelationshipsModalProps> = ({
                           </div>
                           <div className="relative group">
                             <Button
-                              variant="outline"
+                              variant="secondary"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();

@@ -116,7 +116,7 @@ export const KeywordsManager: React.FC<KeywordsManagerProps> = ({
               Keywords ({keywords.length}/{maxKeywords})
             </span>
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={clearAllKeywords}
               disabled={disabled}

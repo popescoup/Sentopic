@@ -75,7 +75,7 @@ const CollectionManager: React.FC = () => {
       <MainLayout title="Collection Manager">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-          <LoadingSpinner size="lg" message="Loading collections" />
+          <LoadingSpinner size="lg" message="Loading Collections..." />
           </div>
         </div>
       </MainLayout>
@@ -202,22 +202,22 @@ const CollectionManager: React.FC = () => {
                 case 'completed':
                   return {
                     className: 'text-success bg-green-100',
-                    label: 'Completed'
+                    label: 'COMPLETED'
                   };
                 case 'running':
                   return {
                     className: 'text-accent bg-blue-100', 
-                    label: 'Running'
+                    label: 'RUNNING'
                   };
                 case 'failed':
                   return {
                     className: 'text-danger bg-red-100',
-                    label: 'Failed'
+                    label: 'FAILED'
                   };
                 default:
                   return {
                     className: 'text-text-tertiary bg-gray-100',
-                    label: 'Unknown'
+                    label: 'UNKNOWN'
                   };
               }
             };
@@ -240,12 +240,12 @@ const CollectionManager: React.FC = () => {
 
             // Helper function to create collection description
             const getCollectionDescription = (collection: any) => {
-              const sortMethod = collection.sort_method.charAt(0).toUpperCase() + collection.sort_method.slice(1);
-              const timePeriod = collection.time_period ? ` (${collection.time_period})` : '';
-              const postsText = `${collection.posts_requested} posts`;
-              const createdText = formatDate(collection.created_at);
+              const sortMethod = collection.sort_method.toUpperCase();
+              const timePeriod = collection.time_period ? ` (${collection.time_period.toUpperCase()})` : '';
+              const postsText = `${collection.posts_requested} POSTS`;
+              const createdText = formatDate(collection.created_at).toUpperCase();
               
-              return `${sortMethod}${timePeriod} • ${postsText} • Created ${createdText}`;
+              return `${sortMethod}${timePeriod} • ${postsText} • CREATED ${createdText}`;
             };
 
             const statusStyling = getStatusStyling(collection.status);

@@ -130,10 +130,7 @@ const ProjectsDashboard: React.FC = () => {
     return (
       <MainLayout title="Projects Dashboard">
         
-        <LoadingState 
-          title="Loading Projects..."
-          description="Fetching your research projects from the server."
-        />
+        <LoadingSpinner size="lg" message="Loading Projects..." />
       </MainLayout>
     );
   }

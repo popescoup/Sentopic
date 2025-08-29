@@ -119,9 +119,9 @@ const KeywordOverviewModal: React.FC<KeywordOverviewModalProps> = ({
 
   // Sort options for dropdown
   const sortOptions = [
-    { value: 'mentions', label: 'Most Mentions First' },
-    { value: 'sentiment', label: 'Most Positive First' },
-    { value: 'alphabetical', label: 'Alphabetical' }
+    { value: 'mentions', label: 'MOST MENTIONS FIRST' },
+    { value: 'sentiment', label: 'MOST POSITIVE FIRST' },
+    { value: 'alphabetical', label: 'ALPHABETICAL' }
   ];
 
   return (
@@ -300,8 +300,8 @@ const KeywordOverviewModal: React.FC<KeywordOverviewModalProps> = ({
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <div className="relative group">
-                          <Button
-                            variant="outline"
+                        <Button
+                            variant="secondary"
                             size="sm"
                             onClick={() => handleExploreClick(keyword.keyword)}
                             className="p-2 w-10 h-10 flex items-center justify-center"
@@ -313,8 +313,8 @@ const KeywordOverviewModal: React.FC<KeywordOverviewModalProps> = ({
                           </div>
                         </div>
                         <div className="relative group">
-                          <Button
-                            variant="outline"
+                        <Button
+                            variant="secondary"
                             size="sm"
                             onClick={() => handleViewTrends(keyword.keyword)}
                             className="p-2 w-10 h-10 flex items-center justify-center"
@@ -341,12 +341,12 @@ const KeywordOverviewModal: React.FC<KeywordOverviewModalProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h3 className="font-subsection text-text-primary mb-2">
-              No Keyword Data Available
-            </h3>
-            <p className="font-body text-text-secondary max-w-md mx-auto">
-              Keyword statistics are not available for this project. This may be because the analysis is still running or has not been completed yet.
-            </p>
+            <h3 className="font-subsection text-text-primary mb-2 tracking-terminal-wide">
+                  NO KEYWORD DATA AVAILABLE
+                </h3>
+                <p className="font-body text-text-secondary max-w-md mx-auto tracking-terminal-wide">
+                  KEYWORD STATISTICS NOT AVAILABLE FOR THIS PROJECT. ANALYSIS MAY BE STILL RUNNING OR NOT COMPLETED YET.
+                </p>
           </div>
         )}
       </div>

@@ -17,7 +17,7 @@ export interface ModalProps {
   /** Modal content */
   children: React.ReactNode;
   /** Modal size - terminal sizes */
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   /** Whether clicking overlay closes modal */
   closeOnOverlayClick?: boolean;
   /** Whether escape key closes modal */

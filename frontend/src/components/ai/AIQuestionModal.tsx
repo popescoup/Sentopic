@@ -154,7 +154,7 @@ const AIQuestionModal: React.FC<AIQuestionModalProps> = ({
 
               {/* Close Button */}
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onClick={onClose}
                 className="text-text-secondary hover:text-text-primary"

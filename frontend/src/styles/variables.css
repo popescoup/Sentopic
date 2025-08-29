@@ -43,12 +43,12 @@
   --font-family-mono: 'Courier New', 'SF Mono', 'Monaco', 'Consolas', monospace;
   
   /* Terminal Font Sizes - Dense Information Display */
-  --font-size-caption: 8px;        /* Table headers, small labels */
-  --font-size-small: 9px;          /* Meta text, help text */    
-  --font-size-body: 10px;          /* Primary UI text */
-  --font-size-large: 11px;         /* Section headers */
-  --font-size-title: 12px;         /* Page titles */
-  --font-size-header: 14px;        /* Main headers */
+  --font-size-caption: 12px;        /* Table headers, small labels */
+  --font-size-small: 13px;          /* Meta text, help text */    
+  --font-size-body: 14px;          /* Primary UI text */
+  --font-size-large: 15px;         /* Section headers */
+  --font-size-title: 16px;         /* Page titles */
+  --font-size-header: 18px;        /* Main headers */
   
   /* Line Heights - Terminal Density */
   --line-height-tight: 1.1;        /* ASCII logo, dense text */

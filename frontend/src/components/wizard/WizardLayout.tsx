@@ -75,7 +75,7 @@ export const WizardLayout: React.FC<WizardLayoutProps> = ({
         <div className="flex items-center space-x-3">
           {/* Cancel Button */}
           <Button
-            variant="ghost"
+            variant="secondary"
             onClick={onCancel}
             disabled={isSubmitting}
           >

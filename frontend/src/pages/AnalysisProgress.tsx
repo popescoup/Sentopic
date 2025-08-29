@@ -126,41 +126,41 @@ const AnalysisProgress: React.FC = () => {
 
             {/* Status Message */}
             <div className="mb-8">
-              <p className="font-body text-text-primary mb-1">
-                {statusMessage}
+              <p className="font-body text-text-primary mb-1 tracking-terminal-wide">
+               {'>'} {statusMessage.toUpperCase()}
               </p>
               
               {/* Phase-specific details */}
               {phase === 'collections' && (
-                <p className="font-body text-text-secondary text-sm">
-                  Processing collection {currentCollection} of {project.collections_metadata.length}
+                <p className="font-body text-text-secondary text-sm tracking-terminal-wide">
+                  PROCESSING COLLECTION {currentCollection} OF {project.collections_metadata.length}
                 </p>
               )}
               
               {phase === 'summary' && (
-                <p className="font-body text-text-secondary text-sm">
-                  Generating AI-powered insights and summary
+                <p className="font-body text-text-secondary text-sm tracking-terminal-wide">
+                  GENERATING AI-POWERED INSIGHTS AND SUMMARY
                 </p>
               )}
               
               {phase === 'complete' && (
-                <p className="font-body text-text-secondary text-sm">
-                  Redirecting to your project workspace...
+                <p className="font-body text-text-secondary text-sm tracking-terminal-wide">
+                  REDIRECTING TO PROJECT WORKSPACE...
                 </p>
               )}
             </div>
 
             {/* Analysis Details */}
-            <div className="bg-panel rounded-default p-4 border border-border-secondary">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="bg-panel p-4 border border-border">
+              <div className="grid grid-cols-2 gap-4 text-sm font-terminal">
                 <div>
-                  <span className="font-body text-text-secondary">Keywords:</span>
+                  <span className="font-body text-text-secondary tracking-terminal-wide">KEYWORDS:</span>
                   <span className="font-technical text-text-primary ml-2">
                     {project.keywords.length}
                   </span>
                 </div>
                 <div>
-                  <span className="font-body text-text-secondary">Collections:</span>
+                  <span className="font-body text-text-secondary tracking-terminal-wide">COLLECTIONS:</span>
                   <span className="font-technical text-text-primary ml-2">
                     {project.collections_metadata.length}
                   </span>

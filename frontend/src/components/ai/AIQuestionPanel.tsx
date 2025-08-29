@@ -143,7 +143,7 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
             
             {/* Expand Button */}
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={() => setIsModalOpen(true)}
               className="text-text-secondary hover:text-text-primary p-1"

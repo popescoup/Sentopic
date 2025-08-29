@@ -227,7 +227,7 @@ export const ErrorFallback: React.FC<{
       )}
       
       {resetError && (
-        <Button variant="outline" size="sm" onClick={resetError}>
+        <Button variant="secondary" size="sm" onClick={resetError}>
           Try Again
         </Button>
       )}
