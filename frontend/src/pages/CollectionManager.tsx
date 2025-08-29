@@ -11,6 +11,7 @@ import { ConfirmModal } from '@/components/ui/Modal';
 import { CollectionCreationModal } from '@/components/collections';
 import { useCollections, useDeleteCollection } from '@/hooks/useApi';
 import { getErrorMessage } from '@/api/client';
+import LoadingSpinner from '@/components/layout/LoadingSpinner';
 
 const CollectionManager: React.FC = () => {
   const { data: collectionsData, isLoading, error, refetch } = useCollections();
@@ -74,8 +75,7 @@ const CollectionManager: React.FC = () => {
       <MainLayout title="Collection Manager">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4"></div>
-            <p className="font-body text-text-secondary">Loading collections...</p>
+          <LoadingSpinner size="lg" message="Loading collections" />
           </div>
         </div>
       </MainLayout>
@@ -134,27 +134,11 @@ const CollectionManager: React.FC = () => {
 
   return (
     <MainLayout title="Collection Manager">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="font-page-title text-text-primary mb-3">
-          Collection Manager
-        </h1>
-        <p className="font-body text-text-secondary max-w-2xl">
-          Manage your Reddit data collections. Create new collections from subreddits, 
-          monitor collection progress, and organize your data sources for analysis projects.
-        </p>
-      </div>
 
       {/* Action Bar */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <Button 
-            variant="primary"
-            onClick={() => setShowCreationModal(true)}
-          >
-            + New Collection
-          </Button>
-          {selectedCollections.size > 0 && (
+      <div className="flex items-center space-x-4">
+      {selectedCollections.size > 0 && (
             <Button 
             variant="danger" 
             onClick={handleBulkDelete}
@@ -186,17 +170,30 @@ const CollectionManager: React.FC = () => {
 
       {/* Collections Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        {collections.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
-            <div className="mb-4 text-4xl">📊</div>
-            <h3 className="font-subsection text-text-primary mb-2">No collections yet</h3>
-            <p className="font-body text-text-secondary mb-4 max-w-md">
-              Start by creating your first Reddit data collection to analyze discussions and sentiment.
-            </p>
-            <Button variant="primary">
-              + Create Your First Collection
-            </Button>
+        {/* New Collection Card - Terminal Style */}
+        <div 
+          className="bg-content border-2 border-dashed border-border text-center cursor-pointer hover:border-border-dark hover:bg-panel transition-all duration-100 flex flex-col items-center justify-center font-terminal"
+          style={{ minHeight: '120px', padding: '20px' }}
+          onClick={() => setShowCreationModal(true)}
+        >
+          <div className="font-title text-text-tertiary mb-2">
+            [+]
           </div>
+          <div className="font-body text-text-primary mb-1 tracking-terminal-wide">
+            NEW COLLECTION
+          </div>
+          <div className="font-caption text-text-secondary tracking-terminal-wide">
+            CREATE DATA SOURCE
+          </div>
+        </div>
+
+        {collections.length === 0 ? (
+          <div className="col-span-2 text-center py-8">
+          <h3 className="font-subsection text-text-primary mb-2 tracking-terminal-wide">NO COLLECTIONS YET</h3>
+          <p className="font-body text-text-secondary tracking-terminal-wide">
+            CLICK THE NEW COLLECTION CARD TO START
+          </p>
+        </div>
         ) : (
           collections.map((collection) => {
             // Helper function to get status styling

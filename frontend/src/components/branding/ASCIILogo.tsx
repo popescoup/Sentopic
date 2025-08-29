@@ -1,6 +1,6 @@
 /**
  * ASCII Logo Component
- * Implements the modular geometric logo design from specifications
+ * Terminal-style ASCII logo with sharp monospace aesthetic
  */
 
 import React from 'react';
@@ -21,32 +21,33 @@ export const ASCIILogo: React.FC<ASCIILogoProps> = ({
   className = ''
 }) => {
   const logoContent = (
-    <div className={`font-mono select-none ${className}`}>
+    <div className={`font-terminal select-none ${className}`}>
       <div 
-        className="text-text-secondary hover:text-text-primary transition-colors duration-150"
+        className="text-text-primary hover:text-accent transition-colors duration-100"
         style={{
-          fontSize: '11px',
-          lineHeight: '1.0',
+          fontSize: '10px',
+          lineHeight: '1.1',
           letterSpacing: '0'
         }}
       >
-        {/* Modular Geometric ASCII Logo */}
-        <div className="whitespace-pre">
-{`┌─┐┌─┐┌┐┌┌┬┐┌─┐┌─┐┬┌─┐
-└─┐├┤ │││ │ │ │├─┘││  
-└─┘└─┘┘└┘ ┴ └─┘┴  ┴└─┘`}
+        {/* ASCII Logo - Clean SENTOPIC */}
+        <div className="whitespace-pre font-terminal">
+{`                               
+  _  _   _  _/_  _    _   .  _ 
+_\  /_' / / /   /_/  /_/ /  /_ 
+                    /          `}
         </div>
         
-        {/* Subtitle - only show on desktop/tablet */}
+        {/* Subtitle - terminal style */}
         {showSubtitle && (
-          <div className="hidden sm:block mt-1 text-[9px] tracking-wider text-text-tertiary">
+          <div className="hidden sm:block mt-1 font-caption text-text-tertiary tracking-terminal-widest">
             REDDIT ANALYTICS
           </div>
         )}
         
-        {/* Mobile text fallback */}
+        {/* Mobile text fallback - also terminal style */}
         {showSubtitle && (
-          <div className="block sm:hidden text-sm font-sans font-semibold text-text-secondary">
+          <div className="block sm:hidden font-large text-text-primary tracking-terminal-wide">
             SENTOPIC
           </div>
         )}
@@ -58,7 +59,7 @@ export const ASCIILogo: React.FC<ASCIILogoProps> = ({
     return (
       <Link 
         to="/" 
-        className="block focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 rounded-sm"
+        className="block focus:outline-none focus:ring-2 focus:ring-accent"
         aria-label="Return to Projects Dashboard"
       >
         {logoContent}

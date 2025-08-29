@@ -46,13 +46,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background font-terminal">
       {/* Header */}
       {showHeader && <AppHeader />}
 
       {/* Main Content */}
       <main className="flex-1">
-        <div className={`${maxWidthClasses[maxWidth]} mx-auto px-4 sm:px-6 lg:px-8 py-6 ${className}`}>
+        <div className={`${maxWidthClasses[maxWidth]} mx-auto terminal-spacing ${className}`}>
           {children}
         </div>
       </main>

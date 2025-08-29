@@ -1,9 +1,9 @@
 /**
  * Loading Spinner Component
- * Professional loading animations with different variants
+ * Terminal-style loading animations with ASCII aesthetic
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface LoadingSpinnerProps {
   /** Size of the spinner */
@@ -25,63 +25,57 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   overlay = false,
   className = ''
 }) => {
-  // Size classes for spinner
+  // Terminal spinner animation frames
+  const [frameIndex, setFrameIndex] = useState(0);
+  const spinFrames = ['/', '-', '\\', '|'];
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFrameIndex((prev) => (prev + 1) % spinFrames.length);
+    }, 150);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Size classes for terminal spinner
   const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-6 w-6',
-    lg: 'h-8 w-8',
-    xl: 'h-12 w-12'
+    sm: 'text-small',
+    md: 'text-body',
+    lg: 'text-large',
+    xl: 'text-title'
   };
 
   // Text size classes
   const textSizeClasses = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg',
-    xl: 'text-xl'
+    sm: 'font-small',
+    md: 'font-body',
+    lg: 'font-large',
+    xl: 'font-title'
   };
 
   const spinnerElement = (
-    <div className={`flex items-center justify-center ${centered ? 'h-full' : ''} ${className}`}>
+    <div className={`flex items-center justify-center font-terminal ${centered ? 'h-full' : ''} ${className}`}>
       <div className="flex flex-col items-center">
-        {/* Spinner */}
-        <svg
-          className={`animate-spin text-accent ${sizeClasses[size]}`}
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-label="Loading"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          />
-        </svg>
+        {/* Terminal ASCII Spinner */}
+        <div className={`text-accent ${sizeClasses[size]} font-bold`}>
+          [{spinFrames[frameIndex]}]
+        </div>
 
-        {/* Loading message */}
+        {/* Loading message - terminal style */}
         {message && (
-          <p className={`mt-3 text-text-secondary ${textSizeClasses[size]} animate-pulse`}>
-            {message}
-          </p>
+          <div className={`mt-2 text-text-secondary ${textSizeClasses[size]} tracking-terminal-wide`}>
+            {message.toUpperCase()}
+          </div>
         )}
       </div>
     </div>
   );
 
-  // Overlay variant
+  // Overlay variant - terminal panel style
   if (overlay) {
     return (
-      <div className="fixed inset-0 bg-background bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-modal">
-        <div className="bg-content rounded-default p-6 shadow-modal">
+      <div className="fixed inset-0 bg-background bg-opacity-75 flex items-center justify-center z-modal">
+        <div className="terminal-panel bg-content p-4">
           {spinnerElement}
         </div>
       </div>
@@ -91,62 +85,71 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   return spinnerElement;
 };
 
-// Simple inline spinner for buttons and small spaces
+// Terminal inline spinner for buttons
 export const InlineSpinner: React.FC<{
   size?: 'sm' | 'md';
   className?: string;
 }> = ({ size = 'sm', className = '' }) => {
+  const [frameIndex, setFrameIndex] = useState(0);
+  const spinFrames = ['/', '-', '\\', '|'];
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFrameIndex((prev) => (prev + 1) % spinFrames.length);
+    }, 150);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-5 w-5'
+    sm: 'font-small',
+    md: 'font-body'
   };
 
   return (
-    <svg
-      className={`animate-spin ${sizeClasses[size]} ${className}`}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      aria-label="Loading"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
+    <span className={`font-terminal text-accent ${sizeClasses[size]} ${className}`}>
+      {spinFrames[frameIndex]}
+    </span>
   );
 };
 
-// Professional loading state for entire page sections
+// Terminal loading state for page sections
 export const LoadingState: React.FC<{
   title?: string;
   description?: string;
   className?: string;
 }> = ({ 
-  title = 'Loading...', 
-  description = 'Please wait while we fetch your data.',
+  title = 'LOADING', 
+  description = 'PROCESSING DATA...',
   className = ''
 }) => {
   return (
-    <div className={`flex flex-col items-center justify-center py-12 ${className}`}>
+    <div className={`flex flex-col items-center justify-center py-12 font-terminal ${className}`}>
       <LoadingSpinner size="lg" />
-      <div className="mt-6 text-center">
-        <h3 className="font-subsection text-text-primary mb-2">
-          {title}
+      <div className="mt-4 text-center">
+        <h3 className="font-large text-text-primary mb-2 tracking-terminal-widest">
+          {title.toUpperCase()}
         </h3>
-        <p className="font-body text-text-secondary max-w-sm">
-          {description}
+        <p className="font-body text-text-secondary max-w-sm tracking-terminal-wide">
+          {description.toUpperCase()}
         </p>
       </div>
+    </div>
+  );
+};
+
+// Terminal progress bar component
+export const TerminalProgress: React.FC<{
+  progress: number; // 0-100
+  width?: number; // character width
+  className?: string;
+}> = ({ progress, width = 20, className = '' }) => {
+  const filled = Math.round((progress / 100) * width);
+  const empty = width - filled;
+  
+  return (
+    <div className={`font-terminal text-accent ${className}`}>
+      [{'='.repeat(filled)}{' '.repeat(empty)}] {progress.toFixed(0)}%
     </div>
   );
 };

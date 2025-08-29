@@ -1,6 +1,6 @@
 /**
  * App Header Component
- * Professional header with ASCII logo, navigation, and settings
+ * Terminal-style header with ASCII logo and tab navigation
  */
 
 import React, { useState } from 'react';
@@ -20,65 +20,81 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ className = '' }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
-  // Determine if we're on collection manager page
+  // Determine current page for tab highlighting
   const isCollectionManager = location.pathname.startsWith('/collections');
 
   return (
-    <header className={`bg-gradient-header border-b border-border-primary relative z-header ${className}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo Section */}
-          <div className="flex items-center">
-            <ASCIILogo 
-              showSubtitle={true}
-              clickable={true}
-              className="mr-6"
-            />
-          </div>
+    <header className={className}>
+      {/* Top Header Bar - Logo and Actions */}
+      <div className="bg-panel">
+        <div className="max-w-7xl mx-auto terminal-spacing">
+          <div className="flex items-center justify-between" style={{ minHeight: '48px' }}>
+            {/* Logo Section */}
+            <div className="flex items-center">
+              <ASCIILogo 
+                showSubtitle={true}
+                clickable={true}
+              />
+            </div>
 
-          {/* Navigation Section */}
-          <div className="flex items-center space-x-4">
-            {/* Collection Manager Link */}
-            <Link
-              to="/collections"
-              className={`px-3 py-2 rounded-input text-sm font-medium transition-colors duration-150 ${
-                isCollectionManager
-                  ? 'bg-accent text-white'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-hover-blue'
-              }`}
-            >
-              Collection Manager
-            </Link>
-
-            {/* Divider */}
-            <div className="h-4 w-px bg-border-secondary" />
-
-            {/* Settings Menu */}
-            <div className="relative">
+            {/* Settings and Help - Right Side */}
+            <div className="flex items-center space-x-2">
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onClick={() => setIsSettingsOpen(true)}
-                className="text-text-secondary hover:text-text-primary"
+                className="font-caption"
                 aria-label="Open settings"
               >
-                ⚙️ Settings
+                SETTINGS
               </Button>
-            </div>
 
-            {/* Help Menu */}
-            <div className="relative">
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onClick={() => setIsHelpOpen(true)}
-                className="text-text-secondary hover:text-text-primary"
+                className="font-caption"
                 aria-label="Open help"
               >
-                ? Help
+                HELP
               </Button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation Bar */}
+      <div className="bg-panel border-t border-b border-border">
+        <div className="flex">
+          {/* Projects Tab - Half Width */}
+          <Link
+            to="/"
+            className={`flex-1 px-4 py-2 font-caption border-r border-border transition-colors duration-100 text-center ${
+              !isCollectionManager
+                ? 'bg-background text-text-primary font-bold border-b-0'
+                : 'text-text-secondary hover:text-text-primary hover:bg-hover-panel'
+            }`}
+            style={{
+              marginBottom: !isCollectionManager ? '-1px' : '0'
+            }}
+          >
+            PROJECTS
+          </Link>
+
+          {/* Collections Tab - Half Width */}
+          <Link
+            to="/collections"
+            className={`flex-1 px-4 py-2 font-caption transition-colors duration-100 text-center ${
+              isCollectionManager
+                ? 'bg-background text-text-primary font-bold border-b-0'
+                : 'text-text-secondary hover:text-text-primary hover:bg-hover-panel'
+            }`}
+            style={{
+              marginBottom: isCollectionManager ? '-1px' : '0'
+            }}
+          >
+            COLLECTIONS
+          </Link>
         </div>
       </div>
 

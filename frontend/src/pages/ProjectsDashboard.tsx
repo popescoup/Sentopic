@@ -15,6 +15,7 @@ import { ConfirmModal } from '@/components/ui/Modal';
 import { useProjects, useDeleteProject } from '@/hooks/useApi';
 import { getErrorMessage } from '@/api/client';
 import type { ProjectResponse } from '@/types/api';
+import LoadingSpinner from '@/components/layout/LoadingSpinner';
 
 const ProjectsDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -128,16 +129,6 @@ const ProjectsDashboard: React.FC = () => {
   if (isLoading) {
     return (
       <MainLayout title="Projects Dashboard">
-        <div className="mb-8">
-          <h1 className="font-page-title text-text-primary mb-3">
-            Research Projects
-          </h1>
-          <p className="font-body text-text-secondary max-w-2xl">
-            Create and manage your Reddit research investigations. Each project combines 
-            keywords, data collections, and AI-powered insights to help you understand 
-            discussions and sentiment patterns.
-          </p>
-        </div>
         
         <LoadingState 
           title="Loading Projects..."
@@ -151,14 +142,6 @@ const ProjectsDashboard: React.FC = () => {
   if (error) {
     return (
       <MainLayout title="Projects Dashboard">
-        <div className="mb-8">
-          <h1 className="font-page-title text-text-primary mb-3">
-            Research Projects
-          </h1>
-          <p className="font-body text-text-secondary max-w-2xl">
-            Create and manage your Reddit research investigations.
-          </p>
-        </div>
 
         <Card className="text-center py-12">
           <div className="text-danger mb-4">
@@ -186,11 +169,11 @@ const ProjectsDashboard: React.FC = () => {
           </p>
           
           <div className="flex justify-center space-x-3">
-            <Button variant="primary" onClick={() => refetch()}>
-              Try Again
+          <Button variant="primary" onClick={() => refetch()}>
+              TRY AGAIN
             </Button>
             <Button variant="secondary" onClick={handleCreateProject}>
-              Create New Project
+              CREATE NEW PROJECT
             </Button>
           </div>
         </Card>
@@ -204,16 +187,6 @@ const ProjectsDashboard: React.FC = () => {
   if (projects.length === 0) {
     return (
       <MainLayout title="Projects Dashboard">
-        <div className="mb-8">
-          <h1 className="font-page-title text-text-primary mb-3">
-            Research Projects
-          </h1>
-          <p className="font-body text-text-secondary max-w-2xl">
-            Create and manage your Reddit research investigations. Each project combines 
-            keywords, data collections, and AI-powered insights to help you understand 
-            discussions and sentiment patterns.
-          </p>
-        </div>
 
         <Card className="text-center py-16">
           <div className="text-accent mb-6">
@@ -246,9 +219,8 @@ const ProjectsDashboard: React.FC = () => {
             variant="primary"
             size="lg"
             onClick={handleCreateProject}
-            className="font-semibold"
           >
-            Create First Project
+            CREATE FIRST PROJECT
           </Button>
           
           <div className="mt-8 pt-6 border-t border-border-primary">
@@ -271,17 +243,6 @@ const ProjectsDashboard: React.FC = () => {
   // Projects grid view
   return (
     <MainLayout title="Projects Dashboard">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="font-page-title text-text-primary mb-3">
-          Research Projects
-        </h1>
-        <p className="font-body text-text-secondary max-w-2xl">
-          Create and manage your Reddit research investigations. Each project combines 
-          keywords, data collections, and AI-powered insights to help you understand 
-          discussions and sentiment patterns.
-        </p>
-      </div>
 
       {/* Action Bar */}
       {projects.length > 0 && (
@@ -291,21 +252,16 @@ const ProjectsDashboard: React.FC = () => {
               <Button 
                 variant="danger" 
                 onClick={handleBulkDelete}
-                startIcon={
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                }
               >
-                Delete Selected ({selectedProjects.size})
+                X DELETE SELECTED ({selectedProjects.size})
               </Button>
             )}
             <Button 
-              variant="outline" 
+              variant="secondary" 
               size="sm"
               onClick={() => handleSelectAll(selectedProjects.size !== projects.length)}
             >
-              {selectedProjects.size === projects.length ? 'Deselect All' : 'Select All'}
+              {selectedProjects.size === projects.length ? 'DESELECT ALL' : 'SELECT ALL'}
             </Button>
           </div>
           
@@ -323,35 +279,22 @@ const ProjectsDashboard: React.FC = () => {
 
       {/* Projects Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* New Project Card */}
-        <Card 
-          clickable
-          hover
-          className="border-2 border-dashed border-border-secondary bg-panel text-center py-8"
+        {/* New Project Card - Terminal Style */}
+        <div 
+          className="bg-content border-2 border-dashed border-border text-center cursor-pointer hover:border-border-dark hover:bg-panel transition-all duration-100 flex flex-col items-center justify-center font-terminal"
+          style={{ minHeight: '120px', padding: '20px' }}
           onClick={handleCreateProject}
         >
-          <div className="text-accent mb-4">
-            <svg
-              className="h-12 w-12 mx-auto"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-              />
-            </svg>
+          <div className="font-title text-text-tertiary mb-2">
+            [+]
           </div>
-          <h3 className="font-subsection text-text-primary mb-2">
-            New Project
-          </h3>
-          <p className="font-body text-text-secondary">
-            Start a new research investigation
-          </p>
-        </Card>
+          <div className="font-body text-text-primary mb-1 tracking-terminal-wide">
+            NEW PROJECT
+          </div>
+          <div className="font-caption text-text-secondary tracking-terminal-wide">
+            START NEW RESEARCH
+          </div>
+        </div>
 
         {/* Existing Project Cards */}
         {projects.map((project) => {
@@ -384,7 +327,7 @@ const ProjectsDashboard: React.FC = () => {
                   </div>
                   {/* Delete button moved to top right */}
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -394,9 +337,7 @@ const ProjectsDashboard: React.FC = () => {
                     aria-label="Delete project"
                     disabled={deleteProjectMutation.isPending && deleteModal.project?.id === project.id}
                   >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    X
                   </Button>
                 </div>
                 <p className="font-small text-text-tertiary">
@@ -439,8 +380,8 @@ const ProjectsDashboard: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex space-x-2">
-                <Button
-                  variant="outline"
+              <Button
+                  variant="primary"
                   size="sm"
                   className="flex-1"
                   onClick={(e) => {
@@ -448,21 +389,15 @@ const ProjectsDashboard: React.FC = () => {
                     handleViewProject(project.id);
                   }}
                 >
-                  View Results
+                  VIEW RESULTS
                 </Button>
               </div>
 
               {/* Loading Overlay for Delete */}
               {deleteProjectMutation.isPending && deleteModal.project?.id === project.id && (
-                <div className="absolute inset-0 bg-content bg-opacity-75 flex items-center justify-center rounded-default">
-                  <div className="flex items-center space-x-2">
-                    <svg className="animate-spin h-4 w-4 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span className="font-small text-text-secondary">Deleting...</span>
-                  </div>
-                </div>
+                <div className="absolute inset-0 bg-content bg-opacity-75 flex items-center justify-center">
+                <LoadingSpinner size="sm" message="Deleting" />
+              </div>
               )}
             </Card>
           );
@@ -500,17 +435,17 @@ const ProjectsDashboard: React.FC = () => {
           </div>
           
           <div className="flex space-x-3">
-            <Button
-              variant="outline"
+          <Button
+              variant="secondary"
               onClick={() => navigate('/collections')}
             >
-              Manage Collections
+              MANAGE COLLECTIONS
             </Button>
             <Button
               variant="primary"
               onClick={handleCreateProject}
             >
-              New Project
+              NEW PROJECT
             </Button>
           </div>
         </div>
