@@ -51,19 +51,23 @@ export default {
         primary: ['Courier New', 'Courier', 'monospace']
       },
       fontSize: {
-        // Terminal font scale - dense information display
+        // Existing terminal font scale
         'caption': ['8px', { lineHeight: '1.1', letterSpacing: '0.5px' }],
-        'small': ['9px', { lineHeight: '1.3', letterSpacing: '0.5px' }],
-        'body': ['10px', { lineHeight: '1.3' }],
-        'large': ['11px', { lineHeight: '1.3' }],
-        'title': ['12px', { lineHeight: '1.1', letterSpacing: '1px' }],
-        'header': ['14px', { lineHeight: '1.1', letterSpacing: '-0.5px' }],
+        'small': ['10px', { lineHeight: '1.3', letterSpacing: '0.5px' }],    // Increased from 9px
+        'body': ['12px', { lineHeight: '1.3' }],                             // Increased from 10px
+        'large': ['14px', { lineHeight: '1.3' }],                            // Increased from 11px
+        'title': ['16px', { lineHeight: '1.1', letterSpacing: '1px' }],      // Increased from 12px
+        'header': ['18px', { lineHeight: '1.1', letterSpacing: '-0.5px' }],  // Increased from 14px
         
-        // Legacy aliases for gradual migration
-        'page-title': ['12px', { lineHeight: '1.1', letterSpacing: '1px' }],
-        'section-header': ['11px', { lineHeight: '1.3', letterSpacing: '1px' }],
-        'subsection': ['10px', { lineHeight: '1.3' }],
-        'technical': ['10px', { lineHeight: '1.3' }]
+        // New larger sizes for buttons
+        'button-lg': ['16px', { lineHeight: '1.2', letterSpacing: '0.5px' }],
+        'button-xl': ['18px', { lineHeight: '1.2', letterSpacing: '0.5px' }],
+        
+        // Legacy aliases (updated)
+        'page-title': ['16px', { lineHeight: '1.1', letterSpacing: '1px' }],
+        'section-header': ['14px', { lineHeight: '1.3', letterSpacing: '1px' }],
+        'subsection': ['12px', { lineHeight: '1.3' }],
+        'technical': ['12px', { lineHeight: '1.3' }]
       },
       spacing: {
         // Terminal spacing scale - dense layout (4px base)
