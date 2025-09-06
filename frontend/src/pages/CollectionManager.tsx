@@ -274,19 +274,17 @@ const CollectionManager: React.FC = () => {
                         r/{collection.subreddit}
                       </h3>
                     </div>
-                    <Button 
-                      variant="secondary" 
-                      size="sm"
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteCollection(collection);
                       }}
-                      className="text-text-secondary hover:text-danger -mr-2 -mt-1"
+                      className="text-text-secondary hover:text-danger -mr-0.3 -mt-1 font-terminal text-lg font-bold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                       aria-label="Delete collection"
                       disabled={deleteCollectionMutation.isPending && deleteModal.collection?.id === collection.id}
                     >
-                      X
-                    </Button>
+                      ×
+                    </button>
                   </div>
                   <p className="font-small text-text-tertiary">
                     {getCollectionDescription(collection)}

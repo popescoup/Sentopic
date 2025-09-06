@@ -324,19 +324,17 @@ const ProjectsDashboard: React.FC = () => {
                     </h3>
                   </div>
                   {/* Delete button moved to top right */}
-                  <Button
-                    variant="secondary"
-                    size="sm"
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteProject(project);
                     }}
-                    className="text-text-secondary hover:text-danger -mr-2 -mt-1"
+                    className="text-text-secondary hover:text-danger -mr-0.3 -mt-1 font-terminal text-lg font-bold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Delete project"
                     disabled={deleteProjectMutation.isPending && deleteModal.project?.id === project.id}
                   >
-                    X
-                  </Button>
+                    ×
+                  </button>
                 </div>
                 <p className="font-small text-text-tertiary">
                   Created {formatDate(project.created_at)} • {project.collections_metadata.map(c => `r/${c.subreddit}`).join(', ')}
