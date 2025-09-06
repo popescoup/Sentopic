@@ -37,8 +37,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         className="max-h-[90vh]"
       >
         <div className="h-[70vh] flex flex-col">
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
             {statusLoading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">

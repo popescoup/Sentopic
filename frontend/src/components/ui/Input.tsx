@@ -39,9 +39,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
     // Terminal size classes - dense spacing
     const sizeClasses = {
-      sm: 'px-1.5 py-1 text-small',
-      md: 'px-2 py-1 text-body',
-      lg: 'px-2 py-1.5 text-large'
+      sm: 'px-1.5 py-1 text-body',     // 12px (was 10px)
+      md: 'px-2 py-1 text-large',      // 14px (was 12px)
+      lg: 'px-2 py-1.5 text-title'     // 16px (was 14px)
     };
 
     // Base terminal input classes

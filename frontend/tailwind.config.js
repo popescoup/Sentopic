@@ -52,12 +52,12 @@ export default {
       },
       fontSize: {
         // Existing terminal font scale
-        'caption': ['8px', { lineHeight: '1.1', letterSpacing: '0.5px' }],
-        'small': ['10px', { lineHeight: '1.3', letterSpacing: '0.5px' }],    // Increased from 9px
-        'body': ['12px', { lineHeight: '1.3' }],                             // Increased from 10px
-        'large': ['14px', { lineHeight: '1.3' }],                            // Increased from 11px
-        'title': ['16px', { lineHeight: '1.1', letterSpacing: '1px' }],      // Increased from 12px
-        'header': ['18px', { lineHeight: '1.1', letterSpacing: '-0.5px' }],  // Increased from 14px
+        'caption': ['10px', { lineHeight: '1.1', letterSpacing: '0.5px' }],
+        'small': ['12px', { lineHeight: '1.3', letterSpacing: '0.5px' }],    // Increased from 10px
+        'body': ['14px', { lineHeight: '1.3' }],                             // Increased from 12px  
+        'large': ['16px', { lineHeight: '1.3' }],                            // Increased from 14px
+        'title': ['18px', { lineHeight: '1.1', letterSpacing: '1px' }],      // Increased from 16px
+        'header': ['20px', { lineHeight: '1.1', letterSpacing: '-0.5px' }],
         
         // New larger sizes for buttons
         'button-lg': ['16px', { lineHeight: '1.2', letterSpacing: '0.5px' }],
