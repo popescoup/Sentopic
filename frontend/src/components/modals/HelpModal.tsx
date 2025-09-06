@@ -26,12 +26,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({
   size="xl"
   className="max-h-[85vh]"
 >
-  <div className="h-[60vh] overflow-hidden">
-        {/* Scrollable Content Area */}
-        <div className="h-full overflow-y-auto px-2 pt-2 pb-0">
-          <HelpContent />
-        </div>
-      </div>
+<div className="max-h-[60vh] overflow-y-auto px-2 pt-2 pb-0">
+  <HelpContent />
+</div>
     </Modal>
   );
 };
