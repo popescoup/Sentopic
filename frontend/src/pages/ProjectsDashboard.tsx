@@ -129,8 +129,9 @@ const ProjectsDashboard: React.FC = () => {
   if (isLoading) {
     return (
       <MainLayout title="Projects Dashboard">
-        
-        <LoadingSpinner size="lg" message="Loading Projects..." />
+        <div className="flex items-center justify-center py-12">
+          <LoadingSpinner size="lg" message="Loading Projects..." />
+        </div>
       </MainLayout>
     );
   }
