@@ -394,19 +394,105 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({
     keywords.forEach((keyword, index) => {
       const legendRow = legend.append('g')
         .attr('transform', `translate(0, ${index * 25})`);
-
+    
       legendRow.append('line')
         .attr('x1', 0)
         .attr('x2', 15)
         .attr('stroke', colorScale(keyword))
         .attr('stroke-width', 2.5);
-
-      legendRow.append('text')
+    
+      const textElement = legendRow.append('text')
         .attr('x', 20)
         .attr('y', 0)
-        .attr('dy', '0.35em')
-        .attr('class', 'font-small fill-text-primary')
-        .text(keyword);
+        .attr('class', 'font-small fill-text-primary');
+    
+      // Break keyword into chunks of maximum 9 characters per line
+      const maxCharsPerLine = 9;
+      const lineHeight = 12; // pixels between lines
+      
+      if (keyword.length <= maxCharsPerLine) {
+        // Single line - use normal positioning
+        textElement.append('tspan')
+          .attr('x', 20)
+          .attr('dy', '0.35em')
+          .text(keyword);
+      } else {
+        // Multiple lines needed
+        const words = keyword.split(' ');
+        let currentLine = '';
+        let lineNumber = 0;
+        
+        words.forEach((word, wordIndex) => {
+          // Check if adding this word would exceed the line limit
+          const testLine = currentLine ? currentLine + ' ' + word : word;
+          
+          if (testLine.length <= maxCharsPerLine) {
+            // Word fits on current line
+            currentLine = testLine;
+            
+            // If this is the last word, add the line
+            if (wordIndex === words.length - 1) {
+              textElement.append('tspan')
+                .attr('x', 20)
+                .attr('dy', lineNumber === 0 ? '0.35em' : `${lineHeight}px`)
+                .text(currentLine);
+            }
+          } else {
+            // Word doesn't fit - finish current line and start new one
+            if (currentLine) {
+              textElement.append('tspan')
+                .attr('x', 20)
+                .attr('dy', lineNumber === 0 ? '0.35em' : `${lineHeight}px`)
+                .text(currentLine);
+              lineNumber++;
+            }
+            
+            // Handle the word that didn't fit
+            if (word.length <= maxCharsPerLine) {
+              // Word fits on its own line
+              currentLine = word;
+              
+              // If this is the last word, add the line
+              if (wordIndex === words.length - 1) {
+                textElement.append('tspan')
+                  .attr('x', 20)
+                  .attr('dy', `${lineHeight}px`)
+                  .text(currentLine);
+              }
+            } else {
+              // Word is too long - need to break it
+              let remainingWord = word;
+              
+              while (remainingWord.length > 0) {
+                if (remainingWord.length <= maxCharsPerLine) {
+                  // Last piece fits
+                  const prefix = lineNumber > 0 || currentLine ? '-' : '';
+                  textElement.append('tspan')
+                    .attr('x', 20)
+                    .attr('dy', lineNumber === 0 ? '0.35em' : `${lineHeight}px`)
+                    .text(prefix + remainingWord);
+                  lineNumber++;
+                  remainingWord = '';
+                } else {
+                  // Need to break the word
+                  const charsToTake = lineNumber > 0 ? maxCharsPerLine - 1 : maxCharsPerLine; // Reserve space for hyphen on continuation lines
+                  const piece = remainingWord.substring(0, charsToTake);
+                  
+                  textElement.append('tspan')
+                    .attr('x', 20)
+                    .attr('dy', lineNumber === 0 ? '0.35em' : `${lineHeight}px`)
+                    .text(lineNumber > 0 ? '-' + piece : piece);
+                  
+                  remainingWord = remainingWord.substring(charsToTake);
+                  lineNumber++;
+                }
+              }
+              
+              currentLine = '';
+            }
+          }
+        });
+      }
     });
 
     // Add zero line for sentiment charts
