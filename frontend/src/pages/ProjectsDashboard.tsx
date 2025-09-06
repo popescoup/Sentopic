@@ -309,16 +309,17 @@ const ProjectsDashboard: React.FC = () => {
               <div className="mb-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center space-x-3 flex-1">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleSelectProject(project.id, e.target.checked);
-                      }}
-                      className="h-4 w-4 text-accent focus:ring-accent border-border-secondary rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                  <div 
+                    className="h-4 w-4 border border-border-secondary bg-content cursor-pointer flex items-center justify-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectProject(project.id, !isSelected);
+                    }}
+                  >
+                    {isSelected && (
+                      <div className="h-2 w-2 bg-accent"></div>
+                    )}
+                  </div>
                     <h3 className="font-subsection text-text-primary mb-1 flex-1">
                       {project.name}
                     </h3>

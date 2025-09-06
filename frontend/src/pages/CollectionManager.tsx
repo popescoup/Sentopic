@@ -260,16 +260,17 @@ const CollectionManager: React.FC = () => {
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedCollections.has(collection.id)}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleSelectCollection(collection.id, e.target.checked);
-                        }}
-                        className="h-4 w-4 text-accent focus:ring-accent border-border-secondary rounded"
-                        onClick={(e) => e.stopPropagation()}
-                      />
+                    <div 
+  className="h-4 w-4 border border-border-secondary bg-content cursor-pointer flex items-center justify-center"
+  onClick={(e) => {
+    e.stopPropagation();
+    handleSelectCollection(collection.id, !selectedCollections.has(collection.id));
+  }}
+>
+  {selectedCollections.has(collection.id) && (
+    <div className="h-2 w-2 bg-accent"></div>
+  )}
+</div>
                       <h3 className="font-subsection text-text-primary">
                         r/{collection.subreddit}
                       </h3>

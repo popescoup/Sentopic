@@ -10,6 +10,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* === FORCE SHARP CHECKBOX CORNERS === */
+input[type="checkbox"] {
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  -moz-border-radius: 0 !important;
+}
+
+input[type="checkbox"]:focus {
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  -moz-border-radius: 0 !important;
+}
+
+input[type="checkbox"]:checked {
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  -moz-border-radius: 0 !important;
+}
+
 /* NO Google Fonts - Using system monospace fonts only */
 /* Terminal aesthetic relies on built-in monospace fonts */
 
