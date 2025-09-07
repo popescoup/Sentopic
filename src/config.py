@@ -356,14 +356,14 @@ class Config:
             # Get all analysis sessions
             analysis_sessions = db.get_analysis_sessions()
             
-            # Delete each analysis session (this cascades to all related data)
+            # Delete each analysis session (this now cascades to chat sessions automatically)
             for session in analysis_sessions:
                 analytics_engine.delete_session(session.id)
             
             # Get all collections
             collections = db.get_collections()
             
-            # Delete each collection (this cascades to posts and comments)
+            # Delete each collection (this now cascades to posts, comments, and embeddings automatically)
             session = db.get_session()
             try:
                 for collection in collections:
@@ -372,7 +372,7 @@ class Config:
             finally:
                 session.close()
             
-            return True, f"Successfully cleared all data: {len(analysis_sessions)} projects and {len(collections)} collections deleted"
+            return True, f"Successfully cleared all data: {len(analysis_sessions)} projects and {len(collections)} collections deleted (with full cascade deletion)"
             
         except Exception as e:
             return False, f"Failed to clear data: {str(e)}"

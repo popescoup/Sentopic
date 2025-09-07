@@ -28,6 +28,7 @@ class Collection(Base):
     # Relationships (simplified - no cross-references between Post and Comment)
     posts = relationship("Post", back_populates="collection", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="collection", cascade="all, delete-orphan")
+    content_embeddings = relationship("ContentEmbedding", back_populates="collection", cascade="all, delete-orphan")
 
 
 class Post(Base):
@@ -90,6 +91,7 @@ class AnalysisSession(Base):
     keyword_stats = relationship("KeywordStat", back_populates="session", cascade="all, delete-orphan")
     keyword_cooccurrences = relationship("KeywordCooccurrence", back_populates="session", cascade="all, delete-orphan")
     llm_summary = relationship("LLMSummary", back_populates="session", uselist=False, cascade="all, delete-orphan")
+    chat_sessions = relationship("ChatSession", back_populates="analysis_session", cascade="all, delete-orphan")
 
 
 class KeywordMention(Base):
@@ -165,11 +167,14 @@ class ContentEmbedding(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     content_type = Column(String, nullable=False)  # 'post' or 'comment'
     content_id = Column(String, nullable=False)  # reddit_id from posts or comments
-    collection_id = Column(String, nullable=False)
+    collection_id = Column(String, ForeignKey('collections.id'), nullable=False)
     embedding = Column(LargeBinary, nullable=False)  # Serialized vector embedding
     model = Column(String, nullable=False)  # Model used to generate embedding
     provider = Column(String, nullable=False)  # Provider used ('openai', 'local', etc.)
     created_at = Column(Integer, nullable=False)
+    
+    # Relationships
+    collection = relationship("Collection", back_populates="content_embeddings")
     
     # Composite index for efficient lookups
     __table_args__ = (
@@ -188,6 +193,7 @@ class ChatSession(Base):
     
     # Relationships
     messages = relationship("ChatMessage", back_populates="chat_session", cascade="all, delete-orphan")
+    analysis_session = relationship("AnalysisSession", back_populates="chat_sessions")
 
 
 class ChatMessage(Base):
