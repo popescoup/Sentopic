@@ -273,19 +273,17 @@ export const CollectionSelector: React.FC<CollectionSelectorProps> = ({
                 </div>
                 
                 {/* Selection Checkbox */}
-                <div className={`
-                  w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-150
-                  ${isSelected 
-                    ? 'bg-accent border-accent' 
-                    : 'border-border-secondary hover:border-accent'
-                  }
-                `}>
-                  {isSelected && (
-                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
+<div className={`
+  w-5 h-5 border-2 flex items-center justify-center transition-all duration-150
+  ${isSelected 
+    ? 'bg-accent border-accent' 
+    : 'border-border-secondary hover:border-accent'
+  }
+`}>
+  {isSelected && (
+    <div className="w-2 h-2 bg-white"></div>
+  )}
+</div>
               </div>
 
               {/* Collection Stats */}

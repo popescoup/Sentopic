@@ -30,16 +30,16 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
     updateFormData({ projectName: event.target.value });
   };
 
-  const handlePartialMatchingChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    updateFormData({ partialMatching: event.target.checked });
+  const handlePartialMatchingChange = () => {
+    updateFormData({ partialMatching: !formData.partialMatching });
   };
 
   const handleContextWindowChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     updateFormData({ contextWindow: parseInt(event.target.value) || 150 });
   };
 
-  const handleGenerateSummaryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    updateFormData({ generateSummary: event.target.checked });
+  const handleGenerateSummaryChange = () => {
+    updateFormData({ generateSummary: !formData.generateSummary });
   };
 
   // Get selected collections data
@@ -95,13 +95,15 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
             <div className="space-y-4">
               {/* Partial Matching */}
               <div>
-                <label className="flex items-start space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.partialMatching}
-                    onChange={handlePartialMatchingChange}
-                    className="mt-1 rounded border-border-secondary focus:border-accent focus:ring-accent"
-                  />
+              <div className="flex items-start space-x-3">
+                  <div 
+                    className="h-4 w-4 border border-border-secondary bg-content cursor-pointer flex items-center justify-center flex-shrink-0 mt-0.5"
+                    onClick={handlePartialMatchingChange}
+                  >
+                    {formData.partialMatching && (
+                      <div className="h-2 w-2 bg-accent"></div>
+                    )}
+                  </div>
                   <div>
                     <div className="font-medium text-text-primary">
                       Partial Keyword Matching
@@ -110,7 +112,7 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
                       Find keywords as parts of larger words (e.g., "program" matches "programming")
                     </div>
                   </div>
-                </label>
+                </div>
               </div>
 
               {/* Context Window */}
@@ -138,13 +140,15 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
 
               {/* AI Summary */}
               <div>
-                <label className="flex items-start space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={formData.generateSummary}
-                    onChange={handleGenerateSummaryChange}
-                    className="mt-1 rounded border-border-secondary focus:border-accent focus:ring-accent"
-                  />
+              <div className="flex items-start space-x-3">
+                  <div 
+                    className="h-4 w-4 border border-border-secondary bg-content cursor-pointer flex items-center justify-center flex-shrink-0 mt-0.5"
+                    onClick={handleGenerateSummaryChange}
+                  >
+                    {formData.generateSummary && (
+                      <div className="h-2 w-2 bg-accent"></div>
+                    )}
+                  </div>
                   <div>
                     <div className="font-medium text-text-primary">
                       Generate AI Summary
@@ -153,7 +157,7 @@ export const ConfigurationStep: React.FC<ConfigurationStepProps> = ({
                       Create an AI-powered summary of key findings and insights
                     </div>
                   </div>
-                </label>
+                </div>
               </div>
             </div>
           </Card>
