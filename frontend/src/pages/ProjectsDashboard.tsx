@@ -276,11 +276,11 @@ const ProjectsDashboard: React.FC = () => {
       )}
 
       {/* Projects Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="projects-grid">
         {/* New Project Card - Terminal Style */}
         <div 
           className="bg-content border-2 border-dashed border-border text-center cursor-pointer hover:border-border-dark hover:bg-panel transition-all duration-100 flex flex-col items-center justify-center font-terminal"
-          style={{ minHeight: '120px', padding: '20px' }}
+          style={{ minHeight: '155px', padding: '20px' }}
           onClick={handleCreateProject}
         >
           <div className="font-title text-text-tertiary mb-2">

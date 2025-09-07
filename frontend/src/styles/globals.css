@@ -490,3 +490,29 @@ body {
 .hover-lift:hover {
   animation: cardLift 0.15s var(--transition-sophisticated) forwards;
 }
+
+/* === PROJECT CARDS GRID LAYOUT === */
+.projects-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(1, 1fr);
+  align-items: center; /* Center cards vertically within each row */
+}
+
+@media (min-width: 768px) {
+  .projects-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .projects-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Ensure each grid item centers its content */
+.projects-grid > * {
+  justify-self: stretch; /* Fill width */
+  align-self: center;    /* Center vertically in row */
+}
