@@ -26,13 +26,13 @@ export default {
         },
         // Terminal accent colors
         accent: '#0066cc',
-        success: '#00ff41',  // Terminal green
+        success: '#00cc33',  // Terminal green
         warning: '#ffb000',  // Amber
         danger: '#cc0000',   // Bold red
         info: '#00ffff',     // Cyan
         // Sentiment colors
         sentiment: {
-          positive: '#00ff41',
+          positive: '#00cc33',
           negative: '#cc0000',
           neutral: '#666666'
         },

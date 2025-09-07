@@ -362,7 +362,6 @@ export const HelpContent: React.FC<HelpContentProps> = ({ className = '' }) => {
               </p>
               <ul className="list-disc list-inside space-y-1 text-text-secondary ml-4">
                 <li><strong>Be specific:</strong> "What are the main complaints about delivery apps?" vs. "Tell me about sentiment"</li>
-                <li><strong>Ask for examples:</strong> Request specific Reddit discussions that support insights</li>
                 <li><strong>Explore connections:</strong> Ask about relationships between different keywords</li>
                 <li><strong>Business focus:</strong> Frame questions around actionable business decisions</li>
               </ul>
