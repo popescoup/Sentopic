@@ -8,7 +8,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/Modal';
-import { CollectionCreationModal } from '@/components/collections';
+import { useNavigate } from 'react-router-dom';
 import { useCollections, useDeleteCollection } from '@/hooks/useApi';
 import { getErrorMessage } from '@/api/client';
 import LoadingSpinner from '@/components/layout/LoadingSpinner';
@@ -16,9 +16,7 @@ import LoadingSpinner from '@/components/layout/LoadingSpinner';
 const CollectionManager: React.FC = () => {
   const { data: collectionsData, isLoading, error, refetch } = useCollections();
   const deleteCollectionMutation = useDeleteCollection();
-  
-  // State for collection creation modal
-  const [showCreationModal, setShowCreationModal] = useState(false);
+  const navigate = useNavigate();
   
   // State for delete confirmation modal
   const [deleteModal, setDeleteModal] = useState<{
@@ -174,7 +172,7 @@ const CollectionManager: React.FC = () => {
         <div 
           className="bg-content border-2 border-dashed border-border text-center cursor-pointer hover:border-border-dark hover:bg-panel transition-all duration-100 flex flex-col items-center justify-center font-terminal"
           style={{ minHeight: '120px', padding: '20px' }}
-          onClick={() => setShowCreationModal(true)}
+          onClick={() => navigate('/collections/new')}
         >
           <div className="font-title text-text-tertiary mb-2">
             [+]
@@ -261,16 +259,16 @@ const CollectionManager: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-3">
                     <div 
-  className="h-4 w-4 border border-border-secondary bg-content cursor-pointer flex items-center justify-center"
-  onClick={(e) => {
-    e.stopPropagation();
-    handleSelectCollection(collection.id, !selectedCollections.has(collection.id));
-  }}
->
-  {selectedCollections.has(collection.id) && (
-    <div className="h-2 w-2 bg-accent"></div>
-  )}
-</div>
+                      className="h-4 w-4 border border-border-secondary bg-content cursor-pointer flex items-center justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectCollection(collection.id, !selectedCollections.has(collection.id));
+                      }}
+                    >
+                      {selectedCollections.has(collection.id) && (
+                        <div className="h-2 w-2 bg-accent"></div>
+                      )}
+                    </div>
                       <h3 className="font-subsection text-text-primary">
                         r/{collection.subreddit}
                       </h3>
@@ -339,16 +337,6 @@ const CollectionManager: React.FC = () => {
           })
         )}
       </div>
-
-{/* Collection Creation Modal */}
-<CollectionCreationModal
-  isOpen={showCreationModal}
-  onClose={() => setShowCreationModal(false)}
-  onSuccess={() => {
-    setShowCreationModal(false);
-    refetch(); // Refresh the collections list
-  }}
-/>
 
 {/* Delete Confirmation Modal */}
 <ConfirmModal

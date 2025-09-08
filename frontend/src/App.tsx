@@ -13,6 +13,7 @@ import ProjectWorkspace from '@/pages/ProjectWorkspace';
 import CollectionManager from '@/pages/CollectionManager';
 import ProjectSetupWizard from '@/pages/ProjectSetupWizard';
 import AnalysisProgress from '@/pages/AnalysisProgress';
+import CollectionSetupWizard from '@/pages/CollectionSetupWizard';
 
 // Create QueryClient for TanStack Query
 const queryClient = new QueryClient({
@@ -71,6 +72,9 @@ function App() {
   
             {/* Collection manager route */}
             <Route path="/collections" element={<CollectionManager />} />
+
+            {/* Collection setup wizard route */}
+            <Route path="/collections/new" element={<CollectionSetupWizard />} />
   
             {/* Redirect old paths */}
             <Route path="/dashboard" element={<Navigate to="/" replace />} />

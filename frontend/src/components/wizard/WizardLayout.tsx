@@ -37,7 +37,7 @@ export interface WizardLayoutProps {
   /** Next button handler */
   onNext: () => void;
   /** Cancel button handler */
-  onCancel: () => void;
+  onCancel?: () => void;
   /** Additional CSS classes */
   className?: string;
 }
@@ -74,13 +74,15 @@ export const WizardLayout: React.FC<WizardLayoutProps> = ({
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
           {/* Cancel Button */}
-          <Button
-            variant="secondary"
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
+          {onCancel && (
+            <Button
+              variant="secondary"
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+          )}
 
           {/* Previous Button */}
           <Button
