@@ -177,37 +177,54 @@ const CollectionSetupWizard = () => {
     </div>
   ) : null;
 
-  // Main render
-  return (
-    <MainLayout title="Create New Collection">
-      <div className="mb-6">
-        {breadcrumbContent}
+  // If we're on the progress step (step 4), render only the progress content
+  if (currentStep === 4) {
+    return (
+      <MainLayout title="Collection in Progress">
+        <div className="max-w-4xl mx-auto mt-12">
+          <ProgressStep
+          formData={formData}
+          updateFormData={updateFormData}
+          errors={validateCollectionStep(currentStep, formData).errors}
+          onComplete={handleCollectionComplete}
+          createCollectionsMutation={createCollectionsMutation}
+        />
       </div>
-  
-      <div className="mb-8">
-        {pageHeaderContent}
-      </div>
-  
-      <div className="max-w-4xl mx-auto">
-        <WizardLayout
-          steps={steps}
-          currentStep={currentStep}
-          onStepClick={currentStep !== 4 ? goToStep : undefined}
-          canGoBack={canGoBack && currentStep !== 4}
-          canGoNext={canGoNext && isStepComplete(currentStep)}
-          onPrevious={handlePrevious}
-          onNext={handleNext}
-          onCancel={currentStep !== 4 ? handleCancel : undefined}
-          isSubmitting={isSubmitting}
-          submitText={currentStep === 3 ? 'Start Collection' : 'Next'}
-        >
-          {CurrentStepComponent && React.createElement(CurrentStepComponent, stepComponentProps)}
-        </WizardLayout>
-      </div>
-  
-      {errorDisplayContent}
     </MainLayout>
   );
+}
+
+// For other steps, render the full wizard layout
+return (
+  <MainLayout title="Create New Collection">
+    <div className="mb-6">
+      {breadcrumbContent}
+    </div>
+
+    <div className="mb-8">
+      {pageHeaderContent}
+    </div>
+
+    <div className="max-w-4xl mx-auto">
+      <WizardLayout
+        steps={steps}
+        currentStep={currentStep}
+        onStepClick={goToStep}
+        canGoBack={canGoBack}
+        canGoNext={canGoNext && isStepComplete(currentStep)}
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        onCancel={handleCancel}
+        isSubmitting={isSubmitting}
+        submitText={currentStep === 3 ? 'Start Collection' : 'Next'}
+      >
+        {CurrentStepComponent && React.createElement(CurrentStepComponent, stepComponentProps)}
+      </WizardLayout>
+    </div>
+
+    {errorDisplayContent}
+  </MainLayout>
+);
 };
 
 export default CollectionSetupWizard;

@@ -103,16 +103,6 @@ export const ProgressStep: React.FC<ProgressStepProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <h3 className="font-subsection text-text-primary mb-2">
-          Collection in Progress
-        </h3>
-        <p className="font-body text-text-secondary">
-          Collecting data from {formData.subreddits.length} subreddit{formData.subreddits.length !== 1 ? 's' : ''}
-        </p>
-      </div>
-
       {/* Overall Progress */}
       <Card className={`${overallStyling.bg} border-2 border-current ${overallStyling.color}`}>
         <div className="flex items-center justify-between mb-4">
