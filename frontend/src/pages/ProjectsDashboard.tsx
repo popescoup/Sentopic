@@ -418,35 +418,6 @@ const ProjectsDashboard: React.FC = () => {
         cancelText="Cancel"
         variant="danger"
       />
-
-      {/* Stats Footer */}
-      <div className="mt-12 bg-panel rounded-default p-6 border border-border-primary">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-subsection text-text-primary mb-1">
-              Project Overview
-            </h3>
-            <p className="font-body text-text-secondary">
-              {projects.length} {projects.length === 1 ? 'project' : 'projects'} total
-            </p>
-          </div>
-          
-          <div className="flex space-x-3">
-          <Button
-              variant="secondary"
-              onClick={() => navigate('/collections')}
-            >
-              MANAGE COLLECTIONS
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleCreateProject}
-            >
-              NEW PROJECT
-            </Button>
-          </div>
-        </div>
-      </div>
     </MainLayout>
   );
 };
