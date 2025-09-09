@@ -12,12 +12,44 @@ import { useNavigate } from 'react-router-dom';
 import { useCollections, useDeleteCollection } from '@/hooks/useApi';
 import { getErrorMessage } from '@/api/client';
 import LoadingSpinner from '@/components/layout/LoadingSpinner';
+import { DashboardHeader, ManagementControls, type SortOption } from '@/components/dashboard';
+import { useDashboardSort } from '@/hooks/useDashboardSort';
 
 const CollectionManager: React.FC = () => {
   const { data: collectionsData, isLoading, error, refetch } = useCollections();
   const deleteCollectionMutation = useDeleteCollection();
   const navigate = useNavigate();
-  
+
+  const collections = collectionsData?.collections || [];
+  const totalCount = collectionsData?.total_count || 0;
+
+  // Sort functionality - MUST be called before any conditional returns
+  const { sortedItems: sortedCollections, handleSort, getCurrentSortValue } = useDashboardSort(
+    collections,
+    'date',
+    'desc'
+  );
+
+  // Sort options for collections
+  const collectionSortOptions: SortOption[] = [
+    { value: 'subreddit-asc', label: 'NAME (A-Z)' },
+    { value: 'subreddit-desc', label: 'NAME (Z-A)' },
+    { value: 'date-desc', label: 'NEWEST FIRST' },
+    { value: 'date-asc', label: 'OLDEST FIRST' },
+    { value: 'posts-desc', label: 'MOST POSTS' },
+    { value: 'posts-asc', label: 'LEAST POSTS' },
+  ];
+
+  // Calculate stats
+  const totalPosts = collections.reduce((sum, collection) => sum + collection.posts_collected, 0);
+  const totalComments = collections.reduce((sum, collection) => sum + collection.comments_collected, 0);
+
+  const dashboardStats = [
+    { value: collections.length, label: 'Total Collections' },
+    { value: totalPosts.toLocaleString(), label: 'Total Posts' },
+    { value: totalComments.toLocaleString(), label: 'Total Comments' },
+  ];
+
   // State for delete confirmation modal
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
@@ -127,47 +159,37 @@ const CollectionManager: React.FC = () => {
     });
   };
 
-  const collections = collectionsData?.collections || [];
-  const totalCount = collectionsData?.total_count || 0;
-
   return (
-    <MainLayout title="Collection Manager">
-
-      {/* Action Bar */}
-      <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center space-x-4">
-      {selectedCollections.size > 0 && (
-            <Button 
-            variant="danger" 
-            onClick={handleBulkDelete}
-          >
-            X DELETE SELECTED ({selectedCollections.size})
-          </Button>
-          )}
-          {collections.length > 0 && (
-            <Button 
-            variant="secondary" 
-            size="sm"
-            onClick={() => handleSelectAll(selectedCollections.size !== collections.length)}
-          >
-            {selectedCollections.size === collections.length ? 'DESELECT ALL' : 'SELECT ALL'}
-          </Button>
-          )}
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <span className="font-body text-text-secondary">
-            {selectedCollections.size > 0 
-              ? `${selectedCollections.size} selected • `
-              : ''
-            }
-            {totalCount} {totalCount === 1 ? 'collection' : 'collections'}
-          </span>
-        </div>
-      </div>
-
-      {/* Collections Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+    <MainLayout title="Collection Manager" className="dashboard-spacing">
+      {/* Level 1: Page Header */}
+      <DashboardHeader 
+        title="Collection Manager"
+        subtitle="Reddit Data Collection Management Interface"
+      />
+  
+      {/* Level 2: Management Controls with Stats */}
+      {collections.length > 0 && (
+        <ManagementControls
+          title="Collection Management"
+          selectedCount={selectedCollections.size}
+          totalCount={collections.length}
+          sortOptions={collectionSortOptions}
+          currentSort={getCurrentSortValue()}
+          onSelectAll={() => handleSelectAll(true)}
+          onDeselectAll={() => handleSelectAll(false)}
+          onSort={handleSort}
+          onBulkDelete={handleBulkDelete}
+          isAllSelected={selectedCollections.size === collections.length && collections.length > 0}
+          stats={dashboardStats}
+        />
+      )}
+  
+      {/* Level 3: Collections Grid */}
+      <div className="dashboard-level-4">
+        <h4 className="font-large text-text-primary mb-4">
+          Collection Repository
+        </h4>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
         {/* New Collection Card - Terminal Style */}
         <div 
           className="bg-content border-2 border-dashed border-border text-center cursor-pointer hover:border-border-dark hover:bg-panel transition-all duration-100 flex flex-col items-center justify-center font-terminal"
@@ -193,7 +215,7 @@ const CollectionManager: React.FC = () => {
           </p>
         </div>
         ) : (
-          collections.map((collection) => {
+          sortedCollections.map((collection) => {
             // Helper function to get status styling
             const getStatusStyling = (status: string) => {
               switch (status) {
@@ -337,8 +359,9 @@ const CollectionManager: React.FC = () => {
           })
         )}
       </div>
+      </div>
 
-{/* Delete Confirmation Modal */}
+    {/* Delete Confirmation Modal */}
 <ConfirmModal
   isOpen={deleteModal.isOpen}
   onClose={closeDeleteModal}

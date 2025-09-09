@@ -16,6 +16,8 @@ import { useProjects, useDeleteProject } from '@/hooks/useApi';
 import { getErrorMessage } from '@/api/client';
 import type { ProjectResponse } from '@/types/api';
 import LoadingSpinner from '@/components/layout/LoadingSpinner';
+import { DashboardHeader, SystemStats, ManagementControls, type SortOption } from '@/components/dashboard';
+import { useDashboardSort } from '@/hooks/useDashboardSort';
 
 const ProjectsDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -125,6 +127,37 @@ const ProjectsDashboard: React.FC = () => {
     return date.toLocaleDateString();
   };
 
+  const projects = projectsData?.projects || [];
+
+  // Sort functionality
+  const { sortedItems: sortedProjects, handleSort, getCurrentSortValue } = useDashboardSort(
+    projects,
+    'date',
+    'desc'
+  );
+
+  // Sort options for projects
+  const projectSortOptions: SortOption[] = [
+    { value: 'name-asc', label: 'NAME (A-Z)' },
+    { value: 'name-desc', label: 'NAME (Z-A)' },
+    { value: 'date-desc', label: 'NEWEST FIRST' },
+    { value: 'date-asc', label: 'OLDEST FIRST' },
+    { value: 'mentions-desc', label: 'MOST MENTIONS' },
+    { value: 'sentiment-desc', label: 'HIGHEST SENTIMENT' },
+  ];
+
+  // Calculate stats
+  const totalMentions = projects.reduce((sum, project) => sum + project.stats.total_mentions, 0);
+  const uniqueCollections = new Set(
+    projects.flatMap(project => project.collections_metadata.map(c => c.subreddit))
+  ).size;
+
+  const dashboardStats = [
+    { value: projects.length, label: 'Total Projects' },
+    { value: totalMentions.toLocaleString(), label: 'Total Mentions' },
+    { value: uniqueCollections, label: 'Collections Used' },
+  ];
+
   // Loading state
   if (isLoading) {
     return (
@@ -140,265 +173,257 @@ const ProjectsDashboard: React.FC = () => {
   if (error) {
     return (
       <MainLayout title="Projects Dashboard">
-
-        <Card className="text-center py-12">
-          <div className="text-danger mb-4">
-            <svg
-              className="h-12 w-12 mx-auto"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          
-          <h3 className="font-subsection text-text-primary mb-2">
-            Failed to Load Projects
-          </h3>
-          
-          <p className="font-body text-text-secondary mb-6 max-w-md mx-auto">
-            {getErrorMessage(error)}
-          </p>
-          
-          <div className="flex justify-center space-x-3">
-          <Button variant="primary" onClick={() => refetch()}>
-              TRY AGAIN
-            </Button>
-            <Button variant="secondary" onClick={handleCreateProject}>
-              CREATE NEW PROJECT
-            </Button>
-          </div>
-        </Card>
+        <div className="dashboard-spacing">
+          <Card className="text-center py-12">
+            <div className="text-danger mb-4">
+              <svg
+                className="h-12 w-12 mx-auto"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            
+            <h3 className="font-subsection text-text-primary mb-2">
+              Failed to Load Projects
+            </h3>
+            
+            <p className="font-body text-text-secondary mb-6 max-w-md mx-auto">
+              {getErrorMessage(error)}
+            </p>
+            
+            <div className="flex justify-center space-x-3">
+              <Button variant="primary" onClick={() => refetch()}>
+                TRY AGAIN
+              </Button>
+              <Button variant="secondary" onClick={handleCreateProject}>
+                CREATE NEW PROJECT
+              </Button>
+            </div>
+          </Card>
+        </div>
       </MainLayout>
     );
   }
-
-  const projects = projectsData?.projects || [];
 
   // Empty state
   if (projects.length === 0) {
     return (
       <MainLayout title="Projects Dashboard">
-
-        <Card className="text-center py-16">
-          <div className="text-accent mb-6">
-            <svg
-              className="h-16 w-16 mx-auto"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-          </div>
-          
-          <h2 className="font-section-header text-text-primary mb-3">
-            Create Your First Project
-          </h2>
-          
-          <p className="font-body text-text-secondary mb-8 max-w-lg mx-auto">
-            Get started by creating your first research project. Define your research question, 
-            select keywords, choose data sources, and let our AI-powered analytics reveal 
-            insights from Reddit discussions.
-          </p>
-          
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={handleCreateProject}
-          >
-            CREATE FIRST PROJECT
-          </Button>
-          
-          <div className="mt-8 pt-6 border-t border-border-primary">
-            <p className="font-small text-text-tertiary">
-              Need data first? Visit the{' '}
-              <button
-                onClick={() => navigate('/collections')}
-                className="text-accent hover:underline"
+        <div className="dashboard-spacing">
+          <Card className="text-center py-16">
+            <div className="text-accent mb-6">
+              <svg
+                className="h-16 w-16 mx-auto"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                Collection Manager
-              </button>
-              {' '}to gather Reddit data.
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+            
+            <h2 className="font-section-header text-text-primary mb-3">
+              Create Your First Project
+            </h2>
+            
+            <p className="font-body text-text-secondary mb-8 max-w-lg mx-auto">
+              Get started by creating your first research project. Define your research question, 
+              select keywords, choose data sources, and let our AI-powered analytics reveal 
+              insights from Reddit discussions.
             </p>
-          </div>
-        </Card>
+            
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={handleCreateProject}
+            >
+              CREATE FIRST PROJECT
+            </Button>
+            
+            <div className="mt-8 pt-6 border-t border-border-primary">
+              <p className="font-small text-text-tertiary">
+                Need data first? Visit the{' '}
+                <button
+                  onClick={() => navigate('/collections')}
+                  className="text-accent hover:underline"
+                >
+                  Collection Manager
+                </button>
+                {' '}to gather Reddit data.
+              </p>
+            </div>
+          </Card>
+        </div>
       </MainLayout>
     );
   }
 
-  // Projects grid view
+  // Projects dashboard with new hierarchy
   return (
-    <MainLayout title="Projects Dashboard">
+    <MainLayout title="Projects Dashboard" className="dashboard-spacing">
+      {/* Level 1: Page Header */}
+      <DashboardHeader 
+        title="Projects Dashboard"
+        subtitle="Research Project Management Interface"
+      />
 
-      {/* Action Bar */}
-      {projects.length > 0 && (
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            {selectedProjects.size > 0 && (
-              <Button 
-                variant="danger" 
-                onClick={handleBulkDelete}
+      {/* Level 2: Management Controls with Stats */}
+      <ManagementControls
+        title="Project Management"
+        selectedCount={selectedProjects.size}
+        totalCount={projects.length}
+        sortOptions={projectSortOptions}
+        currentSort={getCurrentSortValue()}
+        onSelectAll={() => handleSelectAll(true)}
+        onDeselectAll={() => handleSelectAll(false)}
+        onSort={handleSort}
+        onBulkDelete={handleBulkDelete}
+        isAllSelected={selectedProjects.size === projects.length && projects.length > 0}
+        stats={dashboardStats}
+      />
+
+      {/* Level 4: Projects Grid */}
+      <div className="dashboard-level-4">
+        <h4 className="font-large text-text-primary mb-4">
+          Project Collection
+        </h4>
+        <div className="projects-grid">
+          {/* New Project Card - Terminal Style */}
+          <div 
+            className="bg-content border-2 border-dashed border-border text-center cursor-pointer hover:border-border-dark hover:bg-panel transition-all duration-100 flex flex-col items-center justify-center font-terminal"
+            style={{ minHeight: '155px', padding: '20px' }}
+            onClick={handleCreateProject}
+          >
+            <div className="font-title text-text-tertiary mb-2">
+              [+]
+            </div>
+            <div className="font-body text-text-primary mb-1 tracking-terminal-wide">
+              NEW PROJECT
+            </div>
+            <div className="font-caption text-text-secondary tracking-terminal-wide">
+              START NEW RESEARCH
+            </div>
+          </div>
+
+          {/* Existing Project Cards */}
+          {sortedProjects.map((project) => {
+            const isSelected = selectedProjects.has(project.id);
+            
+            return (
+              <Card
+                key={project.id}
+                hover
+                className="cursor-pointer relative group"
+                onClick={() => handleViewProject(project.id)}
               >
-                X DELETE SELECTED ({selectedProjects.size})
-              </Button>
-            )}
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={() => handleSelectAll(selectedProjects.size !== projects.length)}
-            >
-              {selectedProjects.size === projects.length ? 'DESELECT ALL' : 'SELECT ALL'}
-            </Button>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="font-body text-text-secondary">
-              {selectedProjects.size > 0 
-                ? `${selectedProjects.size} selected • `
-                : ''
-              }
-              {projects.length} {projects.length === 1 ? 'project' : 'projects'}
-            </span>
-          </div>
-        </div>
-      )}
+                {/* Project Content */}
+                <div className="mb-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center space-x-3 flex-1">
+                      <div 
+                        className="h-4 w-4 border border-border-secondary bg-content cursor-pointer flex items-center justify-center"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectProject(project.id, !isSelected);
+                        }}
+                      >
+                        {isSelected && (
+                          <div className="h-2 w-2 bg-accent"></div>
+                        )}
+                      </div>
+                      <h3 className="font-subsection text-text-primary mb-1 flex-1">
+                        {project.name}
+                      </h3>
+                    </div>
+                    {/* Delete button moved to top right */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteProject(project);
+                      }}
+                      className="text-text-secondary hover:text-danger -mr-0.3 -mt-1 font-terminal text-lg font-bold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Delete project"
+                      disabled={deleteProjectMutation.isPending && deleteModal.project?.id === project.id}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <p className="font-small text-text-tertiary">
+                    Created {formatDate(project.created_at)} • {project.collections_metadata.map(c => `r/${c.subreddit}`).join(', ')}
+                  </p>
+                </div>
+                
+                {/* Project Stats */}
+                <div className="flex items-center justify-between text-small mb-4">
+                  <div className="flex space-x-4">
+                    <span className="text-text-tertiary">
+                      <span className="font-technical">{project.stats.total_mentions.toLocaleString()}</span> mentions
+                    </span>
+                    <span className={project.stats.avg_sentiment >= 0 ? 'text-success' : 'text-danger'}>
+                      <span className="font-technical">
+                        {project.stats.avg_sentiment >= 0 ? '+' : ''}{project.stats.avg_sentiment.toFixed(2)}
+                      </span> sentiment
+                    </span>
+                  </div>
+                </div>
 
-      {/* Projects Grid */}
-      <div className="projects-grid">
-        {/* New Project Card - Terminal Style */}
-        <div 
-          className="bg-content border-2 border-dashed border-border text-center cursor-pointer hover:border-border-dark hover:bg-panel transition-all duration-100 flex flex-col items-center justify-center font-terminal"
-          style={{ minHeight: '155px', padding: '20px' }}
-          onClick={handleCreateProject}
-        >
-          <div className="font-title text-text-tertiary mb-2">
-            [+]
-          </div>
-          <div className="font-body text-text-primary mb-1 tracking-terminal-wide">
-            NEW PROJECT
-          </div>
-          <div className="font-caption text-text-secondary tracking-terminal-wide">
-            START NEW RESEARCH
-          </div>
-        </div>
-
-        {/* Existing Project Cards */}
-        {projects.map((project) => {
-          const isSelected = selectedProjects.has(project.id);
-          
-          return (
-            <Card
-              key={project.id}
-              hover
-              className="cursor-pointer relative group"
-              onClick={() => handleViewProject(project.id)}
-            >
-              {/* Project Content */}
-              <div className="mb-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center space-x-3 flex-1">
-                  <div 
-                    className="h-4 w-4 border border-border-secondary bg-content cursor-pointer flex items-center justify-center"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSelectProject(project.id, !isSelected);
-                    }}
-                  >
-                    {isSelected && (
-                      <div className="h-2 w-2 bg-accent"></div>
+                {/* Keywords Preview */}
+                <div className="mb-4">
+                  <div className="flex flex-wrap gap-1">
+                    {project.keywords.slice(0, 3).map((keyword, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-panel text-text-secondary font-small rounded-input text-xs"
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                    {project.keywords.length > 3 && (
+                      <span className="px-2 py-1 bg-panel text-text-tertiary font-small rounded-input text-xs">
+                        +{project.keywords.length - 3} more
+                      </span>
                     )}
                   </div>
-                    <h3 className="font-subsection text-text-primary mb-1 flex-1">
-                      {project.name}
-                    </h3>
-                  </div>
-                  {/* Delete button moved to top right */}
-                  <button
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteProject(project);
+                      handleViewProject(project.id);
                     }}
-                    className="text-text-secondary hover:text-danger -mr-0.3 -mt-1 font-terminal text-lg font-bold transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Delete project"
-                    disabled={deleteProjectMutation.isPending && deleteModal.project?.id === project.id}
                   >
-                    ×
-                  </button>
+                    VIEW RESULTS
+                  </Button>
                 </div>
-                <p className="font-small text-text-tertiary">
-                  Created {formatDate(project.created_at)} • {project.collections_metadata.map(c => `r/${c.subreddit}`).join(', ')}
-                </p>
-              </div>
-              
-              {/* Project Stats */}
-              <div className="flex items-center justify-between text-small mb-4">
-                <div className="flex space-x-4">
-                  <span className="text-text-tertiary">
-                    <span className="font-technical">{project.stats.total_mentions.toLocaleString()}</span> mentions
-                  </span>
-                  <span className={project.stats.avg_sentiment >= 0 ? 'text-success' : 'text-danger'}>
-                    <span className="font-technical">
-                      {project.stats.avg_sentiment >= 0 ? '+' : ''}{project.stats.avg_sentiment.toFixed(2)}
-                    </span> sentiment
-                  </span>
-                </div>
-              </div>
 
-              {/* Keywords Preview */}
-              <div className="mb-4">
-                <div className="flex flex-wrap gap-1">
-                  {project.keywords.slice(0, 3).map((keyword, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 bg-panel text-text-secondary font-small rounded-input text-xs"
-                    >
-                      {keyword}
-                    </span>
-                  ))}
-                  {project.keywords.length > 3 && (
-                    <span className="px-2 py-1 bg-panel text-text-tertiary font-small rounded-input text-xs">
-                      +{project.keywords.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex space-x-2">
-              <Button
-                  variant="primary"
-                  size="sm"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleViewProject(project.id);
-                  }}
-                >
-                  VIEW RESULTS
-                </Button>
-              </div>
-
-              {/* Loading Overlay for Delete */}
-              {deleteProjectMutation.isPending && deleteModal.project?.id === project.id && (
-                <div className="absolute inset-0 bg-content bg-opacity-75 flex items-center justify-center">
-                <LoadingSpinner size="sm" message="Deleting" />
-              </div>
-              )}
-            </Card>
-          );
-        })}
+                {/* Loading Overlay for Delete */}
+                {deleteProjectMutation.isPending && deleteModal.project?.id === project.id && (
+                  <div className="absolute inset-0 bg-content bg-opacity-75 flex items-center justify-center">
+                    <LoadingSpinner size="sm" message="Deleting" />
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}

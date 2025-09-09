@@ -516,3 +516,134 @@ body {
   justify-self: stretch; /* Fill width */
   align-self: center;    /* Center vertically in row */
 }
+
+/* === DASHBOARD HIERARCHY STYLES === */
+
+/* Standalone Dashboard Header */
+.dashboard-header-standalone {
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+/* Management Controls with Stats */
+.management-controls-with-stats {
+  margin-bottom: 16px;
+}
+
+.stats-controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+/* Inline Stats Section */
+.stats-section-inline {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.inline-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-stat-value {
+  font-weight: bold;
+  color: #0066cc;
+  font-size: 14px;
+}
+
+.inline-stat-label {
+  color: #666666;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Inline Controls Section */
+.controls-section-inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.controls-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Sort Dropdown */
+.sort-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.sort-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #c0c0c0;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.15);
+  min-width: 160px;
+  z-index: 200;
+  font-family: 'Courier New', monospace;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  text-align: left;
+  color: #000000;
+  border-bottom: 1px solid #e8e8e8;
+  font-family: inherit;
+}
+
+.dropdown-item:hover {
+  background: #e0e0e0;
+}
+
+.dropdown-item.active {
+  background: rgba(0, 102, 204, 0.1);
+  color: #0066cc;
+  font-weight: bold;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+/* Dashboard Level 4: Content Grid */
+.dashboard-level-4 {
+  background: #ffffff;
+  border: 1px solid #c0c0c0;
+  padding: 20px;
+}
+
+/* Dashboard generous spacing override */
+.dashboard-spacing {
+  padding: 32px 24px 24px 24px;
+}
