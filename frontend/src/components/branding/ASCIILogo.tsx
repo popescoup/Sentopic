@@ -26,16 +26,16 @@ export const ASCIILogo: React.FC<ASCIILogoProps> = ({
         className="text-text-primary hover:text-accent transition-colors duration-100"
         style={{
           fontSize: '10px',
-          lineHeight: '1.1',
-          letterSpacing: '0'
+          lineHeight: '1.0',
+          letterSpacing: '0',
+          fontFamily: 'Courier New, monospace'
         }}
       >
-        {/* ASCII Logo - Clean SENTOPIC */}
-        <div className="whitespace-pre font-terminal">
-{`                               
-  _  _   _  _/_  _    _   .  _ 
-_\  /_' / / /   /_/  /_/ /  /_ 
-                    /          `}
+        {/* ASCII Logo - Block Style SENTOPIC */}
+        <div className="whitespace-pre font-terminal" style={{ fontFamily: 'Courier New, monospace' }}>
+{`_______ _______ __   _ _______  _____   _____  _____ _______
+|______ |______ | \\  |    |    |     | |_____]   |   |      
+______| |______ |  \\_|    |    |_____| |       __|__ |______ `}
         </div>
         
         {/* Subtitle - terminal style */}
