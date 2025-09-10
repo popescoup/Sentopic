@@ -35,7 +35,7 @@ export const ASCIILogo: React.FC<ASCIILogoProps> = ({
         <div className="whitespace-pre font-terminal" style={{ fontFamily: 'Courier New, monospace' }}>
 {`_______ _______ __   _ _______  _____   _____  _____ _______
 |______ |______ | \\  |    |    |     | |_____]   |   |      
-______| |______ |  \\_|    |    |_____| |       __|__ |______ `}
+_______||______ |  \\_|    |    |_____| |       __|__ |______ `}
         </div>
         
         {/* Subtitle - terminal style */}
