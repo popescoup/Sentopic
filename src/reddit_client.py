@@ -37,6 +37,10 @@ class RedditClient:
     
     def _initialize_client(self):
         """Initialize the PRAW Reddit client."""
+        
+        # Force reload config to get latest values
+        config.reload_config()
+
         reddit_config = config.get_reddit_config()
         
         self.reddit = praw.Reddit(
@@ -56,6 +60,10 @@ class RedditClient:
                 list(self.reddit.subreddit('test').hot(limit=1))
             except Exception as e:
                 raise Exception(f"Failed to connect to Reddit API: {e}")
+    
+    def reload_client(self):
+        """Force reload of client with new configuration."""
+        self._initialize_client()
     
     def _rate_limit_sleep(self):
         """Sleep to respect Reddit's rate limits."""

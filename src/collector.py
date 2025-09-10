@@ -56,6 +56,9 @@ class RedditCollector:
         Returns:
             Collection ID for the completed collection
         """
+        # Force reddit client to reload config before collection
+        reddit_client.reload_client()
+
         # Create collection record
         collection_id = db.create_collection(
             subreddit=params.subreddit,

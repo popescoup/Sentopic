@@ -378,17 +378,7 @@ class Config:
             return False, f"Failed to clear data: {str(e)}"
     
     def reset_configuration(self) -> Tuple[bool, str]:
-        """
-        Reset configuration to defaults (preserving current structure).
-        
-        Returns:
-            Tuple of (success: bool, message: str)
-        """
         try:
-            # Create backup
-            backup_path = f"{self.config_path}.backup.{int(datetime.utcnow().timestamp())}"
-            shutil.copy2(self.config_path, backup_path)
-            
             # Load example config structure
             example_path = "config.example.json"
             if not os.path.exists(example_path):
@@ -410,27 +400,13 @@ class Config:
             except ImportError:
                 pass
             
-            return True, f"Configuration reset to defaults. Backup saved to: {backup_path}"
+            return True, "Configuration reset to defaults successfully"
             
         except Exception as e:
             return False, f"Failed to reset configuration: {str(e)}"
     
     def _save_config(self, config_data: Dict[str, Any]) -> Tuple[bool, List[str]]:
-        """
-        Safely save configuration to file.
-        
-        Args:
-            config_data: Configuration dictionary to save
-            
-        Returns:
-            Tuple of (success: bool, error_messages: List[str])
-        """
         try:
-            # Create backup of current config
-            backup_path = f"{self.config_path}.backup"
-            if os.path.exists(self.config_path):
-                shutil.copy2(self.config_path, backup_path)
-            
             # Write new config with proper formatting
             with open(self.config_path, 'w') as f:
                 json.dump(config_data, f, indent=4, sort_keys=False)
@@ -439,21 +415,9 @@ class Config:
             with open(self.config_path, 'r') as f:
                 loaded_config = json.load(f)
             
-            # Remove backup on success
-            if os.path.exists(backup_path):
-                os.remove(backup_path)
-            
             return True, []
             
         except Exception as e:
-            # Restore backup if it exists
-            backup_path = f"{self.config_path}.backup"
-            if os.path.exists(backup_path):
-                try:
-                    shutil.move(backup_path, self.config_path)
-                except Exception:
-                    pass  # Backup restore failed, but original error is more important
-            
             return False, [f"Failed to save configuration: {str(e)}"]
 
 
