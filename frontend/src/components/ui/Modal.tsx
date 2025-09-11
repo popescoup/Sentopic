@@ -24,6 +24,8 @@ export interface ModalProps {
   closeOnEscape?: boolean;
   /** Whether to show close button */
   showCloseButton?: boolean;
+  /** Whether close actions are disabled */
+  closeDisabled?: boolean;
   /** Additional CSS classes for modal content */
   className?: string;
   /** Additional CSS classes for overlay */
@@ -39,6 +41,7 @@ export const Modal: React.FC<ModalProps> = ({
   closeOnOverlayClick = true,
   closeOnEscape = true,
   showCloseButton = true,
+  closeDisabled = false,
   className = '',
   overlayClassName = ''
 }) => {
@@ -56,7 +59,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   // Handle escape key
   useEffect(() => {
-    if (!isOpen || !closeOnEscape) return;
+    if (!isOpen || !closeOnEscape || closeDisabled) return;
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -66,7 +69,7 @@ export const Modal: React.FC<ModalProps> = ({
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, closeOnEscape, onClose]);
+  }, [isOpen, closeOnEscape, closeDisabled, onClose]);
 
   // Focus management
   useEffect(() => {
@@ -99,7 +102,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   // Handle overlay click
   const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (closeOnOverlayClick && event.target === event.currentTarget) {
+    if (closeOnOverlayClick && !closeDisabled && event.target === event.currentTarget) {
       onClose();
     }
   };
@@ -140,8 +143,13 @@ export const Modal: React.FC<ModalProps> = ({
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={onClose}
-                className="text-text-secondary hover:text-text-primary"
+                onClick={closeDisabled ? undefined : onClose}
+                disabled={closeDisabled}
+                className={`text-text-secondary ${
+                  closeDisabled 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:text-text-primary'
+                }`}
                 aria-label="Close dialog"
               >
                 X

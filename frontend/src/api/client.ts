@@ -156,7 +156,9 @@ export class SentopicAPI {
   }
 
   async startIndexing(projectId: string, request: IndexingRequest): Promise<IndexingResponse> {
-    const response = await this.client.post<IndexingResponse>(`/projects/${projectId}/indexing`, request);
+    const response = await this.client.post<IndexingResponse>(`/projects/${projectId}/indexing`, request, {
+      timeout: 9000000 // 150 minutes timeout for collections
+    });
     return response.data;
   }
 
@@ -177,7 +179,7 @@ export class SentopicAPI {
   async createCollections(request: CollectionCreateRequest): Promise<CollectionBatchResponse> {
     // Use a much longer timeout for collection requests since they run synchronously
     const response = await this.client.post<CollectionBatchResponse>('/collections', request, {
-      timeout: 90000000 // 1500 minutes timeout for collections
+      timeout: 9000000 // 150 minutes timeout for collections
     });
     return response.data;
   }

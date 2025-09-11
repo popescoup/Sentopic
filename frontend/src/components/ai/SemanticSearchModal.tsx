@@ -78,7 +78,8 @@ const SemanticSearchModal: React.FC<SemanticSearchModalProps> = ({
   };
 
   const handleClose = () => {
-    if (isGenerating) return; // Prevent closing during generation
+    // Prevent closing during generation or if indexing has started
+    if (isGenerating || indexingStarted) return;
     setError(null);
     setIndexingStarted(false);
     onClose();
@@ -99,6 +100,7 @@ const SemanticSearchModal: React.FC<SemanticSearchModalProps> = ({
       onClose={handleClose}
       title="Enable Semantic Search"
       size="xl"
+      closeDisabled={isGenerating || indexingStarted}
     >
       <div className="space-y-4">
         {/* Brief Introduction */}
@@ -176,7 +178,7 @@ const SemanticSearchModal: React.FC<SemanticSearchModalProps> = ({
             <div className="text-sm text-text-secondary space-y-2">
               <p>Advanced search using OpenAI's embedding API with higher accuracy.</p>
               <div className="space-y-1">
-                <div><strong>Cost:</strong> $0.10 - $2.00 estimated</div>
+                <div><strong>Cost:</strong> $0.01 - $0.20 estimated</div>
                 <div><strong>Privacy:</strong> Data sent to OpenAI</div>
                 <div><strong>Quality:</strong> Excellent semantic understanding</div>
               </div>
@@ -190,7 +192,7 @@ const SemanticSearchModal: React.FC<SemanticSearchModalProps> = ({
             <div className="flex items-center space-x-4">
               <div>
                 <span className="text-text-secondary">Processing time:</span>
-                <span className="text-text-primary ml-1">2-5 minutes</span>
+                <span className="text-text-primary ml-1">1-10 minutes</span>
               </div>
               <div>
                 <span className="text-text-secondary">Setup:</span>
@@ -198,7 +200,7 @@ const SemanticSearchModal: React.FC<SemanticSearchModalProps> = ({
               </div>
             </div>
             <div className="text-text-primary font-medium">
-              {isCloudSearch ? 'Estimated: $0.10 - $2.00' : 'Completely Free'}
+              {isCloudSearch ? 'Estimated: $0.01 - $0.20' : 'Completely Free'}
             </div>
           </div>
         </div>
@@ -234,8 +236,8 @@ const SemanticSearchModal: React.FC<SemanticSearchModalProps> = ({
             disabled={isGenerating}
           >
             {isGenerating 
-              ? (indexingStarted ? 'Generating Embeddings...' : 'Starting Indexing...') 
-              : `Enable ${isCloudSearch ? 'Cloud' : 'Local'} Search`
+              ? (indexingStarted ? 'Generating Embeddings...' : 'Generating Embeddings...') 
+              : `Enable ${isCloudSearch ? 'Cloud' : 'Local'} Semantic`
             }
           </Button>
         </div>
