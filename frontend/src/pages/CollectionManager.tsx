@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { useNavigate } from 'react-router-dom';
 import { useCollections, useDeleteCollection } from '@/hooks/useApi';
+import { useRedditStatus } from '@/hooks/useRedditStatus';
 import { getErrorMessage } from '@/api/client';
 import LoadingSpinner from '@/components/layout/LoadingSpinner';
 import { DashboardHeader, ManagementControls, type SortOption } from '@/components/dashboard';
@@ -17,6 +18,7 @@ import { useDashboardSort } from '@/hooks/useDashboardSort';
 
 const CollectionManager: React.FC = () => {
   const { data: collectionsData, isLoading, error, refetch } = useCollections();
+  const { isRedditConfigured, isLoading: redditStatusLoading } = useRedditStatus();
   const deleteCollectionMutation = useDeleteCollection();
   const navigate = useNavigate();
 
@@ -100,7 +102,7 @@ const CollectionManager: React.FC = () => {
   };
 
   // Handle loading state
-  if (isLoading) {
+  if (isLoading || redditStatusLoading) {
     return (
       <MainLayout title="Collection Manager">
         <div className="flex items-center justify-center py-12">
@@ -192,9 +194,13 @@ const CollectionManager: React.FC = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
         {/* New Collection Card - Terminal Style */}
         <div 
-          className="bg-content border-2 border-dashed border-border text-center cursor-pointer hover:border-border-dark hover:bg-panel transition-all duration-100 flex flex-col items-center justify-center font-terminal"
+          className={`bg-content border-2 border-dashed transition-all duration-100 flex flex-col items-center justify-center font-terminal ${
+            isRedditConfigured 
+              ? 'border-border text-center cursor-pointer hover:border-border-dark hover:bg-panel' 
+              : 'border-border-secondary text-center cursor-not-allowed opacity-60'
+          }`}
           style={{ minHeight: '120px', padding: '20px' }}
-          onClick={() => navigate('/collections/new')}
+          onClick={isRedditConfigured ? () => navigate('/collections/new') : undefined}
         >
           <div className="font-title text-text-tertiary mb-2">
             [+]
@@ -203,7 +209,7 @@ const CollectionManager: React.FC = () => {
             NEW COLLECTION
           </div>
           <div className="font-caption text-text-secondary tracking-terminal-wide">
-            CREATE DATA SOURCE
+            {isRedditConfigured ? 'CREATE DATA SOURCE' : 'CONFIGURE API TO GET STARTED'}
           </div>
         </div>
 
