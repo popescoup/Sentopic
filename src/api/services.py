@@ -710,13 +710,19 @@ Return only the subreddit names, separated by commas, with no additional explana
             working_providers_count = len([p for p in providers.values() if p.get("available", False)])
             ai_truly_available = llm_system_available and api_key_configured and working_providers_count > 0
             
+            default_provider_working = (
+                default_provider and 
+                providers.get(default_provider, {}).get("available", False)
+            )
+            
             return AIStatusResponse(
                 ai_available=ai_truly_available,
                 providers=providers,
                 features=features,
                 default_provider=default_provider,
                 embeddings_info=embeddings_info,
-                api_key_configured=api_key_configured
+                api_key_configured=api_key_configured,
+                default_provider_available=default_provider_working
             )
             
         except Exception as e:

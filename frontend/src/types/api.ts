@@ -219,6 +219,8 @@ export interface ProjectStats {
     };
     default_provider?: string;
     embeddings_info: Record<string, any>;
+    api_key_configured: boolean;
+    default_provider_available: boolean;
   }
 
 export interface IndexingRequest {

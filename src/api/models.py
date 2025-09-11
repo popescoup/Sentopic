@@ -419,6 +419,7 @@ class AIStatusResponse(BaseModel):
     default_provider: Optional[str] = Field(None, description="Default AI provider name")
     embeddings_info: Dict[str, Any] = Field({}, description="Embeddings system status")
     api_key_configured: bool = Field(..., description="Whether at least one provider has a valid API key")
+    default_provider_available: bool = Field(..., description="Whether the default provider is configured and working")
     
     class Config:
         json_schema_extra = {

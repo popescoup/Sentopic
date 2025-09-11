@@ -5,6 +5,7 @@
 
 import React from 'react';
 import Button from '@/components/ui/Button';
+import { InlineSpinner } from '@/components/layout/LoadingSpinner';
 
 interface ConnectionTestProps {
     /** Label for the connection test */
@@ -40,7 +41,7 @@ interface ConnectionTestProps {
     if (isTesting) {
       return (
         <div className="flex items-center space-x-2 text-text-secondary">
-          <div className="animate-spin h-4 w-4 border-2 border-accent border-t-transparent rounded-full" />
+          <InlineSpinner size="sm" />
           <span className="font-small">Testing...</span>
         </div>
       );

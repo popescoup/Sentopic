@@ -109,7 +109,7 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
   };
 
   // Enhanced availability check
-  const isAIReady = aiStatus?.ai_available;
+  const isAIReady = aiStatus?.default_provider_available;
 
   if (!isAIReady) {
     return (
@@ -126,7 +126,7 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
         
         <div className="mb-4 p-3 bg-content rounded-input border border-border-primary">
           <p className="font-body text-text-secondary text-sm">
-            AI API key is not configured. Please configure your LLM provider API key in settings.
+            AI API key is not configured. Please verify the configuration your default LLM provider API key in settings.
           </p>
         </div>
       </Card>
