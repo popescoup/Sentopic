@@ -5,6 +5,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessageCreate } from '@/types/api';
+import { useOpenAIStatus } from '@/hooks/useOpenAIStatus';
 
 // Extract the search type for consistency
 type SearchType = NonNullable<ChatMessageCreate['search_type']>;
@@ -33,6 +34,7 @@ const SearchTypeSelector: React.FC<SearchTypeSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { isOpenAIConfigured } = useOpenAIStatus();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -64,10 +66,14 @@ const SearchTypeSelector: React.FC<SearchTypeSelectorProps> = ({
     {
       value: 'cloud_semantic',
       label: 'Semantic (Cloud)',
-      description: 'Advanced semantic search using OpenAI embeddings (paid)',
+      description: isOpenAIConfigured 
+        ? 'Advanced semantic search using OpenAI embeddings (paid)'
+        : 'Configure OpenAI API key to enable cloud embeddings',
       requiresIndexing: true,
-      disabled: isIndexingInProgress,
-      disabledReason: isIndexingInProgress ? 'Indexing in progress...' : undefined
+      disabled: !isOpenAIConfigured || isIndexingInProgress,
+      disabledReason: !isOpenAIConfigured 
+        ? 'OpenAI API key not configured' 
+        : isIndexingInProgress ? 'Indexing in progress...' : undefined
     }
   ];
 
