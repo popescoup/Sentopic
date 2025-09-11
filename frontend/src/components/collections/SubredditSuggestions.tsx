@@ -54,7 +54,7 @@ export const SubredditSuggestions: React.FC<SubredditSuggestionsProps> = ({
       setSuggestedSubreddits(newSuggestions);
 
     } catch (error) {
-      setAiError('Failed to generate subreddit suggestions. Please try again.');
+      setAiError('Failed to generate subreddit suggestions. Please check your LLM provider API configuration and try again.');
       console.error('AI subreddit suggestion error:', error);
     } finally {
       setIsGeneratingSubreddits(false);

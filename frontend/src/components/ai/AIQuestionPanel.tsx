@@ -108,8 +108,10 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
     // Allow Shift+Enter for new lines (default behavior)
   };
 
-  // Check if AI is available
-  if (!aiStatus?.ai_available) {
+  // Enhanced availability check
+  const isAIReady = aiStatus?.ai_available;
+
+  if (!isAIReady) {
     return (
       <Card className="bg-gradient-subtle">
         <div className="mb-4">
@@ -118,14 +120,13 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
           </h3>
           <div className="flex items-center text-small text-text-tertiary">
             <div className="w-2 h-2 bg-text-tertiary rounded-full mr-2"></div>
-            Unavailable
+            Configuration Required
           </div>
         </div>
         
         <div className="mb-4 p-3 bg-content rounded-input border border-border-primary">
           <p className="font-body text-text-secondary text-sm">
-            AI features are not available. Please check the AI configuration 
-            in settings or contact your administrator.
+            AI API key is not configured. Please configure your LLM provider API key in settings.
           </p>
         </div>
       </Card>
@@ -156,14 +157,16 @@ const AIQuestionPanel: React.FC<AIQuestionPanelProps> = ({ projectId }) => {
           </div>
           
           <div className="flex items-center justify-between">
-            <div className="flex items-center text-small text-text-tertiary">
-              <div className={`w-2 h-2 rounded-full mr-2 ${
-                isLoading ? 'bg-accent animate-pulse' : 
-                error ? 'bg-danger' : 'bg-success'
-              }`}></div>
-              {isLoading ? 'Analyzing question' : 
-               error ? 'Error' : 'Ready'}
-            </div>
+          <div className="flex items-center text-small text-text-tertiary">
+            <div className={`w-2 h-2 rounded-full mr-2 ${
+              isLoading ? 'bg-accent animate-pulse' : 
+              error ? 'bg-danger' : 
+              !isAIReady ? 'bg-yellow-500' : 'bg-success'
+            }`}></div>
+            {isLoading ? 'Analyzing question' : 
+            error ? 'Error' : 
+            !isAIReady ? 'API Key Required' : 'Ready'}
+          </div>
           </div>
         </div>
 

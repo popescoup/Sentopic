@@ -413,39 +413,42 @@ class SubredditSuggestionResponse(BaseModel):
 
 class AIStatusResponse(BaseModel):
     """Response about AI system status and capabilities."""
-    ai_available: bool = Field(..., description="Whether AI features are available")
+    ai_available: bool = Field(..., description="Whether AI features are available AND properly configured")  # CHANGED: Updated description
     providers: Dict[str, Dict[str, Any]] = Field(..., description="Status of each AI provider")
     features: Dict[str, bool] = Field(..., description="Available AI features")
     default_provider: Optional[str] = Field(None, description="Default AI provider name")
     embeddings_info: Dict[str, Any] = Field({}, description="Embeddings system status")
+    api_key_configured: bool = Field(..., description="Whether at least one provider has a valid API key")
     
     class Config:
         json_schema_extra = {
             "example": {
-                "ai_available": True,
+                "ai_available": False,  # CHANGED: Now false when API key missing
                 "providers": {
                     "anthropic": {
-                        "available": True,
+                        "available": False,  # CHANGED: False when no API key
                         "model": "claude-3-5-sonnet-20240620",
-                        "status": "Connected successfully"
+                        "status": "API key not configured",  # CHANGED: Better status message
+                        "api_key_configured": False  # NEW: Add this field
                     },
                     "openai": {
-                        "available": True,
+                        "available": False,  # CHANGED: False when no API key
                         "model": "gpt-4o",
-                        "status": "Connected successfully"
+                        "status": "API key not configured",  # CHANGED: Better status message
+                        "api_key_configured": False  # NEW: Add this field
                     }
                 },
                 "features": {
-                    "keyword_suggestion": True,
-                    "summarization": True,
-                    "chat_agent": True,
-                    "rag_search": True
+                    "keyword_suggestion": False,  # CHANGED: False when no API key
+                    "summarization": False,      # CHANGED: False when no API key
+                    "chat_agent": False,         # CHANGED: False when no API key
+                    "rag_search": False          # CHANGED: False when no API key
                 },
                 "default_provider": "anthropic",
                 "embeddings_info": {
                     "provider": "openai",
                     "model": "text-embedding-3-small",
-                    "available": True
+                    "available": False  # CHANGED: False when no API key
                 }
             }
         }

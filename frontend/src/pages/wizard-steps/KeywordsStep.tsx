@@ -57,7 +57,7 @@ export const KeywordsStep: React.FC<KeywordsStepProps> = ({
       updateFormData({ keywords: combinedKeywords });
 
     } catch (error) {
-      setAiError('Failed to generate keyword suggestions. Please try again.');
+      setAiError('Failed to generate keyword suggestions. Please check your LLM provider API configuration and try again.');
       console.error('AI keyword suggestion error:', error);
     } finally {
       setIsGeneratingKeywords(false);
