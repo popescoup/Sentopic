@@ -631,10 +631,7 @@ Return only the subreddit names, separated by commas, with no additional explana
             AIStatusResponse with system status
         """
         try:
-            # Check overall LLM availability
-            ai_available = is_llm_available()
-            
-            # Get provider information
+            # Initialize default values
             providers = {}
             features = {
                 "keyword_suggestion": False,
@@ -644,9 +641,12 @@ Return only the subreddit names, separated by commas, with no additional explana
             }
             default_provider = None
             embeddings_info = {}
-            api_key_configured = False  # NEW: Add this flag
+            api_key_configured = False
             
-            if ai_available:
+            # Check if LLM system is even configured/available
+            llm_system_available = is_llm_available()
+            
+            if llm_system_available:
                 try:
                     from src.llm.config import llm_config
                     
@@ -654,28 +654,31 @@ Return only the subreddit names, separated by commas, with no additional explana
                     available_providers = llm_config.get_available_providers()
                     default_provider = llm_config.get_default_provider()
                     
-                    # Test each provider
+                    # Test each provider AND check for API keys
                     test_results = llm_config.test_providers()
                     
                     for provider_name in available_providers:
                         config = llm_config.get_provider_config(provider_name)
                         test_success, test_message = test_results.get(provider_name, (False, "Not tested"))
                         
-                        # NEW: Check if API key is actually configured
+                        # Check if API key is actually configured
                         has_api_key = bool(config and config.get('api_key') and config['api_key'].strip())
                         
+                        # Provider is only truly available if it has API key AND passes tests
+                        provider_truly_available = test_success and has_api_key
+                        
                         providers[provider_name] = {
-                            "available": test_success and has_api_key,  # CHANGED: Both must be true
+                            "available": provider_truly_available,
                             "model": config.get('model', 'unknown') if config else 'unknown',
-                            "status": test_message if has_api_key else "API key not configured",  # CHANGED: Better status message
-                            "api_key_configured": has_api_key  # NEW: Add this field
+                            "status": test_message if has_api_key else "API key not configured",
+                            "api_key_configured": has_api_key
                         }
                         
-                        # NEW: If any provider has a configured API key, mark as configured
+                        # If any provider has a configured API key, mark as configured
                         if has_api_key:
                             api_key_configured = True
                     
-                    # CHANGED: Only enable features if we have at least one working provider
+                    # Only enable features if we have at least one working provider with API key
                     working_providers = [p for p in providers.values() if p.get("available", False)]
                     if working_providers:
                         features = llm_config.get_feature_config()
@@ -683,22 +686,32 @@ Return only the subreddit names, separated by commas, with no additional explana
                     # Get embeddings info
                     embeddings_config = llm_config.get_embeddings_config()
                     if embeddings_config:
+                        # Check if embeddings provider has API key
+                        embeddings_provider = embeddings_config.get('provider')
+                        embeddings_has_key = False
+                        if embeddings_provider in providers:
+                            embeddings_has_key = providers[embeddings_provider].get("api_key_configured", False)
+                        
                         embeddings_info = {
-                            "provider": embeddings_config.get('provider', 'unknown'),
+                            "provider": embeddings_provider,
                             "model": embeddings_config.get('model', 'unknown'),
-                            "available": api_key_configured  # CHANGED: Depends on API key
+                            "available": embeddings_has_key
                         }
                     
                 except Exception as e:
                     print(f"Error getting detailed AI status: {e}")
                     # Fallback to basic status
-                    providers = {"unknown": {"available": False, "status": "Configuration error", "api_key_configured": False}}  # CHANGED: More accurate fallback
+                    providers = {"unknown": {"available": False, "status": "Configuration error", "api_key_configured": False}}
             
-            # NEW: Update ai_available to require both LLM availability AND API key configuration
-            ai_truly_available = ai_available and api_key_configured
+            # AI is only truly available if:
+            # 1. LLM system is available AND
+            # 2. At least one provider has a configured API key AND
+            # 3. At least one provider is working
+            working_providers_count = len([p for p in providers.values() if p.get("available", False)])
+            ai_truly_available = llm_system_available and api_key_configured and working_providers_count > 0
             
             return AIStatusResponse(
-                ai_available=ai_truly_available,  # CHANGED: This is the key change
+                ai_available=ai_truly_available,
                 providers=providers,
                 features=features,
                 default_provider=default_provider,
