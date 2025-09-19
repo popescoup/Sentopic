@@ -20,143 +20,210 @@ const CONFIG = {
   maxStartupTime: 60000       // 60 seconds total
 };
 
-// Utility: Check if port is available
+// FIXED: More robust port availability checking that detects conflicts properly
 function isPortAvailable(port) {
   return new Promise((resolve) => {
     const server = net.createServer();
+    let resolved = false;
     
-    server.listen(port, () => {
-      server.once('close', () => resolve(true));
-      server.close();
+    // Set up error handler first
+    server.on('error', (err) => {
+      if (!resolved) {
+        resolved = true;
+        console.log(`   Port ${port}: UNAVAILABLE (${err.code})`);
+        resolve(false);
+      }
     });
     
-    server.on('error', () => resolve(false));
+    // FIXED: Bind to 0.0.0.0 instead of 127.0.0.1 to detect all conflicts
+    // This will properly detect conflicts with servers bound to any interface
+    server.listen(port, '0.0.0.0', () => {
+      if (!resolved) {
+        console.log(`   Port ${port}: AVAILABLE`);
+        server.close(() => {
+          if (!resolved) {
+            resolved = true;
+            resolve(true);
+          }
+        });
+      }
+    });
+    
+    // Timeout fallback to prevent hanging
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        console.log(`   Port ${port}: TIMEOUT (assuming unavailable)`);
+        try {
+          server.destroy();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        resolve(false);
+      }
+    }, 2000); // Increased timeout slightly
   });
 }
 
-// Utility: Find available port with fallback strategy
+// Enhanced port finding with better error handling
 async function findAvailablePort() {
-  console.log('🔍 Looking for available port...');
+  console.log('Looking for available port...');
   
   // Strategy 1: Try primary range (8000-8020)
+  console.log(`Checking primary range: ${CONFIG.primaryPortRange.start}-${CONFIG.primaryPortRange.end}`);
   for (let port = CONFIG.primaryPortRange.start; port <= CONFIG.primaryPortRange.end; port++) {
-    if (await isPortAvailable(port)) {
-      console.log(`✅ Found available port: ${port} (primary range)`);
+    console.log(`Testing port ${port}...`);
+    const available = await isPortAvailable(port);
+    if (available) {
+      console.log(`Found available port: ${port} (primary range)`);
       return port;
     }
   }
   
   // Strategy 2: Try fallback range (9000-9020)
-  console.log('⚠️ Primary range full, trying fallback range...');
+  console.log('PRIMARY RANGE EXHAUSTED - SWITCHING TO FALLBACK RANGE');
+  console.log(`Checking fallback range: ${CONFIG.fallbackPortRange.start}-${CONFIG.fallbackPortRange.end}`);
   for (let port = CONFIG.fallbackPortRange.start; port <= CONFIG.fallbackPortRange.end; port++) {
-    if (await isPortAvailable(port)) {
-      console.log(`✅ Found available port: ${port} (fallback range)`);
+    console.log(`Testing fallback port ${port}...`);
+    const available = await isPortAvailable(port);
+    if (available) {
+      console.log(`Found available port: ${port} (fallback range)`);
       return port;
     }
   }
   
   // Strategy 3: Get random available port from OS
-  console.log('⚠️ Fallback range full, requesting OS-assigned port...');
+  console.log('FALLBACK RANGE EXHAUSTED - REQUESTING OS PORT');
   return new Promise((resolve, reject) => {
     const server = net.createServer();
-    server.listen(0, () => {
+    
+    server.listen(0, '0.0.0.0', () => {
       const port = server.address().port;
       server.close(() => {
-        console.log(`✅ OS assigned port: ${port}`);
+        console.log(`OS assigned port: ${port}`);
         resolve(port);
       });
     });
-    server.on('error', reject);
+    
+    server.on('error', (err) => {
+      console.error('Failed to get OS-assigned port:', err);
+      reject(new Error(`No available ports found. OS port assignment failed: ${err.message}`));
+    });
   });
 }
 
-// Debug function to test different network methods
-async function debugHealthCheck(port) {
-  const healthUrl = `http://127.0.0.1:${port}/health`;
-  console.log(`🔍 Debug: Testing health check to ${healthUrl}`);
+// Function to verify Python process is actually responding
+async function verifyPythonProcess(port) {
+  console.log('Verifying Python process...');
   
-  // Test 1: Axios (what we normally use)
-  try {
-    console.log('🔍 Debug: Trying axios...');
-    const axiosResponse = await axios.get(healthUrl, { 
-      timeout: 5000,
-      headers: {
-        'User-Agent': 'Electron-Debug'
-      }
-    });
-    console.log(`✅ Debug: Axios success - Status: ${axiosResponse.status}`);
-    console.log(`✅ Debug: Axios data: ${JSON.stringify(axiosResponse.data)}`);
-    return { method: 'axios', success: true, data: axiosResponse.data };
-  } catch (axiosError) {
-    console.log(`❌ Debug: Axios failed - Code: ${axiosError.code}, Message: ${axiosError.message}`);
-    if (axiosError.response) {
-      console.log(`❌ Debug: Axios response status: ${axiosError.response.status}`);
-    }
+  if (!pythonProcess) {
+    console.log('Python process is null');
+    return false;
   }
   
-  return { method: 'none', success: false };
+  if (pythonProcess.killed) {
+    console.log('Python process was killed');
+    return false;
+  }
+  
+  console.log(`Python process PID: ${pythonProcess.pid}`);
+  console.log(`Python process exitCode: ${pythonProcess.exitCode}`);
+  console.log(`Python process signalCode: ${pythonProcess.signalCode}`);
+  
+  // Try a simple TCP connection to the port
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let resolved = false;
+    
+    socket.setTimeout(3000);
+    
+    socket.on('connect', () => {
+      if (!resolved) {
+        resolved = true;
+        console.log(`TCP connection to port ${port} successful`);
+        socket.destroy();
+        resolve(true);
+      }
+    });
+    
+    socket.on('error', (err) => {
+      if (!resolved) {
+        resolved = true;
+        console.log(`TCP connection to port ${port} failed: ${err.message}`);
+        resolve(false);
+      }
+    });
+    
+    socket.on('timeout', () => {
+      if (!resolved) {
+        resolved = true;
+        console.log(`TCP connection to port ${port} timed out`);
+        socket.destroy();
+        resolve(false);
+      }
+    });
+    
+    socket.connect(port, '127.0.0.1');
+  });
 }
 
-// Utility: Wait for backend health check with comprehensive debugging
+// Health check with better debugging
 async function waitForBackend(port, timeout = CONFIG.healthCheckTimeout) {
   const startTime = Date.now();
   const healthUrl = `http://127.0.0.1:${port}/health`;
   
-  console.log(`🏥 Waiting for backend health check at ${healthUrl}...`);
-  console.log(`🏥 Timeout configured for ${timeout}ms`);
+  console.log(`Waiting for backend health check at ${healthUrl}...`);
+  console.log(`Timeout configured for ${timeout}ms`);
   
-  // First, run comprehensive debug check
-  console.log('🔍 Running comprehensive network debug...');
-  const debugResult = await debugHealthCheck(port);
-  
-  if (debugResult.success) {
-    console.log(`✅ Debug check passed using ${debugResult.method}! Backend is accessible.`);
-    return true;
-  }
-  
-  console.log('❌ Debug check failed. Trying standard health check loop...');
-  
-  // Continue with original logic but with enhanced logging
   let attemptCount = 0;
   while (Date.now() - startTime < timeout) {
     attemptCount++;
     const elapsed = Date.now() - startTime;
     
+    // Every 10 attempts, do a deeper check
+    if (attemptCount % 10 === 0) {
+      console.log(`Deep check at attempt ${attemptCount}...`);
+      const processOk = await verifyPythonProcess(port);
+      if (!processOk) {
+        console.error('Python process verification failed - aborting health checks');
+        return false;
+      }
+    }
+    
     try {
-      console.log(`🔍 Health check attempt #${attemptCount} at ${elapsed}ms`);
-      console.log(`🔍 Making request to: ${healthUrl}`);
+      if (attemptCount <= 5 || attemptCount % 10 === 0) {
+        console.log(`Health check attempt #${attemptCount} at ${elapsed}ms`);
+      }
       
       const response = await axios.get(healthUrl, { 
         timeout: 2000,
         headers: {
           'User-Agent': 'Electron-HealthCheck'
-        },
-        validateStatus: function (status) {
-          return status < 500; // Accept anything except server errors
         }
       });
       
-      console.log(`📡 Response received - Status: ${response.status}`);
-      
       if (response.status === 200) {
-        console.log('✅ Backend health check passed!');
-        console.log(`✅ Response data: ${JSON.stringify(response.data)}`);
+        console.log('Backend health check passed!');
+        console.log(`Response data: ${JSON.stringify(response.data)}`);
         return true;
       } else {
-        console.log(`⚠️ Unexpected status code: ${response.status}`);
+        console.log(`Unexpected status code: ${response.status}`);
       }
     } catch (error) {
-      console.log(`❌ Health check attempt #${attemptCount} failed:`);
-      console.log(`   Error code: ${error.code || 'unknown'}`);
-      console.log(`   Error message: ${error.message}`);
+      // Only log every 10th error to reduce noise
+      if (attemptCount <= 5 || attemptCount % 10 === 0) {
+        console.log(`Health check attempt #${attemptCount} failed:`);
+        console.log(`   Error code: ${error.code || 'unknown'}`);
+        console.log(`   Error message: ${error.message}`);
+      }
       
       // Wait before next attempt
       await new Promise(resolve => setTimeout(resolve, CONFIG.healthCheckInterval));
     }
   }
   
-  console.error(`❌ Backend health check failed - timeout reached after ${attemptCount} attempts`);
-  console.error(`❌ Total time elapsed: ${Date.now() - startTime}ms`);
+  console.error(`Backend health check failed - timeout reached after ${attemptCount} attempts`);
+  console.error(`Total time elapsed: ${Date.now() - startTime}ms`);
   return false;
 }
 
@@ -165,35 +232,46 @@ function showErrorDialog(title, message) {
   dialog.showErrorBox(title, `${message}\n\nPlease check the console for more details.`);
 }
 
-// Start Python backend subprocess
+// Python backend startup with comprehensive debugging
 async function startPythonBackend() {
   try {
-    console.log('🐍 Starting Python backend...');
+    console.log('STARTING PYTHON BACKEND PROCESS...');
+    console.log('='.repeat(60));
     
-    // Find available port
+    // Find available port FIRST
+    console.log('Step 1: Finding available port...');
     backendPort = await findAvailablePort();
-    console.log(`🔌 Backend will use port: ${backendPort}`);
+    console.log(`SELECTED PORT: ${backendPort}`);
+    console.log('='.repeat(60));
     
-    // Determine project root (parent of electron directory)
+    // Determine paths
     const projectRoot = path.dirname(__dirname);
     const venvPath = path.join(projectRoot, 'sentopic-env', 'bin', 'python');
     const runApiPath = path.join(projectRoot, 'run_api.py');
     
-    console.log(`📁 Project root: ${projectRoot}`);
-    console.log(`🐍 Virtual env python: ${venvPath}`);
-    console.log(`🚀 Starting backend on port ${backendPort}`);
+    console.log('Step 2: Verifying file paths...');
+    console.log(`Project root: ${projectRoot}`);
+    console.log(`Virtual env python: ${venvPath}`);
+    console.log(`run_api.py path: ${runApiPath}`);
     
-    // Check if venv python exists
+    // Check if files exist
     if (!fs.existsSync(venvPath)) {
       throw new Error(`Virtual environment not found at: ${venvPath}`);
     }
+    console.log('Virtual environment python found');
     
     if (!fs.existsSync(runApiPath)) {
       throw new Error(`run_api.py not found at: ${runApiPath}`);
     }
+    console.log('run_api.py found');
+    console.log('='.repeat(60));
     
     // Start Python process
-    console.log('🚀 Spawning Python process...');
+    console.log('Step 3: Starting Python process...');
+    console.log(`Command: ${venvPath} ${runApiPath}`);
+    console.log(`Environment PORT: ${backendPort}`);
+    console.log(`Working directory: ${projectRoot}`);
+    
     pythonProcess = spawn(venvPath, [runApiPath], {
       cwd: projectRoot,
       env: {
@@ -201,42 +279,65 @@ async function startPythonBackend() {
         PORT: backendPort.toString(),
         PYTHONPATH: projectRoot
       },
-      stdio: isDev ? 'inherit' : 'pipe'
+      stdio: ['pipe', 'pipe', 'pipe'] // Always capture output for debugging
     });
     
-    console.log(`✅ Python process started with PID: ${pythonProcess.pid}`);
+    console.log(`Python process started with PID: ${pythonProcess.pid}`);
+    
+    // Capture and log all output from Python process
+    pythonProcess.stdout.on('data', (data) => {
+      const output = data.toString().trim();
+      if (output) {
+        console.log(`PYTHON STDOUT: ${output}`);
+      }
+    });
+    
+    pythonProcess.stderr.on('data', (data) => {
+      const output = data.toString().trim();
+      if (output) {
+        console.log(`PYTHON STDERR: ${output}`);
+      }
+    });
     
     // Handle process events
     pythonProcess.on('error', (error) => {
-      console.error('❌ Python process error:', error);
+      console.error('Python process spawn error:', error);
       showErrorDialog('Backend Startup Error', `Failed to start Python backend: ${error.message}`);
     });
     
     pythonProcess.on('exit', (code, signal) => {
-      console.log(`🔄 Python process exited - Code: ${code}, Signal: ${signal}`);
+      console.log(`Python process exited - Code: ${code}, Signal: ${signal}`);
       if (code !== 0 && code !== null) {
-        console.error(`❌ Python process exited with code ${code}`);
+        console.error(`Python process exited with code ${code}`);
       }
       pythonProcess = null;
     });
     
-    // Give the process a moment to start
-    console.log('⏳ Waiting 2 seconds for process initialization...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('='.repeat(60));
+    console.log('Step 4: Waiting for process initialization...');
+    await new Promise(resolve => setTimeout(resolve, 3000)); // Give it more time
     
-    // Wait for backend to be ready
-    console.log('🏥 Starting health check process...');
+    // Verify process is still running
+    if (!pythonProcess || pythonProcess.killed || pythonProcess.exitCode !== null) {
+      throw new Error('Python process died during startup');
+    }
+    console.log('Python process still running after initialization period');
+    
+    console.log('='.repeat(60));
+    console.log('Step 5: Starting health checks...');
     const isHealthy = await waitForBackend(backendPort);
     
     if (!isHealthy) {
       throw new Error('Backend failed to start within timeout period');
     }
     
-    console.log('🎉 Python backend started successfully!');
+    console.log('PYTHON BACKEND STARTED SUCCESSFULLY!');
+    console.log('='.repeat(60));
     return true;
     
   } catch (error) {
-    console.error('❌ Failed to start Python backend:', error);
+    console.error('FAILED TO START PYTHON BACKEND:', error);
+    console.log('='.repeat(60));
     showErrorDialog('Backend Startup Failed', error.message);
     return false;
   }
@@ -244,7 +345,7 @@ async function startPythonBackend() {
 
 // Create the main application window
 function createWindow() {
-  console.log('🪟 Creating main window...');
+  console.log('Creating main window...');
   
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -262,16 +363,16 @@ function createWindow() {
   
   if (fs.existsSync(frontendPath)) {
     mainWindow.loadFile(frontendPath);
-    console.log(`✅ Loaded frontend from: ${frontendPath}`);
+    console.log(`Loaded frontend from: ${frontendPath}`);
   } else {
-    console.error(`❌ Frontend not found at: ${frontendPath}`);
+    console.error(`Frontend not found at: ${frontendPath}`);
     showErrorDialog('Frontend Not Found', 'Please run "npm run build" in the frontend directory first.');
     return;
   }
   
   // Show window when ready
   mainWindow.once('ready-to-show', () => {
-    console.log('✅ Window ready to show');
+    console.log('Window ready to show');
     mainWindow.show();
     
     if (isDev) {
@@ -288,7 +389,7 @@ function createWindow() {
 // IPC handlers
 ipcMain.handle('get-backend-url', () => {
   const backendUrl = backendPort ? `http://127.0.0.1:${backendPort}` : null;
-  console.log(`🔗 IPC: Providing backend URL: ${backendUrl}`);
+  console.log(`IPC: Providing backend URL: ${backendUrl}`);
   return backendUrl;
 });
 
@@ -298,17 +399,18 @@ ipcMain.handle('get-backend-status', () => {
     isRunning: pythonProcess !== null,
     url: backendPort ? `http://127.0.0.1:${backendPort}` : null
   };
-  console.log(`📊 IPC: Backend status requested:`, status);
+  console.log(`IPC: Backend status requested:`, status);
   return status;
 });
 
 // App event handlers
 app.whenReady().then(async () => {
-  console.log('🚀 Sentopic Desktop App starting...');
-  console.log(`📍 Development mode: ${isDev}`);
-  console.log(`📍 Node version: ${process.version}`);
-  console.log(`📍 Electron version: ${process.versions.electron}`);
-  console.log(`📍 Platform: ${process.platform}`);
+  console.log('Sentopic Desktop App starting...');
+  console.log(`Development mode: ${isDev}`);
+  console.log(`Node version: ${process.version}`);
+  console.log(`Electron version: ${process.versions.electron}`);
+  console.log(`Platform: ${process.platform}`);
+  console.log('='.repeat(60));
   
   // Start backend first
   const backendStarted = await startPythonBackend();
@@ -318,7 +420,7 @@ app.whenReady().then(async () => {
     createWindow();
   } else {
     // Exit if backend failed to start
-    console.log('❌ Exiting due to backend startup failure');
+    console.log('Exiting due to backend startup failure');
     app.quit();
   }
 });
@@ -339,16 +441,16 @@ app.on('activate', () => {
 
 // Graceful shutdown
 app.on('before-quit', (event) => {
-  console.log('🛑 App shutting down...');
+  console.log('App shutting down...');
   
   if (pythonProcess) {
-    console.log('⏳ Terminating Python backend...');
+    console.log('Terminating Python backend...');
     pythonProcess.kill('SIGTERM');
     
     // Give it a moment to shut down gracefully
     setTimeout(() => {
       if (pythonProcess) {
-        console.log('🔨 Force killing Python backend...');
+        console.log('Force killing Python backend...');
         pythonProcess.kill('SIGKILL');
       }
     }, 3000);
