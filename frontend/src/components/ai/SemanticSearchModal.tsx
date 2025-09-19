@@ -107,7 +107,7 @@ const SemanticSearchModal: React.FC<SemanticSearchModalProps> = ({
         <div className="text-center">
           <p className="font-body text-text-secondary leading-relaxed">
             Semantic search understands the <strong>meaning</strong> behind your questions, finding relevant 
-            discussions even when they don't contain your exact words.
+            discussions even when they don't contain your exact words - Requires the generation of vector embeddings.
           </p>
         </div>
 
@@ -140,7 +140,7 @@ const SemanticSearchModal: React.FC<SemanticSearchModalProps> = ({
             </div>
             
             <div className="text-sm text-text-secondary space-y-2">
-              <p>Runs entirely on your machine using open-source models. No data sent externally.</p>
+              <p>Runs entirely on your machine using an open-source model.</p>
               <div className="space-y-1">
                 <div><strong>Cost:</strong> $0.00</div>
                 <div><strong>Privacy:</strong> Complete</div>

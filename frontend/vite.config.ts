@@ -5,6 +5,7 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: './', // THIS IS THE KEY FIX - generates relative paths for Electron
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import MainLayout from '@/components/layout/MainLayout';
@@ -40,12 +40,12 @@ const NotFoundPage: React.FC = () => (
       </div>
       
       <div className="flex justify-center">
-        <a
-          href="/"
+        <Link
+          to="/"
           className="inline-flex items-center px-4 py-2 bg-accent text-white rounded-default hover:bg-blue-700 transition-colors duration-150"
         >
           ← Return to Dashboard
-        </a>
+        </Link>
       </div>
     </div>
   </MainLayout>

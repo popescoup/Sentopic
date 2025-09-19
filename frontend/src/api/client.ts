@@ -38,9 +38,31 @@ import type {
   DataClearResponse
 } from '@/types/api';
 
+// Get backend URL - support both Electron and web environments
+async function getBackendURL(): Promise<string> {
+  // Check if running in Electron
+  if (typeof window !== 'undefined' && (window as any).electronAPI) {
+    console.log('🔗 Running in Electron, getting dynamic backend URL...');
+    try {
+      const backendUrl = await (window as any).electronAPI.getBackendURL();
+      if (backendUrl) {
+        console.log(`✅ Got backend URL from Electron: ${backendUrl}`);
+        return backendUrl;
+      }
+    } catch (error) {
+      console.error('❌ Failed to get backend URL from Electron:', error);
+    }
+  }
+  
+  // Fallback to environment variable or default
+  const fallbackUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  console.log(`🌐 Using fallback backend URL: ${fallbackUrl}`);
+  return fallbackUrl;
+}
+
 // Create axios instance with base configuration
-const createApiClient = (): AxiosInstance => {
-  const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const createApiClient = async (): Promise<AxiosInstance> => {
+  const baseURL = await getBackendURL();
   
   const client = axios.create({
     baseURL,
@@ -93,15 +115,29 @@ const createApiClient = (): AxiosInstance => {
   return client;
 };
 
-// Create the main API client instance
-export const apiClient = createApiClient();
+// Create the main API client instance (async)
+let apiClientPromise: Promise<AxiosInstance> | null = null;
+
+function getApiClient(): Promise<AxiosInstance> {
+  if (!apiClientPromise) {
+    apiClientPromise = createApiClient();
+  }
+  return apiClientPromise;
+}
+
+// Export the client promise for backwards compatibility
+export const apiClient = getApiClient();
 
 // API client class with typed methods
 export class SentopicAPI {
-  private client: AxiosInstance;
+  private clientPromise: Promise<AxiosInstance>;
 
   constructor() {
-    this.client = apiClient;
+    this.clientPromise = getApiClient();
+  }
+
+  private async getClient(): Promise<AxiosInstance> {
+    return await this.clientPromise;
   }
 
   // ============================================================================
@@ -109,7 +145,8 @@ export class SentopicAPI {
   // ============================================================================
 
   async healthCheck(): Promise<HealthCheckResponse> {
-    const response = await this.client.get<HealthCheckResponse>('/health');
+    const client = await this.getClient();
+    const response = await client.get<HealthCheckResponse>('/health');
     return response.data;
   }
 
@@ -118,22 +155,26 @@ export class SentopicAPI {
   // ============================================================================
 
   async getProjects(): Promise<ProjectListResponse> {
-    const response = await this.client.get<ProjectListResponse>('/projects');
+    const client = await this.getClient();
+    const response = await client.get<ProjectListResponse>('/projects');
     return response.data;
   }
 
   async getProject(projectId: string): Promise<ProjectResponse> {
-    const response = await this.client.get<ProjectResponse>(`/projects/${projectId}`);
+    const client = await this.getClient();
+    const response = await client.get<ProjectResponse>(`/projects/${projectId}`);
     return response.data;
   }
 
   async createProject(projectData: ProjectCreate): Promise<ProjectResponse> {
-    const response = await this.client.post<ProjectResponse>('/projects', projectData);
+    const client = await this.getClient();
+    const response = await client.post<ProjectResponse>('/projects', projectData);
     return response.data;
   }
 
   async deleteProject(projectId: string): Promise<void> {
-    await this.client.delete(`/projects/${projectId}`);
+    const client = await this.getClient();
+    await client.delete(`/projects/${projectId}`);
   }
 
   // ============================================================================
@@ -141,29 +182,34 @@ export class SentopicAPI {
   // ============================================================================
 
   async startAnalysis(projectId: string): Promise<AnalysisStartResponse> {
-    const response = await this.client.post<AnalysisStartResponse>(`/projects/${projectId}/analysis/start`);
+    const client = await this.getClient();
+    const response = await client.post<AnalysisStartResponse>(`/projects/${projectId}/analysis/start`);
     return response.data;
   }
 
   async getAnalysisStatus(projectId: string): Promise<AnalysisStatusResponse> {
-    const response = await this.client.get<AnalysisStatusResponse>(`/projects/${projectId}/analysis/status`);
+    const client = await this.getClient();
+    const response = await client.get<AnalysisStatusResponse>(`/projects/${projectId}/analysis/status`);
     return response.data;
   }
 
   async getAnalysisResults(projectId: string): Promise<ProjectResponse> {
-    const response = await this.client.get<ProjectResponse>(`/projects/${projectId}/analysis/results`);
+    const client = await this.getClient();
+    const response = await client.get<ProjectResponse>(`/projects/${projectId}/analysis/results`);
     return response.data;
   }
 
   async startIndexing(projectId: string, request: IndexingRequest): Promise<IndexingResponse> {
-    const response = await this.client.post<IndexingResponse>(`/projects/${projectId}/indexing`, request, {
+    const client = await this.getClient();
+    const response = await client.post<IndexingResponse>(`/projects/${projectId}/indexing`, request, {
       timeout: 9000000 // 150 minutes timeout for collections
     });
     return response.data;
   }
 
   async getIndexingStatus(projectId: string): Promise<IndexingStatusResponse> {
-    const response = await this.client.get<IndexingStatusResponse>(`/projects/${projectId}/indexing/status`);
+    const client = await this.getClient();
+    const response = await client.get<IndexingStatusResponse>(`/projects/${projectId}/indexing/status`);
     return response.data;
   }
 
@@ -172,34 +218,39 @@ export class SentopicAPI {
   // ============================================================================
 
   async getCollections(): Promise<CollectionListResponse> {
-    const response = await this.client.get<CollectionListResponse>('/collections');
+    const client = await this.getClient();
+    const response = await client.get<CollectionListResponse>('/collections');
     return response.data;
   }
 
   async createCollections(request: CollectionCreateRequest): Promise<CollectionBatchResponse> {
+    const client = await this.getClient();
     // Use a much longer timeout for collection requests since they run synchronously
-    const response = await this.client.post<CollectionBatchResponse>('/collections', request, {
+    const response = await client.post<CollectionBatchResponse>('/collections', request, {
       timeout: 9000000 // 150 minutes timeout for collections
     });
     return response.data;
   }
 
   async getCollectionBatchStatus(batchId: string): Promise<CollectionBatchStatusResponse> {
-    const response = await this.client.get<CollectionBatchStatusResponse>(`/collections/${batchId}/status`);
+    const client = await this.getClient();
+    const response = await client.get<CollectionBatchStatusResponse>(`/collections/${batchId}/status`);
     return response.data;
   }
 
   async deleteCollection(collectionId: string): Promise<void> {
-    await this.client.delete(`/collections/${collectionId}`);
+    const client = await this.getClient();
+    await client.delete(`/collections/${collectionId}`);
   }
 
   async deleteMultipleCollections(collectionIds: string[]): Promise<any> {
+    const client = await this.getClient();
     const [primaryId, ...additionalIds] = collectionIds;
     const queryParams = additionalIds.length > 0 
       ? `?additional_ids=${additionalIds.join(',')}` 
       : '';
     
-    const response = await this.client.delete(`/collections/${primaryId}${queryParams}`);
+    const response = await client.delete(`/collections/${primaryId}${queryParams}`);
     return response.data;
   }
 
@@ -208,37 +259,44 @@ export class SentopicAPI {
   // ============================================================================
 
   async getAIStatus(): Promise<AIStatusResponse> {
-    const response = await this.client.get<AIStatusResponse>('/ai/status');
+    const client = await this.getClient();
+    const response = await client.get<AIStatusResponse>('/ai/status');
     return response.data;
   }
 
   async suggestKeywords(request: KeywordSuggestionRequest): Promise<KeywordSuggestionResponse> {
-    const response = await this.client.post<KeywordSuggestionResponse>('/ai/keywords/suggest', request);
+    const client = await this.getClient();
+    const response = await client.post<KeywordSuggestionResponse>('/ai/keywords/suggest', request);
     return response.data;
   }
 
   async suggestSubreddits(request: SubredditSuggestionRequest): Promise<SubredditSuggestionResponse> {
-    const response = await this.client.post<SubredditSuggestionResponse>('/ai/subreddits/suggest', request);
+    const client = await this.getClient();
+    const response = await client.post<SubredditSuggestionResponse>('/ai/subreddits/suggest', request);
     return response.data;
   }
 
   async getChatSessions(projectId: string): Promise<ChatSessionListResponse> {
-    const response = await this.client.get<ChatSessionListResponse>(`/projects/${projectId}/chat/sessions`);
+    const client = await this.getClient();
+    const response = await client.get<ChatSessionListResponse>(`/projects/${projectId}/chat/sessions`);
     return response.data;
   }
 
   async startChatSession(projectId: string): Promise<{ session_id: string; created_at: string; message: string }> {
-    const response = await this.client.post(`/projects/${projectId}/chat/sessions`);
+    const client = await this.getClient();
+    const response = await client.post(`/projects/${projectId}/chat/sessions`);
     return response.data;
   }
 
   async sendChatMessage(chatSessionId: string, message: ChatMessageCreate): Promise<ChatResponse> {
-    const response = await this.client.post<ChatResponse>(`/chat/${chatSessionId}/messages`, message);
+    const client = await this.getClient();
+    const response = await client.post<ChatResponse>(`/chat/${chatSessionId}/messages`, message);
     return response.data;
   }
 
   async getChatHistory(chatSessionId: string, limit = 50): Promise<ChatHistoryResponse> {
-    const response = await this.client.get<ChatHistoryResponse>(`/chat/${chatSessionId}/history?limit=${limit}`);
+    const client = await this.getClient();
+    const response = await client.get<ChatHistoryResponse>(`/chat/${chatSessionId}/history?limit=${limit}`);
     return response.data;
   }
 
@@ -254,6 +312,7 @@ export class SentopicAPI {
       limit: number;
     }
   ): Promise<AggregatedFilteredContextsResponse> {
+    const client = await this.getClient();
     const params = new URLSearchParams({
       min_sentiment: filters.min_sentiment.toString(),
       max_sentiment: filters.max_sentiment.toString(),
@@ -270,7 +329,7 @@ export class SentopicAPI {
       params.append('secondary_keyword', filters.secondary_keyword);
     }
   
-    const response = await this.client.get<AggregatedFilteredContextsResponse>(
+    const response = await client.get<AggregatedFilteredContextsResponse>(
       `/projects/${projectId}/contexts/filtered?${params.toString()}`
     );
     return response.data;
@@ -281,6 +340,7 @@ export class SentopicAPI {
     keywords: string[],
     timePeriod: string = 'weekly'
   ): Promise<TrendsResponse> {
+    const client = await this.getClient();
     const params = new URLSearchParams({
       time_period: timePeriod,
     });
@@ -289,39 +349,45 @@ export class SentopicAPI {
       params.append('keywords', keyword);
     });
 
-    const response = await this.client.get<TrendsResponse>(
+    const response = await client.get<TrendsResponse>(
       `/projects/${projectId}/trends?${params.toString()}`
     );
     return response.data;
   }
 
   async getConfigStatus(): Promise<ConfigurationStatus> {
-    const response = await this.client.get<ConfigurationStatus>('/config/status');
+    const client = await this.getClient();
+    const response = await client.get<ConfigurationStatus>('/config/status');
     return response.data;
   }
 
   async updateRedditConfig(config: RedditConfigUpdate): Promise<ConfigUpdateResponse> {
-    const response = await this.client.post<ConfigUpdateResponse>('/config/reddit', config);
+    const client = await this.getClient();
+    const response = await client.post<ConfigUpdateResponse>('/config/reddit', config);
     return response.data;
   }
 
   async updateLLMConfig(config: LLMConfigUpdate): Promise<ConfigUpdateResponse> {
-    const response = await this.client.post<ConfigUpdateResponse>('/config/llm', config);
+    const client = await this.getClient();
+    const response = await client.post<ConfigUpdateResponse>('/config/llm', config);
     return response.data;
   }
 
   async testAllConnections(): Promise<ConnectionTestResult> {
-    const response = await this.client.post<ConnectionTestResult>('/config/test-connections');
+    const client = await this.getClient();
+    const response = await client.post<ConnectionTestResult>('/config/test-connections');
     return response.data;
   }
 
   async resetConfiguration(): Promise<DataClearResponse> {
-    const response = await this.client.delete<DataClearResponse>('/config/reset');
+    const client = await this.getClient();
+    const response = await client.delete<DataClearResponse>('/config/reset');
     return response.data;
   }
 
   async clearAllData(): Promise<DataClearResponse> {
-    const response = await this.client.delete<DataClearResponse>('/config/clear-data');
+    const client = await this.getClient();
+    const response = await client.delete<DataClearResponse>('/config/clear-data');
     return response.data;
   }
 
