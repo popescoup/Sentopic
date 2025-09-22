@@ -83,3 +83,15 @@ frontend/.env.production.local
 
 # Electron
 electron/node_modules/
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec.bak
+
+# PyInstaller cache
+__pycache__/
+*.pyc
+
+# Build scripts output
+scripts/build-output.log
