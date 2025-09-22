@@ -100,6 +100,16 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def startup_event():
     """Application startup tasks."""
     print("🚀 Sentopic API starting up...")
+    
+    # Initialize Reddit client to ensure configuration is loaded properly
+    try:
+        from src.reddit_client import get_reddit_client
+        reddit_client = get_reddit_client()
+        print("✅ Reddit client initialized successfully")
+    except Exception as e:
+        print(f"⚠️  Reddit client initialization failed: {e}")
+        print("   Reddit data collection will not be available until configuration is fixed")
+    
     print("📚 API Documentation available at: http://localhost:8000/docs")
 
 @app.on_event("shutdown") 

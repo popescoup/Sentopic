@@ -137,7 +137,7 @@ excludes = [
 
 # Analysis configuration
 a = Analysis(
-    ['api.py'],  # Entry point script
+    ['run_api.py'],  # Entry point script
     pathex=[project_root],
     binaries=[],
     datas=datas,

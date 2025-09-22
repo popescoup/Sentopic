@@ -240,5 +240,24 @@ class RedditClient:
                     )
 
 
-# Global Reddit client instance
-reddit_client = RedditClient()
+# Global Reddit client instance (lazy initialization)
+_reddit_client_instance = None
+
+def get_reddit_client() -> RedditClient:
+    """
+    Get the global Reddit client instance, creating it if necessary.
+    This implements lazy initialization to avoid timing issues in PyInstaller.
+    """
+    global _reddit_client_instance
+    if _reddit_client_instance is None:
+        _reddit_client_instance = RedditClient()
+    return _reddit_client_instance
+
+def is_reddit_client_initialized() -> bool:
+    """Check if the Reddit client has been initialized."""
+    return _reddit_client_instance is not None
+
+def reset_reddit_client():
+    """Reset the Reddit client instance (useful for configuration changes)."""
+    global _reddit_client_instance
+    _reddit_client_instance = None

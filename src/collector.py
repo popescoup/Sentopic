@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any
 from tqdm import tqdm
 from .database import db, Post, Comment
-from .reddit_client import reddit_client
+from .reddit_client import get_reddit_client
 
 
 class CollectionParameters:
@@ -57,6 +57,7 @@ class RedditCollector:
             Collection ID for the completed collection
         """
         # Force reddit client to reload config before collection
+        reddit_client = get_reddit_client()
         reddit_client.reload_client()
 
         # Create collection record
@@ -108,6 +109,7 @@ class RedditCollector:
         """Collect posts with progress bar."""
         print("Fetching posts...")
         
+        reddit_client = get_reddit_client()
         posts = reddit_client.get_posts(
             subreddit=params.subreddit,
             sort_method=params.sort_method,
@@ -134,6 +136,7 @@ class RedditCollector:
         with tqdm(total=len(posts), desc="Processing posts", unit="post") as pbar:
             for post in posts:
                 # Get comments for this post
+                reddit_client = get_reddit_client()
                 comments = reddit_client.get_comments(
                     post_id=post['id'],
                     root_comments_limit=params.root_comments,

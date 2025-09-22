@@ -105,12 +105,39 @@ echo -e "${BLUE}📁 Executable location: $EXECUTABLE_PATH${NC}"
 
 # Test the executable
 echo -e "${BLUE}🧪 Testing executable...${NC}"
-if "$EXECUTABLE_PATH" --help > /dev/null 2>&1; then
-    echo -e "${GREEN}✅ Executable test passed${NC}"
+
+# Start the server in background
+"$EXECUTABLE_PATH" &
+SERVER_PID=$!
+
+# Wait for server to start (max 30 seconds)
+echo -e "${YELLOW}⏳ Waiting for server to start...${NC}"
+for i in {1..30}; do
+    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Server started successfully${NC}"
+        break
+    fi
+    sleep 1
+    if [ $i -eq 30 ]; then
+        echo -e "${RED}❌ Server failed to start within 30 seconds${NC}"
+        kill $SERVER_PID 2>/dev/null || true
+        exit 1
+    fi
+done
+
+# Test the health endpoint
+if curl -s http://localhost:8000/health | grep -q '"status"'; then
+    echo -e "${GREEN}✅ Health check passed${NC}"
 else
-    echo -e "${YELLOW}⚠️  Executable test failed (this is normal for FastAPI apps)${NC}"
-    echo -e "${YELLOW}   The executable should still work when started normally${NC}"
+    echo -e "${RED}❌ Health check failed${NC}"
+    kill $SERVER_PID 2>/dev/null || true
+    exit 1
 fi
+
+# Stop the server
+kill $SERVER_PID 2>/dev/null || true
+wait $SERVER_PID 2>/dev/null || true
+echo -e "${GREEN}✅ Executable test completed${NC}"
 
 # Show build summary
 echo "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=" "="

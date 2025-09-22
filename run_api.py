@@ -16,16 +16,24 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 if __name__ == "__main__":
+    # Detect if running in PyInstaller bundle
+    is_bundled = getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+    
     # Get port from environment variable or default to 8000
     port = int(os.environ.get('PORT', 8000))
     host = os.environ.get('HOST', '0.0.0.0')
     
-    print("🚀 Starting Sentopic API Development Server...")
+    if is_bundled:
+        print("🚀 Starting Sentopic API Production Server...")
+        print("📦 Running in PyInstaller bundle mode")
+    else:
+        print("🚀 Starting Sentopic API Development Server...")
+        print("🔄 Auto-reload enabled - server will restart when code changes")
+    
     print(f"🌐 Host: {host}")
     print(f"🔌 Port: {port}")
     print(f"📚 API Documentation: http://localhost:{port}/docs")
-    print(f"🏥 Health Check: http://localhost:{port}/health") 
-    print("🔄 Auto-reload enabled - server will restart when code changes")
+    print(f"🏥 Health Check: http://localhost:{port}/health")
     print("⏹️  Press Ctrl+C to stop the server")
     
     # Show environment info for debugging
@@ -41,13 +49,25 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, signal_handler)
     
     try:
-        uvicorn.run(
-            "api:app",
-            host=host,
-            port=port,
-            reload=True,
-            log_level="info"
-        )
+        if is_bundled:
+            # In PyInstaller bundle, import the app directly
+            from api import app
+            uvicorn.run(
+                app,  # Pass app object directly
+                host=host,
+                port=port,
+                reload=False,
+                log_level="info"
+            )
+        else:
+            # In development, use string import for auto-reload
+            uvicorn.run(
+                "api:app",  # String import works in development
+                host=host,
+                port=port,
+                reload=True,
+                log_level="info"
+            )
     except OSError as e:
         if "Address already in use" in str(e):
             print(f"❌ ERROR: Port {port} is already in use!")
