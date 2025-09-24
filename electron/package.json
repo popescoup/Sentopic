@@ -1,49 +1,138 @@
 {
-    "name": "sentopic-desktop",
-    "version": "1.0.0",
-    "description": "Sentopic Reddit Analytics - Desktop Application",
-    "main": "main.js",
-    "author": "Sentopic",
-    "license": "MIT",
-    "private": true,
-    "scripts": {
-      "start": "electron .",
-      "dev": "electron . --dev",
-      "pack": "electron-builder --dir",
-      "dist": "electron-builder",
-      "postinstall": "electron-builder install-app-deps"
+  "name": "sentopic-desktop",
+  "version": "1.0.0",
+  "description": "Sentopic Reddit Analytics - Desktop Application",
+  "main": "main.js",
+  "author": "Sentopic",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "npm run build:python && npm run build:frontend && npm run build:electron",
+    "build:python": "cd .. && ./scripts/build-python.sh",
+    "build:frontend": "cd ../frontend && npm run build && cp -r ../frontend/dist ./frontend-dist",
+    "build:electron": "electron-builder",
+    "pack": "electron-builder --dir",
+    "dist": "npm run build",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "clean": "rm -rf dist && rm -rf ../dist && rm -rf ../frontend/dist && rm -rf frontend-dist",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "concurrently": "^8.2.0",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "build": {
+    "appId": "com.sentopic.desktop",
+    "productName": "Sentopic",
+    "copyright": "Copyright © 2024 Sentopic. All rights reserved.",
+    "directories": {
+      "buildResources": "build-resources",
+      "output": "dist"
     },
-    "devDependencies": {
-      "electron": "^28.0.0",
-      "electron-builder": "^24.9.1",
-      "concurrently": "^8.2.0",
-      "wait-on": "^7.2.0"
-    },
-    "dependencies": {
-      "axios": "^1.6.0"
-    },
-    "build": {
-      "appId": "com.sentopic.desktop",
-      "productName": "Sentopic",
-      "directories": {
-        "output": "dist"
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "frontend-dist/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": "../config.example.json",
+        "to": "config.example.json"
       },
-      "files": [
-        "main.js",
-        "preload.js",
-        "renderer.js",
-        "../frontend/dist/**/*"
-      ],
-      "mac": {
-        "category": "public.app-category.productivity",
-        "target": "dmg"
-      },
-      "win": {
-        "target": "nsis"
-      },
-      "linux": {
-        "target": "AppImage",
-        "category": "Office"
+      {
+        "from": "../dist/sentopic",
+        "to": "python-backend"
       }
-    }
+    ],
+    "asarUnpack": [
+      "python-backend/**/*",
+      "frontend-dist/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        }
+      ],
+      "icon": "build-resources/icon.icns",
+      "entitlements": "build-resources/entitlements.mac.plist",
+      "entitlementsInherit": "build-resources/entitlements.mac.plist",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "darkModeSupport": true,
+      "type": "distribution"
+    },
+    "dmg": {
+      "title": "Sentopic Reddit Analytics",
+      "icon": "build-resources/icon.icns",
+      "backgroundColor": "#1a1a1a",
+      "window": {
+        "width": 600,
+        "height": 400
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 200,
+          "type": "file"
+        },
+        {
+          "x": 450,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "format": "ULFO"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build-resources/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build-resources/icon.ico",
+      "uninstallerIcon": "build-resources/icon.ico",
+      "installerHeaderIcon": "build-resources/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sentopic"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build-resources/icon.png",
+      "category": "Office",
+      "synopsis": "Reddit Analytics and Research Tool",
+      "description": "Comprehensive Reddit analytics tool for sentiment analysis, trend tracking, and community insights."
+    },
+    "publish": null,
+    "compression": "maximum",
+    "removePackageScripts": true,
+    "nodeGypRebuild": false,
+    "npmRebuild": false
   }
+}

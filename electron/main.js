@@ -11,6 +11,12 @@ let pythonProcess = null;
 let backendPort = null;
 let isDev = process.argv.includes('--dev');
 
+// IMPORTANT: Detect if we're running in a packaged app
+const isPackaged = app.isPackaged;
+
+console.log(`Running mode: ${isPackaged ? 'PACKAGED' : 'DEVELOPMENT'}`);
+console.log(`Development flag: ${isDev}`);
+
 // Configuration
 const CONFIG = {
   primaryPortRange: { start: 8000, end: 8020 },
@@ -19,6 +25,46 @@ const CONFIG = {
   healthCheckInterval: 1000,  // 1 second
   maxStartupTime: 60000       // 60 seconds total
 };
+
+// Get the correct paths based on whether we're packaged or in development
+function getPaths() {
+  if (isPackaged) {
+    // Packaged app - use bundled resources
+    const resourcesPath = process.resourcesPath;
+    const pythonExecutable = path.join(resourcesPath, '..', 'python-backend', 'sentopic');
+    const frontendPath = path.join(__dirname, 'frontend-dist', 'index.html');
+    
+    console.log('PACKAGED MODE PATHS:');
+    console.log(`  Resources path: ${resourcesPath}`);
+    console.log(`  Python executable: ${pythonExecutable}`);
+    console.log(`  Frontend path: ${frontendPath}`);
+    
+    return {
+      pythonExecutable,
+      frontendPath,
+      workingDirectory: path.dirname(pythonExecutable)
+    };
+  } else {
+    // Development mode - use existing paths
+    const projectRoot = path.dirname(__dirname);
+    const pythonExecutable = path.join(projectRoot, 'sentopic-env', 'bin', 'python');
+    const runApiPath = path.join(projectRoot, 'run_api.py');
+    const frontendPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
+    
+    console.log('DEVELOPMENT MODE PATHS:');
+    console.log(`  Project root: ${projectRoot}`);
+    console.log(`  Python executable: ${pythonExecutable}`);
+    console.log(`  run_api.py: ${runApiPath}`);
+    console.log(`  Frontend path: ${frontendPath}`);
+    
+    return {
+      pythonExecutable,
+      runApiPath,
+      frontendPath,
+      workingDirectory: projectRoot
+    };
+  }
+}
 
 // FIXED: More robust port availability checking that detects conflicts properly
 function isPortAvailable(port) {
@@ -232,7 +278,7 @@ function showErrorDialog(title, message) {
   dialog.showErrorBox(title, `${message}\n\nPlease check the console for more details.`);
 }
 
-// Python backend startup with comprehensive debugging
+// Python backend startup with comprehensive debugging and mode detection
 async function startPythonBackend() {
   try {
     console.log('STARTING PYTHON BACKEND PROCESS...');
@@ -244,40 +290,48 @@ async function startPythonBackend() {
     console.log(`SELECTED PORT: ${backendPort}`);
     console.log('='.repeat(60));
     
-    // Determine paths
-    const projectRoot = path.dirname(__dirname);
-    const venvPath = path.join(projectRoot, 'sentopic-env', 'bin', 'python');
-    const runApiPath = path.join(projectRoot, 'run_api.py');
+    // Get correct paths based on mode
+    console.log('Step 2: Determining file paths...');
+    const paths = getPaths();
     
-    console.log('Step 2: Verifying file paths...');
-    console.log(`Project root: ${projectRoot}`);
-    console.log(`Virtual env python: ${venvPath}`);
-    console.log(`run_api.py path: ${runApiPath}`);
-    
-    // Check if files exist
-    if (!fs.existsSync(venvPath)) {
-      throw new Error(`Virtual environment not found at: ${venvPath}`);
+    // Verify files exist
+    if (!fs.existsSync(paths.pythonExecutable)) {
+      throw new Error(`Python executable not found at: ${paths.pythonExecutable}`);
     }
-    console.log('Virtual environment python found');
+    console.log('Python executable found');
     
-    if (!fs.existsSync(runApiPath)) {
-      throw new Error(`run_api.py not found at: ${runApiPath}`);
+    if (!isPackaged && !fs.existsSync(paths.runApiPath)) {
+      throw new Error(`run_api.py not found at: ${paths.runApiPath}`);
     }
-    console.log('run_api.py found');
+    
     console.log('='.repeat(60));
     
-    // Start Python process
+    // Start Python process with mode-specific arguments
     console.log('Step 3: Starting Python process...');
-    console.log(`Command: ${venvPath} ${runApiPath}`);
-    console.log(`Environment PORT: ${backendPort}`);
-    console.log(`Working directory: ${projectRoot}`);
     
-    pythonProcess = spawn(venvPath, [runApiPath], {
-      cwd: projectRoot,
+    let spawnArgs, command;
+    
+    if (isPackaged) {
+      // Packaged mode - execute the bundled standalone executable directly
+      command = paths.pythonExecutable;
+      spawnArgs = []; // No additional arguments needed for standalone executable
+      console.log(`PACKAGED MODE - Command: ${command}`);
+    } else {
+      // Development mode - use Python interpreter with script
+      command = paths.pythonExecutable;
+      spawnArgs = [paths.runApiPath];
+      console.log(`DEVELOPMENT MODE - Command: ${command} ${spawnArgs.join(' ')}`);
+    }
+    
+    console.log(`Working directory: ${paths.workingDirectory}`);
+    console.log(`Environment PORT: ${backendPort}`);
+    
+    pythonProcess = spawn(command, spawnArgs, {
+      cwd: paths.workingDirectory,
       env: {
         ...process.env,
         PORT: backendPort.toString(),
-        PYTHONPATH: projectRoot
+        PYTHONPATH: isPackaged ? paths.workingDirectory : path.dirname(__dirname)
       },
       stdio: ['pipe', 'pipe', 'pipe'] // Always capture output for debugging
     });
@@ -358,14 +412,14 @@ function createWindow() {
     show: false // Don't show until ready
   });
   
-  // Load the built frontend
-  const frontendPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
+  // Load the frontend based on mode
+  const paths = getPaths();
   
-  if (fs.existsSync(frontendPath)) {
-    mainWindow.loadFile(frontendPath);
-    console.log(`Loaded frontend from: ${frontendPath}`);
+  if (fs.existsSync(paths.frontendPath)) {
+    mainWindow.loadFile(paths.frontendPath);
+    console.log(`Loaded frontend from: ${paths.frontendPath}`);
   } else {
-    console.error(`Frontend not found at: ${frontendPath}`);
+    console.error(`Frontend not found at: ${paths.frontendPath}`);
     showErrorDialog('Frontend Not Found', 'Please run "npm run build" in the frontend directory first.');
     return;
   }
@@ -397,7 +451,8 @@ ipcMain.handle('get-backend-status', () => {
   const status = {
     port: backendPort,
     isRunning: pythonProcess !== null,
-    url: backendPort ? `http://127.0.0.1:${backendPort}` : null
+    url: backendPort ? `http://127.0.0.1:${backendPort}` : null,
+    mode: isPackaged ? 'packaged' : 'development'
   };
   console.log(`IPC: Backend status requested:`, status);
   return status;
@@ -407,6 +462,7 @@ ipcMain.handle('get-backend-status', () => {
 app.whenReady().then(async () => {
   console.log('Sentopic Desktop App starting...');
   console.log(`Development mode: ${isDev}`);
+  console.log(`Packaged mode: ${isPackaged}`);
   console.log(`Node version: ${process.version}`);
   console.log(`Electron version: ${process.versions.electron}`);
   console.log(`Platform: ${process.platform}`);

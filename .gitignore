@@ -95,3 +95,10 @@ __pycache__/
 
 # Build scripts output
 scripts/build-output.log
+
+# Packaging
+electron/build-resources/
+electron/frontend-dist/
+frontend/frontend-dist/
+electron/temp-asar/
+electron/temp-asar2/
