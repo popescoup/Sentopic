@@ -24,6 +24,17 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false,  // 🔒 SECURITY: Remove source maps from production build
+    minify: 'terser',  // 🔒 SECURITY: Enhanced minification  
+    terserOptions: {
+      compress: {
+        drop_console: true,    // Remove console.log statements from production
+        drop_debugger: true,   // Remove debugger statements
+        passes: 2              // Multiple compression passes for better minification
+      },
+      mangle: {
+        toplevel: true         // Rename top-level variables for better obfuscation
+      }
+    }
   },
 })
