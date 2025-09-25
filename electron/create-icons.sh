@@ -18,8 +18,14 @@ fi
 # Create the base SVG icon file
 cat > build-resources/icon.svg << 'EOF'
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <!-- Dark grey background with rounded corners -->
+  <!-- Main rounded background -->
   <rect width="1024" height="1024" fill="#2a2a2a" rx="128" ry="128"/>
+  
+  <!-- Fill the corner areas that the rounded rect doesn't cover -->
+  <rect x="0" y="0" width="128" height="128" fill="#2a2a2a"/>
+  <rect x="896" y="0" width="128" height="128" fill="#2a2a2a"/>
+  <rect x="0" y="896" width="128" height="128" fill="#2a2a2a"/>
+  <rect x="896" y="896" width="128" height="128" fill="#2a2a2a"/>
   
   <!-- ASCII-style "S" based on your logo -->
   <!-- Top horizontal line -->
