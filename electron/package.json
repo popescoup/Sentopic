@@ -77,7 +77,7 @@
     "dmg": {
       "title": "Sentopic Reddit Analytics",
       "icon": "build-resources/icon.icns",
-      "backgroundColor": "#1a1a1a",
+      "background": "build-resources/dmg-background.png",
       "window": {
         "width": 600,
         "height": 400
