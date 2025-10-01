@@ -6,23 +6,62 @@ from datetime import datetime
 
 
 class Config:
-    def __init__(self, config_path: str = "config.json"):
-        self.config_path = config_path
+    def __init__(self, config_path: str = "config.json", config_dir: str = None):
+        """
+        Initialize configuration.
+        
+        Args:
+            config_path: Name of the config file (default: "config.json")
+            config_dir: Directory containing config file (default: current directory)
+        """
+        self.config_dir = config_dir or os.getcwd()
+        self.config_path = os.path.join(self.config_dir, config_path)
+        self.example_config_path = os.path.join(self.config_dir, "config.example.json")
         self._config = None
     
     def load_config(self) -> Dict[str, Any]:
-        """Load configuration from JSON file."""
+        """Load configuration from JSON file, creating from example if needed."""
         if self._config is None:
+            # Check if config exists, if not create from example
             if not os.path.exists(self.config_path):
-                raise FileNotFoundError(
-                    f"Configuration file '{self.config_path}' not found. "
-                    "Please create it with your Reddit API credentials."
-                )
+                print(f"⚠️  Config file not found at: {self.config_path}")
+                print(f"📝 Creating from example: {self.example_config_path}")
+                
+                success, error = self._create_config_from_example()
+                if not success:
+                    raise FileNotFoundError(
+                        f"Configuration file '{self.config_path}' not found and could not be created. "
+                        f"Error: {error}"
+                    )
+                print(f"✅ Created config file at: {self.config_path}")
             
             with open(self.config_path, 'r') as f:
                 self._config = json.load(f)
         
         return self._config
+    
+    def _create_config_from_example(self) -> Tuple[bool, str]:
+        """
+        Create config.json from config.example.json.
+        
+        Returns:
+            Tuple of (success: bool, error_message: str)
+        """
+        try:
+            # Check if example config exists
+            if not os.path.exists(self.example_config_path):
+                return False, f"Example config not found at: {self.example_config_path}"
+            
+            # Ensure config directory exists
+            os.makedirs(self.config_dir, exist_ok=True)
+            
+            # Copy example to actual config
+            shutil.copy2(self.example_config_path, self.config_path)
+            
+            return True, ""
+            
+        except Exception as e:
+            return False, f"Failed to create config from example: {str(e)}"
     
     def get_reddit_config(self) -> Dict[str, str]:
         """Get Reddit API configuration."""
@@ -240,18 +279,52 @@ class Config:
             Tuple of (success: bool, message: str)
         """
         try:
+            print("=" * 60)
+            print("DEBUG: test_reddit_connection called")
+            print(f"  config.config_dir: {self.config_dir}")
+            print(f"  config.config_path: {self.config_path}")
+            print(f"  config file exists: {os.path.exists(self.config_path)}")
+            print("=" * 60)
+            
             reddit_config = self.get_reddit_config()
             
-            # Import here to avoid circular imports
-            from src.reddit_client import RedditClient
+            print("DEBUG: Reddit config loaded")
+            print(f"  client_id present: {bool(reddit_config.get('client_id'))}")
+            print(f"  client_id length: {len(reddit_config.get('client_id', ''))}")
+            print(f"  client_id value: {reddit_config.get('client_id', '')[:10]}...")
+            print(f"  client_secret present: {bool(reddit_config.get('client_secret'))}")
+            print(f"  client_secret length: {len(reddit_config.get('client_secret', ''))}")
+            print(f"  user_agent present: {bool(reddit_config.get('user_agent'))}")
+            print(f"  user_agent value: {reddit_config.get('user_agent', '')}")
+            print("=" * 60)
             
-            # Create Reddit client and test connection (no parameters needed)
-            reddit_client = RedditClient()
-            return reddit_client.test_connection()
+            # Import here to avoid circular imports
+            from src.reddit_client import get_reddit_client, reset_reddit_client
+            
+            print("DEBUG: Resetting Reddit client...")
+            # Reset the global client to force reinitialization with current config
+            reset_reddit_client()
+            
+            print("DEBUG: Getting Reddit client instance...")
+            # Get the global client instance (will be initialized with current config)
+            reddit_client = get_reddit_client()
+            
+            print("DEBUG: Testing connection...")
+            result = reddit_client.test_connection()
+            print(f"DEBUG: Connection test result: {result}")
+            print("=" * 60)
+            
+            return result
             
         except ValueError as e:
+            print(f"DEBUG: ValueError in test_reddit_connection: {e}")
+            print("=" * 60)
             return False, str(e)
         except Exception as e:
+            print(f"DEBUG: Exception in test_reddit_connection: {e}")
+            import traceback
+            print(f"DEBUG: Traceback:\n{traceback.format_exc()}")
+            print("=" * 60)
             return False, f"Reddit connection test failed: {str(e)}"
     
     def test_llm_providers(self) -> Dict[str, Tuple[bool, str]]:
@@ -407,6 +480,9 @@ class Config:
     
     def _save_config(self, config_data: Dict[str, Any]) -> Tuple[bool, List[str]]:
         try:
+            # Ensure config directory exists
+            os.makedirs(self.config_dir, exist_ok=True)
+            
             # Write new config with proper formatting
             with open(self.config_path, 'w') as f:
                 json.dump(config_data, f, indent=4, sort_keys=False)
@@ -422,4 +498,7 @@ class Config:
 
 
 # Global config instance
+# The config_dir will be set by the application entry point (run_api.py)
+# In development mode, it defaults to current directory
+# In packaged mode, it will be set to the user data directory
 config = Config()

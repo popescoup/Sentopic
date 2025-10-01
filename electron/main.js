@@ -31,7 +31,9 @@ function getPaths() {
   if (isPackaged) {
     // Packaged app - use bundled resources
     const resourcesPath = process.resourcesPath;
-    const pythonExecutable = path.join(resourcesPath, '..', 'python-backend', 'sentopic');
+    // Add .exe extension on Windows
+    const executableName = process.platform === 'win32' ? 'sentopic.exe' : 'sentopic';
+    const pythonExecutable = path.join(resourcesPath, '..', 'python-backend', executableName);
     const frontendPath = path.join(__dirname, 'frontend-dist', 'index.html');
     
     console.log('PACKAGED MODE PATHS:');
@@ -47,7 +49,10 @@ function getPaths() {
   } else {
     // Development mode - use existing paths
     const projectRoot = path.dirname(__dirname);
-    const pythonExecutable = path.join(projectRoot, 'sentopic-env', 'bin', 'python');
+    // Handle different virtual environment structures
+    const pythonExecutable = process.platform === 'win32' 
+      ? path.join(projectRoot, 'sentopic-env', 'Scripts', 'python.exe')
+      : path.join(projectRoot, 'sentopic-env', 'bin', 'python');
     const runApiPath = path.join(projectRoot, 'run_api.py');
     const frontendPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
     
@@ -326,13 +331,22 @@ async function startPythonBackend() {
     console.log(`Working directory: ${paths.workingDirectory}`);
     console.log(`Environment PORT: ${backendPort}`);
     
+    // Prepare environment variables
+    const spawnEnv = {
+      ...process.env,
+      PORT: backendPort.toString(),
+      PYTHONPATH: isPackaged ? paths.workingDirectory : path.dirname(__dirname)
+    };
+    
+    // In packaged mode, tell Python where to find bundled resources (like config.example.json)
+    if (isPackaged && process.resourcesPath) {
+      spawnEnv.SENTOPIC_BUNDLE_DIR = path.join(process.resourcesPath, '..', 'python-backend');
+      console.log(`Environment SENTOPIC_BUNDLE_DIR: ${spawnEnv.SENTOPIC_BUNDLE_DIR}`);
+    }
+    
     pythonProcess = spawn(command, spawnArgs, {
       cwd: paths.workingDirectory,
-      env: {
-        ...process.env,
-        PORT: backendPort.toString(),
-        PYTHONPATH: isPackaged ? paths.workingDirectory : path.dirname(__dirname)
-      },
+      env: spawnEnv,
       stdio: ['pipe', 'pipe', 'pipe'] // Always capture output for debugging
     });
     
@@ -496,19 +510,46 @@ app.on('activate', () => {
 });
 
 // Graceful shutdown
-app.on('before-quit', (event) => {
-  console.log('App shutting down...');
-  
-  if (pythonProcess) {
-    console.log('Terminating Python backend...');
-    pythonProcess.kill('SIGTERM');
+app.on('before-quit', async (event) => {
+  if (pythonProcess && !pythonProcess.killed) {
+    event.preventDefault(); // Prevent immediate quit
     
-    // Give it a moment to shut down gracefully
-    setTimeout(() => {
-      if (pythonProcess) {
-        console.log('Force killing Python backend...');
-        pythonProcess.kill('SIGKILL');
-      }
-    }, 3000);
+    console.log('App shutting down - terminating Python backend...');
+    
+    try {
+      // Try graceful shutdown first
+      pythonProcess.kill('SIGTERM');
+      
+      // Wait for process to exit (with timeout)
+      const shutdownPromise = new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          console.log('Graceful shutdown timeout - force killing...');
+          if (pythonProcess && !pythonProcess.killed) {
+            pythonProcess.kill('SIGKILL');
+          }
+          resolve();
+        }, 3000);
+        
+        if (pythonProcess) {
+          pythonProcess.once('exit', () => {
+            clearTimeout(timeout);
+            console.log('Python process terminated successfully');
+            resolve();
+          });
+        } else {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+      
+      await shutdownPromise;
+      pythonProcess = null;
+      
+    } catch (error) {
+      console.error('Error during Python process shutdown:', error);
+    } finally {
+      // Now actually quit
+      app.quit();
+    }
   }
 });

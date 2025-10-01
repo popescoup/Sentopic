@@ -33,11 +33,9 @@ config_example_path = os.path.join(project_root, 'config.example.json')
 if os.path.exists(config_example_path):
     datas.append((config_example_path, '.'))
 
-# Include actual config.json if it exists (for development testing)
-config_path = os.path.join(project_root, 'config.json')
-if os.path.exists(config_path):
-    datas.append((config_path, '.'))
-    print(f"✅ Including config.json in bundle")
+# DO NOT include config.json in bundle - users will create their own in user data directory
+# Only config.example.json should be bundled as a template
+# (The code for bundling config.example.json is already handled above at line 48)
 
 # Hidden imports required for proper functionality
 hiddenimports = [

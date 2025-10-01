@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from typing import Union
+import os
 
 from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
@@ -18,6 +19,54 @@ from src.api.models import (
     CollectionListResponse, IndexingRequest, IndexingResponse, IndexingStatusResponse,
     FilteredContextsResponse, TrendsResponse
 )
+
+# Initialize configuration and database with appropriate data directory
+# This must happen BEFORE creating the FastAPI app to ensure proper initialization
+data_dir = os.environ.get('SENTOPIC_DATA_DIR')
+
+print("=" * 60)
+print("DEBUG: API initialization")
+print(f"  SENTOPIC_DATA_DIR from env: {data_dir}")
+print("=" * 60)
+
+if data_dir:
+    # Packaged mode - use user data directory
+    print(f"🔧 Initializing with user data directory: {data_dir}")
+    from src.config import config
+    from src.database import db
+    
+    print(f"DEBUG: Before reinit - config.config_dir: {config.config_dir}")
+    print(f"DEBUG: Before reinit - config.config_path: {config.config_path}")
+    
+    # Reinitialize config with user data directory
+    config.__init__(config_dir=data_dir)
+    
+    print(f"DEBUG: After reinit - config.config_dir: {config.config_dir}")
+    print(f"DEBUG: After reinit - config.config_path: {config.config_path}")
+    print(f"DEBUG: Config file exists: {os.path.exists(config.config_path)}")
+    
+    # Reinitialize database with user data directory
+    db.__init__(db_dir=data_dir)
+    
+    # CRITICAL: Reset Reddit client after config is reinitialized
+    # This ensures any cached Reddit client instance is cleared
+    from src.reddit_client import reset_reddit_client
+    print("DEBUG: Resetting Reddit client to use new config path...")
+    reset_reddit_client()
+    print("DEBUG: Reddit client reset complete")
+    
+    print(f"✅ Config path: {config.config_path}")
+    print(f"✅ Database path: {db.db_path}")
+else:
+    # Development mode - use default paths (current directory)
+    print(f"🔧 Initializing with default paths (development mode)")
+    from src.config import config
+    from src.database import db
+    
+    print(f"DEBUG: Dev mode - config.config_dir: {config.config_dir}")
+    print(f"DEBUG: Dev mode - config.config_path: {config.config_path}")
+
+print("=" * 60)
 
 # Initialize FastAPI application with enhanced documentation
 app = FastAPI(

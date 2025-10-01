@@ -225,8 +225,26 @@ Index('idx_chat_messages_timestamp', ChatMessage.timestamp)
 
 
 class Database:
-    def __init__(self, db_path: str = "sentopic.db"):
-        self.engine = create_engine(f"sqlite:///{db_path}", echo=False)
+    def __init__(self, db_path: str = "sentopic.db", db_dir: str = None):
+        """
+        Initialize database.
+        
+        Args:
+            db_path: Name of the database file (default: "sentopic.db")
+            db_dir: Directory containing database file (default: current directory)
+        """
+        import os
+        
+        if db_dir:
+            # If directory is specified, ensure it exists and join paths
+            os.makedirs(db_dir, exist_ok=True)
+            full_db_path = os.path.join(db_dir, db_path)
+        else:
+            # Use db_path as-is (for backward compatibility in dev mode)
+            full_db_path = db_path
+        
+        self.db_path = full_db_path
+        self.engine = create_engine(f"sqlite:///{full_db_path}", echo=False)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         self.create_tables()
     
@@ -492,4 +510,7 @@ class Database:
 
 
 # Global database instance
+# The db_dir will be set by the application entry point (run_api.py)
+# In development mode, it defaults to current directory
+# In packaged mode, it will be set to the user data directory
 db = Database()

@@ -9,8 +9,13 @@ import requests
 class RedditClient:
     def __init__(self):
         self.reddit = None
-        self._initialize_client()
         self.rate_limit_delay = 0.5  # Seconds between requests
+        # Don't initialize immediately - will be done on first use or explicit call
+
+    def _ensure_initialized(self):
+        """Ensure the Reddit client is initialized before use."""
+        if self.reddit is None:
+            self._initialize_client()
 
     def test_connection(self) -> Tuple[bool, str]:
         """
@@ -20,6 +25,9 @@ class RedditClient:
             Tuple of (success: bool, message: str)
         """
         try:
+            # Ensure client is initialized
+            self._ensure_initialized()
+            
             if not self.reddit:
                 return False, "Reddit client not initialized"
             
@@ -33,21 +41,61 @@ class RedditClient:
             return True, "Connected successfully to Reddit API"
             
         except Exception as e:
-            return False, f"Connection test failed: {str(e)}"
+            return False, f"Reddit connection test failed: {str(e)}"
     
     def _initialize_client(self):
         """Initialize the PRAW Reddit client."""
+        
+        print("=" * 60)
+        print("DEBUG: RedditClient._initialize_client() called")
+        print("=" * 60)
         
         # Force reload config to get latest values
         config.reload_config()
 
         reddit_config = config.get_reddit_config()
         
-        self.reddit = praw.Reddit(
-            client_id=reddit_config['client_id'],
-            client_secret=reddit_config['client_secret'],
-            user_agent=reddit_config['user_agent']
-        )
+        print("DEBUG: Config values retrieved:")
+        print(f"  client_id: '{reddit_config['client_id']}'")
+        print(f"  client_id type: {type(reddit_config['client_id'])}")
+        print(f"  client_secret: '{reddit_config['client_secret'][:5]}...'")
+        print(f"  client_secret type: {type(reddit_config['client_secret'])}")
+        print(f"  user_agent: '{reddit_config['user_agent']}'")
+        print(f"  user_agent type: {type(reddit_config['user_agent'])}")
+        print("=" * 60)
+        
+        print("DEBUG: Creating PRAW Reddit instance with all explicit config...")
+        try:
+            # Pass all config directly to avoid PRAW's config discovery
+            self.reddit = praw.Reddit(
+                client_id=reddit_config['client_id'],
+                client_secret=reddit_config['client_secret'],
+                user_agent=reddit_config['user_agent'],
+                redirect_uri='http://localhost:8080',
+                comment_kind='t1',
+                message_kind='t4',
+                redditor_kind='t2',
+                submission_kind='t3',
+                subreddit_kind='t5',
+                trophy_kind='t6',
+                oauth_url='https://oauth.reddit.com',
+                reddit_url='https://www.reddit.com',
+                short_url='https://redd.it',
+                ratelimit_seconds=5,
+                timeout=16,
+                check_for_async=False,
+                check_for_updates=False
+            )
+            print(f"DEBUG: PRAW Reddit instance created successfully")
+            print("=" * 60)
+        except Exception as e:
+            print(f"ERROR: Failed to create PRAW Reddit instance!")
+            print(f"  Exception type: {type(e).__name__}")
+            print(f"  Exception message: {str(e)}")
+            import traceback
+            print(f"  Full traceback:\n{traceback.format_exc()}")
+            print("=" * 60)
+            raise
         
         # Test the connection
         try:
@@ -63,6 +111,7 @@ class RedditClient:
     
     def reload_client(self):
         """Force reload of client with new configuration."""
+        self.reddit = None  # Reset to force reinitialization
         self._initialize_client()
     
     def _rate_limit_sleep(self):
@@ -73,16 +122,11 @@ class RedditClient:
                   limit: int = 100) -> List[Dict[str, Any]]:
         """
         Get posts from a subreddit.
-        
-        Args:
-            subreddit: Subreddit name (without r/)
-            sort_method: 'hot', 'new', 'rising', 'top', or 'controversial'
-            time_period: For top/controversial: 'hour', 'day', 'week', 'month', 'year', 'all'
-            limit: Number of posts to retrieve
-        
-        Returns:
-            List of post dictionaries
+        ...
         """
+        # Ensure client is initialized before use
+        self._ensure_initialized()
+        
         posts = []
         
         try:
@@ -131,16 +175,11 @@ class RedditClient:
                     replies_per_root: int, min_upvotes: int) -> List[Dict[str, Any]]:
         """
         Get comments for a specific post with hierarchical tracking.
-        
-        Args:
-            post_id: Reddit post ID
-            root_comments_limit: Maximum number of root comments to collect
-            replies_per_root: Maximum number of replies per root comment
-            min_upvotes: Minimum upvotes required for comments
-        
-        Returns:
-            List of comment dictionaries with depth and position tracking
+        ...
         """
+        # Ensure client is initialized before use
+        self._ensure_initialized()
+        
         comments = []
         
         try:
