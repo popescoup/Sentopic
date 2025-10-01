@@ -69,8 +69,8 @@ export const SubredditSelector: React.FC<SubredditSelectorProps> = ({
       return 'Subreddit name is too short';
     }
 
-    if (cleanName.length > 21) {
-      return 'Subreddit name is too long (max 21 characters)';
+    if (cleanName.length > 25) {
+      return 'Subreddit name is too long (max 25 characters)';
     }
 
     // Basic format validation (letters, numbers, underscores, hyphens)
