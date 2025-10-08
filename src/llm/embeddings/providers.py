@@ -170,19 +170,86 @@ class LocalEmbeddingProvider(EmbeddingProvider):
     
     def _initialize(self):
         """Initialize sentence-transformers model."""
+        import sys
+        import os
+        
+        # Diagnostic logging
+        print("=" * 60)
+        print("🔍 LocalEmbeddingProvider._initialize() called")
+        print(f"   sys.frozen: {getattr(sys, 'frozen', False)}")
+        print(f"   sys._MEIPASS exists: {hasattr(sys, '_MEIPASS')}")
+        if hasattr(sys, '_MEIPASS'):
+            print(f"   sys._MEIPASS: {sys._MEIPASS}")
+        print(f"   sys.path: {sys.path[:3]}...")  # First 3 entries
+        print("=" * 60)
+        
         try:
+            print("🔍 Attempting to import sentence_transformers...")
             from sentence_transformers import SentenceTransformer
+            print("✅ sentence_transformers imported successfully")
             
             # Default to a good general-purpose model if none specified
             if not self.model:
                 self.model = 'all-MiniLM-L6-v2'
             
-            # Load the model (downloads on first use)
+            print(f"🔍 Loading model: {self.model}")
+            
+            # Set cache directory for bundled models
+            if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+                # Running in PyInstaller bundle
+                cache_dir = os.path.join(sys._MEIPASS, 'huggingface_cache', 'hub')
+                print(f"   Bundled mode - setting cache to: {cache_dir}")
+                
+                # Check if model exists in bundle
+                model_dir = os.path.join(cache_dir, 'models--sentence-transformers--all-MiniLM-L6-v2')
+                if os.path.exists(model_dir):
+                    print(f"   ✅ Found bundled model at: {model_dir}")
+                    # Set HuggingFace cache environment variable
+                    os.environ['SENTENCE_TRANSFORMERS_HOME'] = cache_dir
+                    os.environ['HF_HOME'] = os.path.dirname(cache_dir)
+                else:
+                    print(f"   ⚠️  Bundled model not found at: {model_dir}")
+                    print(f"   Will attempt to use system cache or download")
+            
+            # Load the model
             self.sentence_model = SentenceTransformer(self.model)
             
-        except ImportError:
-            raise ImportError("sentence-transformers package required for local embeddings")
+            print("✅ Model loaded successfully")
+            
+        except ImportError as e:
+            print("❌ ImportError details:")
+            print(f"   Error: {e}")
+            print(f"   Error type: {type(e)}")
+            
+            # Try to import subcomponents to see what's missing
+            print("\n🔍 Testing subcomponent imports:")
+            try:
+                import torch
+                print(f"   ✅ torch: {torch.__version__}")
+            except ImportError as te:
+                print(f"   ❌ torch: {te}")
+            
+            try:
+                import transformers
+                print(f"   ✅ transformers: {transformers.__version__}")
+            except ImportError as te:
+                print(f"   ❌ transformers: {te}")
+            
+            try:
+                import sentence_transformers
+                print(f"   ✅ sentence_transformers: {sentence_transformers.__version__}")
+            except ImportError as te:
+                print(f"   ❌ sentence_transformers: {te}")
+            
+            print("=" * 60)
+            raise ImportError(f"sentence-transformers package required for local embeddings. Import error: {e}")
         except Exception as e:
+            import traceback
+            print(f"❌ Unexpected error: {e}")
+            print(f"   Error type: {type(e)}")
+            print(f"\n   Full traceback:")
+            traceback.print_exc()
+            print("=" * 60)
             raise Exception(f"Failed to initialize local embedding model '{self.model}': {e}")
     
     def generate_embeddings(self, texts: List[str]) -> EmbeddingResponse:
