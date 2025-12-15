@@ -14,7 +14,7 @@ class AnthropicProvider(LLMProvider):
     """
     Anthropic Claude provider implementation.
     
-    Supports Claude 3 models (Sonnet, Opus, Haiku) with proper
+    Supports Claude 3 and Claude 4 models (Sonnet, Opus, Haiku) with proper
     message formatting and error handling.
     """
     
@@ -71,9 +71,13 @@ class AnthropicProvider(LLMProvider):
                 # Claude returns content as a list of content blocks
                 content = "".join([block.text for block in response.content if hasattr(block, 'text')])
             
-            # Calculate cost estimate
+            # Calculate cost estimate with separate input/output token pricing
             tokens_used = response.usage.input_tokens + response.usage.output_tokens
-            cost_estimate = self._calculate_cost(tokens_used, self.config.model)
+            cost_estimate = self._calculate_cost(
+                input_tokens=response.usage.input_tokens,
+                output_tokens=response.usage.output_tokens,
+                model=self.config.model
+            )
             
             return LLMResponse(
                 content=content,
@@ -92,30 +96,46 @@ class AnthropicProvider(LLMProvider):
         except Exception as e:
             raise Exception(f"Unexpected error calling Anthropic API: {e}")
     
-    def _calculate_cost(self, tokens_used: int, model: str) -> float:
+    def _calculate_cost(self, input_tokens: int, output_tokens: int, model: str) -> float:
         """
         Calculate estimated cost for Anthropic API usage.
         
+        Uses official Anthropic pricing with separate input/output token costs.
+        Prices are per million tokens.
+        
         Args:
-            tokens_used: Total tokens (input + output)
+            input_tokens: Number of input tokens
+            output_tokens: Number of output tokens
             model: Model name
         
         Returns:
             Estimated cost in USD
         """
-        # Anthropic pricing (as of 2024) - simplified estimation
-        # In practice, input and output tokens have different costs
-        costs_per_token = {
-            "claude-3-opus-20240229": 0.000075,      # $75 per 1M tokens (mixed)
-            "claude-3-sonnet-20240229": 0.000015,    # $15 per 1M tokens (mixed)
-            "claude-3-haiku-20240307": 0.000001,     # $1 per 1M tokens (mixed)
-            "claude-3.5-sonnet": 0.000015,           # $15 per 1M tokens (mixed)
+        # Anthropic pricing (official rates as of December 2024)
+        # Format: (input_cost_per_1M, output_cost_per_1M)
+        pricing = {
+            # Claude 3 models (legacy - deprecated/retired)
+            "claude-3-opus-20240229": (15.00, 75.00),
+            "claude-3-sonnet-20240229": (3.00, 15.00),
+            "claude-3-haiku-20240307": (0.25, 1.25),
+            "claude-3.5-sonnet": (3.00, 15.00),
+            "claude-3-5-sonnet-20240620": (3.00, 15.00),
+            "claude-3-5-sonnet-20241022": (3.00, 15.00),
+            
+            # Claude 4 models (current)
+            "claude-sonnet-4-20250514": (3.00, 15.00),
+            "claude-sonnet-4-5-20250929": (3.00, 15.00),
+            "claude-haiku-4-5-20251001": (0.80, 4.00),
         }
         
-        # Default cost if model not found
-        cost_per_token = costs_per_token.get(model, 0.000015)
+        # Default to Claude Sonnet pricing if model not found
+        input_cost_per_1m, output_cost_per_1m = pricing.get(model, (3.00, 15.00))
         
-        return tokens_used * cost_per_token
+        # Calculate cost
+        input_cost = (input_tokens / 1_000_000) * input_cost_per_1m
+        output_cost = (output_tokens / 1_000_000) * output_cost_per_1m
+        
+        return input_cost + output_cost
     
     def get_provider_name(self) -> str:
         """Return the provider name."""
@@ -145,29 +165,35 @@ class AnthropicProvider(LLMProvider):
         """
         is_valid, errors = super().validate_config()
         
-        # Validate Claude-specific model names
-        valid_models = [
-            "claude-3-opus-20240229",
-            "claude-3-sonnet-20240229", 
-            "claude-3-haiku-20240307",
-            "claude-3.5-sonnet",
-            "claude-3-5-sonnet-20240620"
-        ]
+        # Basic validation - let the Anthropic SDK handle model name validation
+        # This prevents hardcoding models that may become outdated
+        if not self.config.model or not isinstance(self.config.model, str):
+            errors.append("Model name must be a non-empty string")
         
-        if self.config.model not in valid_models:
-            errors.append(f"Invalid Claude model: {self.config.model}. Valid models: {valid_models}")
-        
-        # Claude has specific max_tokens limits
-        model_limits = {
+        # Validate max_tokens against official model limits (output generation limits)
+        # These are the maximum OUTPUT tokens the model can generate
+        model_output_limits = {
+            # Claude 3 models
             "claude-3-opus-20240229": 4096,
             "claude-3-sonnet-20240229": 4096,
             "claude-3-haiku-20240307": 4096,
             "claude-3.5-sonnet": 8192,
-            "claude-3-5-sonnet-20240620": 8192
+            "claude-3-5-sonnet-20240620": 8192,
+            "claude-3-5-sonnet-20241022": 8192,
+            
+            # Claude 4 models
+            "claude-sonnet-4-20250514": 8192,
+            "claude-sonnet-4-5-20250929": 8192,
+            "claude-haiku-4-5-20251001": 8192,
         }
         
-        max_allowed = model_limits.get(self.config.model, 4096)
+        # Get the limit for this model, default to conservative 4096 for unknown models
+        max_allowed = model_output_limits.get(self.config.model, 4096)
+        
         if self.config.max_tokens > max_allowed:
-            errors.append(f"max_tokens ({self.config.max_tokens}) exceeds limit for {self.config.model}: {max_allowed}")
+            errors.append(
+                f"max_tokens ({self.config.max_tokens}) exceeds output limit for {self.config.model}: {max_allowed}. "
+                f"Note: This is the output generation limit, not the context window limit."
+            )
         
         return len(errors) == 0, errors
