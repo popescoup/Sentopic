@@ -44,7 +44,7 @@
       "renderer.js",
       "frontend-dist/**/*"
     ],
-    "extraFiles": [
+    "extraResources": [
       {
         "from": "../config.example.json",
         "to": "config.example.json"
@@ -67,6 +67,7 @@
         }
       ],
       "icon": "build-resources/icon.icns",
+      "identity": "Luca Popescu (2Y4LYRR4PT)",
       "entitlements": "build-resources/entitlements.mac.plist",
       "entitlementsInherit": "build-resources/entitlements.mac.plist",
       "hardenedRuntime": true,

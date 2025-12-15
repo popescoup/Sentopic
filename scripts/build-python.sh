@@ -146,6 +146,29 @@ echo -e "${BLUE}📁 Executable: $EXECUTABLE_PATH${NC}"
 echo -e "${BLUE}📊 Size: $(du -h "$EXECUTABLE_PATH" | cut -f1)${NC}"
 echo -e "${BLUE}📋 Frozen requirements: $PROJECT_ROOT/requirements-frozen.txt${NC}"
 echo ""
+
+# Sign the Python backend for macOS distribution
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo -e "${BLUE}🔐 Signing Python backend for macOS...${NC}"
+    SIGN_SCRIPT="$PROJECT_ROOT/scripts/sign-python-backend.sh"
+    
+    if [ -f "$SIGN_SCRIPT" ]; then
+        chmod +x "$SIGN_SCRIPT"
+        "$SIGN_SCRIPT"
+        
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✅ Python backend signed successfully${NC}"
+        else
+            echo -e "${RED}❌ Failed to sign Python backend${NC}"
+            echo -e "${YELLOW}⚠️  Build complete but not signed. You can sign manually later.${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Signing script not found at: $SIGN_SCRIPT${NC}"
+        echo -e "${YELLOW}   Build complete but not signed.${NC}"
+    fi
+    echo ""
+fi
+
 echo -e "${YELLOW}📝 Next steps:${NC}"
 echo -e "   1. Test the executable: ${BLUE}$EXECUTABLE_PATH${NC}"
 echo -e "   2. The executable will start your FastAPI server"

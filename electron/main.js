@@ -33,7 +33,7 @@ function getPaths() {
     const resourcesPath = process.resourcesPath;
     // Add .exe extension on Windows
     const executableName = process.platform === 'win32' ? 'sentopic.exe' : 'sentopic';
-    const pythonExecutable = path.join(resourcesPath, '..', 'python-backend', executableName);
+    const pythonExecutable = path.join(resourcesPath, 'python-backend', executableName);
     const frontendPath = path.join(__dirname, 'frontend-dist', 'index.html');
     
     console.log('PACKAGED MODE PATHS:');
@@ -340,7 +340,7 @@ async function startPythonBackend() {
     
     // In packaged mode, tell Python where to find bundled resources (like config.example.json)
     if (isPackaged && process.resourcesPath) {
-      spawnEnv.SENTOPIC_BUNDLE_DIR = path.join(process.resourcesPath, '..', 'python-backend');
+      spawnEnv.SENTOPIC_BUNDLE_DIR = path.join(process.resourcesPath, 'python-backend');
       console.log(`Environment SENTOPIC_BUNDLE_DIR: ${spawnEnv.SENTOPIC_BUNDLE_DIR}`);
     }
     
