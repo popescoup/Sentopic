@@ -501,4 +501,6 @@ class Config:
 # The config_dir will be set by the application entry point (run_api.py)
 # In development mode, it defaults to current directory
 # In packaged mode, it will be set to the user data directory
-config = Config()
+import os
+config_dir = os.environ.get('SENTOPIC_DATA_DIR')
+config = Config(config_dir=config_dir) if config_dir else Config()

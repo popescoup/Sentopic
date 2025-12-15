@@ -513,4 +513,6 @@ class Database:
 # The db_dir will be set by the application entry point (run_api.py)
 # In development mode, it defaults to current directory
 # In packaged mode, it will be set to the user data directory
-db = Database()
+import os
+db_dir = os.environ.get('SENTOPIC_DATA_DIR')
+db = Database(db_dir=db_dir) if db_dir else Database()
