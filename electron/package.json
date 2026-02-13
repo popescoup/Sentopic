@@ -11,7 +11,7 @@
     "dev": "electron . --dev",
     "build": "npm run build:python && npm run build:frontend && npm run build:electron",
     "build:python": "cd .. && ./scripts/build-python.sh",
-    "build:frontend": "cd ../frontend && npm run build && cp -r ../frontend/dist ./frontend-dist",
+    "build:frontend": "cd ../frontend && npm run build && cp -r ./dist ../electron/frontend-dist",
     "build:electron": "electron-builder",
     "pack": "electron-builder --dir",
     "dist": "npm run build",

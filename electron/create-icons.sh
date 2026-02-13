@@ -5,12 +5,12 @@
 
 set -e
 
-echo "🎨 Creating Sentopic App Icons..."
+echo "ðŸŽ¨ Creating Sentopic App Icons..."
 echo "=================================="
 
 # Check if we're in the electron directory
 if [ ! -d "build-resources" ]; then
-    echo "❌ Error: build-resources directory not found"
+    echo "âŒ Error: build-resources directory not found"
     echo "Please run this script from the electron/ directory"
     exit 1
 fi
@@ -19,39 +19,27 @@ fi
 cat > build-resources/icon.svg << 'EOF'
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
   <!-- Main rounded background -->
-  <rect width="1024" height="1024" fill="#2a2a2a" rx="128" ry="128"/>
-  
-  <!-- Fill the corner areas that the rounded rect doesn't cover -->
-  <rect x="0" y="0" width="128" height="128" fill="#2a2a2a"/>
-  <rect x="896" y="0" width="128" height="128" fill="#2a2a2a"/>
-  <rect x="0" y="896" width="128" height="128" fill="#2a2a2a"/>
-  <rect x="896" y="896" width="128" height="128" fill="#2a2a2a"/>
+  <rect width="1024" height="1024" fill="#cfd0d0" rx="128" ry="128"/>
   
   <!-- ASCII-style "S" based on your logo -->
   <!-- Top horizontal line -->
-  <rect x="200" y="250" width="624" height="80" fill="#f0f0f0"/>
+  <rect x="200" y="250" width="624" height="80" fill="#2a2a2a"/>
   
   <!-- Top vertical line (left side) -->
-  <rect x="200" y="250" width="80" height="200" fill="#f0f0f0"/>
+  <rect x="200" y="370" width="80" height="80" fill="#2a2a2a"/>
   
   <!-- Middle horizontal line -->
-  <rect x="200" y="450" width="544" height="80" fill="#f0f0f0"/>
+  <rect x="200" y="450" width="544" height="80" fill="#2a2a2a"/>
   
   <!-- Bottom vertical line (right side) -->
-  <rect x="744" y="450" width="80" height="200" fill="#f0f0f0"/>
+  <rect x="744" y="450" width="80" height="160" fill="#2a2a2a"/>
   
   <!-- Bottom horizontal line -->
-  <rect x="200" y="650" width="624" height="80" fill="#f0f0f0"/>
-  
-  <!-- Top left corner block -->
-  <rect x="200" y="330" width="80" height="40" fill="#2a2a2a"/>
-  
-  <!-- Bottom right corner adjustment -->
-  <rect x="744" y="610" width="80" height="40" fill="#2a2a2a"/>
+  <rect x="200" y="650" width="624" height="80" fill="#2a2a2a"/>
 </svg>
 EOF
 
-echo "✅ Created base SVG icon"
+echo "âœ… Created base SVG icon"
 
 # Function to check if a command exists
 command_exists() {
@@ -66,11 +54,11 @@ if ! command_exists convert; then
 fi
 
 if ! command_exists sips; then
-    echo "⚠️  sips not found (macOS only tool)"
+    echo "âš ï¸  sips not found (macOS only tool)"
 fi
 
 if [ ! -z "$MISSING_TOOLS" ]; then
-    echo "❌ Missing required tools:$MISSING_TOOLS"
+    echo "âŒ Missing required tools:$MISSING_TOOLS"
     echo ""
     echo "To install missing tools:"
     echo "  brew install imagemagick"
@@ -79,10 +67,10 @@ if [ ! -z "$MISSING_TOOLS" ]; then
     exit 1
 fi
 
-echo "✅ Required tools found"
+echo "âœ… Required tools found"
 
 # Create PNG files for various sizes
-echo "🖼️  Creating PNG files..."
+echo "ðŸ–¼ï¸  Creating PNG files..."
 
 SIZES=(16 32 64 128 256 512 1024)
 
@@ -94,17 +82,17 @@ done
 # Create high-resolution PNG for Linux
 cp build-resources/icon-512.png build-resources/icon.png
 
-echo "✅ Created PNG files"
+echo "âœ… Created PNG files"
 
 # Create Windows ICO file (if on macOS or with ImageMagick)
-echo "🪟 Creating Windows ICO file..."
+echo "ðŸªŸ Creating Windows ICO file..."
 convert build-resources/icon-256.png build-resources/icon-128.png build-resources/icon-64.png build-resources/icon-32.png build-resources/icon-16.png build-resources/icon.ico
 
-echo "✅ Created Windows ICO file"
+echo "âœ… Created Windows ICO file"
 
 # Create macOS ICNS file (macOS only)
 if command_exists sips && command_exists iconutil; then
-    echo "🍎 Creating macOS ICNS file..."
+    echo "ðŸŽ Creating macOS ICNS file..."
     
     # Create iconset directory
     mkdir -p build-resources/icon.iconset
@@ -127,9 +115,9 @@ if command_exists sips && command_exists iconutil; then
     # Clean up iconset directory
     rm -rf build-resources/icon.iconset
     
-    echo "✅ Created macOS ICNS file"
+    echo "âœ… Created macOS ICNS file"
 else
-    echo "⚠️  Skipping ICNS creation (macOS tools not available)"
+    echo "âš ï¸  Skipping ICNS creation (macOS tools not available)"
     echo "   You can create it manually later or on macOS"
 fi
 
@@ -151,24 +139,24 @@ cat > build-resources/entitlements.mac.plist << 'EOF'
 </plist>
 EOF
 
-echo "✅ Created macOS entitlements file"
+echo "âœ… Created macOS entitlements file"
 
 # Clean up individual PNG files (optional)
 # rm build-resources/icon-*.png
 
 echo ""
-echo "🎉 Icon creation complete!"
+echo "ðŸŽ‰ Icon creation complete!"
 echo "=================================="
 echo "Created files:"
-echo "  📁 build-resources/icon.svg     - Source SVG file"
-echo "  🖼️  build-resources/icon.png     - Linux PNG (512x512)"
-echo "  🪟 build-resources/icon.ico     - Windows ICO (multi-size)"
+echo "  ðŸ“ build-resources/icon.svg     - Source SVG file"
+echo "  ðŸ–¼ï¸  build-resources/icon.png     - Linux PNG (512x512)"
+echo "  ðŸªŸ build-resources/icon.ico     - Windows ICO (multi-size)"
 if [ -f "build-resources/icon.icns" ]; then
-    echo "  🍎 build-resources/icon.icns    - macOS ICNS (multi-size)"
+    echo "  ðŸŽ build-resources/icon.icns    - macOS ICNS (multi-size)"
 else
-    echo "  ⚠️  build-resources/icon.icns    - Not created (macOS tools required)"
+    echo "  âš ï¸  build-resources/icon.icns    - Not created (macOS tools required)"
 fi
-echo "  📄 build-resources/entitlements.mac.plist - macOS entitlements"
+echo "  ðŸ“„ build-resources/entitlements.mac.plist - macOS entitlements"
 echo ""
 echo "Next steps:"
 echo "1. Your package.json is already configured to use these icons"
