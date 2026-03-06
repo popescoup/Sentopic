@@ -166,6 +166,7 @@ export const useAnalysisStatus = (projectId: string | undefined, enabled = true)
     enabled: !!projectId && enabled,
     refetchInterval: (data) => {
       // Poll every 3 seconds if analysis is running
+      console.log('refetchInterval data:', data?.status);
       return data?.status === 'running' ? 3000 : false;
     },
     retry: 1,

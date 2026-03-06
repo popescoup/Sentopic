@@ -28,8 +28,8 @@ export default defineConfig({
     minify: 'terser',  // 🔒 SECURITY: Enhanced minification  
     terserOptions: {
       compress: {
-        drop_console: true,    // Remove console.log statements from production
-        drop_debugger: true,   // Remove debugger statements
+        // drop_console: true,    // Remove console.log statements from production
+        // drop_debugger: true,   // Remove debugger statements
         passes: 2              // Multiple compression passes for better minification
       },
       mangle: {

@@ -124,6 +124,7 @@ export const useAnalysisProgress = (
   
   // Handle actual analysis completion
   useEffect(() => {
+    console.log('analysisStatus changed:', analysisStatus?.status);
     if (analysisStatus?.status === 'completed') {
       // Jump to 100% and mark as complete
       setProgress(100);
