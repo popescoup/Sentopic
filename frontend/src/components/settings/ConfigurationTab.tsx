@@ -3,7 +3,7 @@
  * Reddit API and LLM provider configuration forms
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/Modal';
@@ -85,9 +85,14 @@ export const ConfigurationTab: React.FC<ConfigurationTabProps> = ({
   const clearDataMutation = useClearAllData();
   const resetConfigMutation = useResetConfiguration();
 
-  // Initialize form with current configuration status
+  // Track whether the form has been initialized with saved values
+  const hasInitialized = useRef(false);
+
+  // Initialize form with current configuration status — runs once per modal open
   useEffect(() => {
-    if (configStatus) {
+    if (configStatus && !hasInitialized.current) {
+      hasInitialized.current = true;
+
       // Load Reddit configuration
       if (configStatus.reddit?.current_config) {
         const { current_config } = configStatus.reddit;
