@@ -1,0 +1,20 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main rounded background -->
+  <rect width="1024" height="1024" fill="#cfd0d0" rx="128" ry="128"/>
+  
+  <!-- ASCII-style "S" based on your logo -->
+  <!-- Top horizontal line -->
+  <rect x="200" y="250" width="624" height="80" fill="#2a2a2a"/>
+  
+  <!-- Top vertical line (left side) -->
+  <rect x="200" y="370" width="80" height="80" fill="#2a2a2a"/>
+  
+  <!-- Middle horizontal line -->
+  <rect x="200" y="450" width="544" height="80" fill="#2a2a2a"/>
+  
+  <!-- Bottom vertical line (right side) -->
+  <rect x="744" y="450" width="80" height="160" fill="#2a2a2a"/>
+  
+  <!-- Bottom horizontal line -->
+  <rect x="200" y="650" width="624" height="80" fill="#2a2a2a"/>
+</svg>
