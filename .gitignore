@@ -98,7 +98,6 @@ __pycache__/
 scripts/build-output.log
 
 # Packaging
-electron/build-resources/
 electron/frontend-dist/
 frontend/frontend-dist/
 electron/temp-asar/
