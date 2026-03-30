@@ -1,6 +1,6 @@
 # Sentopic
 
-Reddit analytics software for finding and validating business opportunities. Sentopic collects Reddit posts and comments, runs keyword-based sentiment analysis, plots mention and sentiment trends, maps co-occurrence relationships between topics, and surfaces insights through an AI-powered chat interface.
+Reddit analytics software for finding and validating business opportunities. Sentopic collects Reddit posts and comments, runs keyword-based sentiment analysis, maps co-occurrences and mention/sentiment trends, and surfaces insights through an AI-powered chat interface.
 
 Built as an Electron desktop app with a Python (FastAPI) backend and React frontend.
 
