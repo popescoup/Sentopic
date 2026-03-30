@@ -67,7 +67,6 @@
         }
       ],
       "icon": "build-resources/icon.icns",
-      "identity": "Luca Popescu (2Y4LYRR4PT)",
       "entitlements": "build-resources/entitlements.mac.plist",
       "entitlementsInherit": "build-resources/entitlements.mac.plist",
       "hardenedRuntime": true,
