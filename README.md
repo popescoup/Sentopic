@@ -17,118 +17,20 @@ Built as an Electron desktop app with a Python (FastAPI) backend and React front
 
 ## Getting the App
 
-Pre-built installers for macOS are available on the [releases page](../../releases). For installation and usage instructions, see the [documentation](https://sentopic.io/pages/documentation).
-
-The rest of this README is for contributors and developers who want to run or build Sentopic from source.
-
----
-
-## Running from Source
-
-### Prerequisites
-
-- Python 3.10+
-- Node.js 18+
-- A Reddit API app ([create one here](https://www.reddit.com/prefs/apps) — select "script" type)
-- An Anthropic or OpenAI API key (optional, required for AI features)
-
-> **Note on PyTorch**: `requirements.txt` includes `torch`, which is a large dependency (~2GB). Installation may take several minutes. If you only need the core sentiment analysis features and not local embeddings, you can skip torch — but AI-powered features will be limited.
-
-### 1. Clone and configure
-
-```bash
-git clone https://github.com/popescoup/Sentopic.git
-cd sentopic
-```
-
-Copy the example config and fill in your credentials:
-
-```bash
-cp config.example.json config.json
-```
-
-Open `config.json` and add your Reddit API credentials and optionally your LLM API key. See [Configuration](#configuration) below for details.
-
-### 2. Set up the Python backend
-
-```bash
-python -m venv sentopic-env
-source sentopic-env/bin/activate        # macOS/Linux
-# sentopic-env\Scripts\activate.bat     # Windows
-
-pip install -r requirements.txt
-```
-
-> The first run will also download the `all-MiniLM-L6-v2` sentence transformer model (~90MB) from HuggingFace when embeddings are first used.
-
-### 3. Set up the frontend
-
-```bash
-cd frontend
-npm install
-```
-
-### 4. Run in development mode
-
-You'll need two terminals:
-
-**Terminal 1 — Backend:**
-```bash
-source sentopic-env/bin/activate
-python run_api.py
-# API runs at http://localhost:8000
-# API docs at http://localhost:8000/docs
-```
-
-**Terminal 2 — Frontend:**
-```bash
-cd frontend
-npm run dev
-# Open the URL shown in the terminal (typically http://localhost:5173)
-```
-
----
-
-## Building the Packaged App
-
-The full build chains PyInstaller (Python → binary) → Vite (React → static assets) → electron-builder (→ `.dmg` / `.exe`).
-
-### Prerequisites
-
-Complete the [Running from Source](#running-from-source) setup first, then:
-
-```bash
-cd electron
-npm install
-```
-
 ### macOS
 
-```bash
-cd electron
-npm run build
-```
+Pre-built `.dmg` installers for macOS are available on the [releases page](https://github.com/popescoup/Sentopic/releases).
 
-Output: `electron/dist/Sentopic-1.0.0-arm64.dmg` and `Sentopic-1.0.0.dmg` (Intel)
-
-> **Code signing**: By default the build is unsigned. macOS users will see an "unidentified developer" warning on first launch, which can be bypassed by right-clicking → Open. See the [macOS installation guide](docs/installation/macos-installation.md) for details. If you have an Apple Developer certificate, set `"identity"` in `electron/package.json` to your identity string.
+1. Download the correct `.dmg` for your Mac:
+   - `Sentopic-1.0.0-arm64.dmg` — Apple Silicon (M1/M2/M3)
+   - `Sentopic-1.0.0.dmg` — Intel
+2. Open the `.dmg` and drag Sentopic to your Applications folder
+3. Open Sentopic
+4. Configure your API credentials in Settings → Configuration
 
 ### Windows
 
-```bash
-cd electron
-npm run dist:win
-```
-
-Output: `electron/dist/Sentopic-1.0.0.exe`
-
-> Windows builds can also be produced on macOS using Wine, but native Windows is recommended.
-
-### What the build does
-
-1. `scripts/build-python.sh` (or `.bat`) — packages the Python backend into a standalone binary via PyInstaller
-2. `cd frontend && npm run build` — compiles the React app and copies it to `electron/frontend-dist/`
-3. `electron-builder` — wraps everything into a platform installer
+A packaged Windows installer is not currently available. Windows users can run Sentopic in dev mode — see [Running from Source (Windows)](#running-from-source--windows) below.
 
 ---
 
@@ -158,11 +60,161 @@ Copy `config.example.json` to `config.json` and fill in your values:
 }
 ```
 
-**Reddit credentials** — Required for all data collection. Create a "script" type app at [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps).
+**Reddit credentials** — Required for all data collection. Create a "script" type app at [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps). Your Client ID is the string under your app name, your Client Secret is labeled "secret", and your User Agent should follow the format `AppName/1.0 by /u/YourRedditUsername`.
 
 **LLM API key** — Optional. Required for keyword suggestions, AI summaries, and the chat assistant. Configure either Anthropic or OpenAI, not both. LLM features are disabled gracefully if no key is provided.
 
 `config.json` is gitignored and never committed.
+
+---
+
+## Running from Source — macOS
+
+For contributors and developers who want to run or build Sentopic from source on macOS.
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- A Reddit API app ([create one here](https://www.reddit.com/prefs/apps) — select "script" type)
+- An Anthropic or OpenAI API key (optional, required for AI features)
+
+> **Note on PyTorch**: `requirements.txt` includes `torch`, which is a large dependency (~2GB). Installation may take several minutes.
+
+### 1. Clone and configure
+
+```bash
+git clone https://github.com/popescoup/Sentopic.git
+cd Sentopic
+cp config.example.json config.json
+```
+
+Open `config.json` and add your credentials.
+
+### 2. Set up the Python backend
+
+```bash
+python3 -m venv sentopic-env
+source sentopic-env/bin/activate
+pip install -r requirements.txt
+```
+
+> The first run will download the `all-MiniLM-L6-v2` sentence transformer model (~90MB) from HuggingFace when embeddings are first used.
+
+### 3. Set up the frontend
+
+```bash
+cd frontend
+npm install
+```
+
+### 4. Run in development mode
+
+You'll need two terminals. The app is accessed via browser at the URL shown in Terminal 2.
+
+**Terminal 1 — Backend:**
+```bash
+source sentopic-env/bin/activate
+python run_api.py
+# API runs at http://localhost:8000
+```
+
+**Terminal 2 — Frontend:**
+```bash
+cd frontend
+npm run dev
+# Open the URL shown in the terminal (typically http://localhost:3000)
+```
+
+---
+
+## Running from Source — Windows
+
+Windows users run Sentopic entirely in dev mode via the browser. There is no packaged Electron app for Windows at this time.
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- A Reddit API app ([create one here](https://www.reddit.com/prefs/apps) — select "script" type)
+- An Anthropic or OpenAI API key (optional, required for AI features)
+
+> **Note on PyTorch**: `requirements.txt` includes `torch`, which is a large dependency (~2GB). Installation may take several minutes.
+
+### 1. Clone and configure
+
+```bash
+git clone https://github.com/popescoup/Sentopic.git
+cd Sentopic
+copy config.example.json config.json
+```
+
+Open `config.json` and add your credentials.
+
+### 2. Set up the Python backend
+
+```bash
+python -m venv sentopic-env
+sentopic-env\Scripts\activate.bat
+pip install -r requirements.txt
+```
+
+### 3. Set up the frontend
+
+```bash
+cd frontend
+npm install
+```
+
+### 4. Run in development mode
+
+You'll need two terminals. The app is accessed via browser at the URL shown in Terminal 2.
+
+**Terminal 1 — Backend:**
+```bash
+sentopic-env\Scripts\activate.bat
+python run_api.py
+# API runs at http://localhost:8000
+```
+
+**Terminal 2 — Frontend:**
+```bash
+cd frontend
+npm run dev
+# Open the URL shown in the terminal (typically http://localhost:3000)
+```
+
+---
+
+## Building the Packaged App (macOS only)
+
+The full build chains PyInstaller (Python → binary) → Vite (React → static assets) → electron-builder (→ `.dmg`).
+
+### Prerequisites
+
+Complete the [Running from Source (macOS)](#running-from-source--macos) setup first, then:
+
+```bash
+cd electron
+npm install
+```
+
+### Build
+
+```bash
+cd electron
+npm run build
+```
+
+Output: `electron/dist/Sentopic-1.0.0-arm64.dmg` and `Sentopic-1.0.0.dmg` (Intel)
+
+> **Code signing**: By default the build is unsigned. macOS users will see an "unidentified developer" warning on first launch, which can be bypassed by right-clicking → Open. If you have an Apple Developer certificate, set `"identity"` in `electron/package.json` to your identity string.
+
+### What the build does
+
+1. `scripts/build-python.sh` — packages the Python backend into a standalone binary via PyInstaller
+2. `cd frontend && npm run build` — compiles the React app and copies it to `electron/frontend-dist/`
+3. `electron-builder` — wraps everything into a `.dmg` installer
 
 ---
 
@@ -184,7 +236,7 @@ sentopic/
 └── scripts/                # Build scripts for Python and macOS signing
 ```
 
-The packaged app embeds the Python backend as a PyInstaller binary that Electron spawns as a child process on startup. In development, you run them separately.
+The packaged macOS app embeds the Python backend as a PyInstaller binary that Electron spawns as a child process on startup. In development, the backend and frontend run separately and the app is accessed via browser.
 
 ---
 
@@ -192,7 +244,7 @@ The packaged app embeds the Python backend as a PyInstaller binary that Electron
 
 | Layer | Technology |
 |---|---|
-| Desktop shell | Electron |
+| Desktop shell | Electron (macOS only) |
 | Frontend | React, TypeScript, Vite, Tailwind CSS, D3.js |
 | Backend | Python, FastAPI, SQLAlchemy |
 | Database | SQLite |
@@ -214,16 +266,6 @@ Contributions are welcome. Please open an issue before starting significant work
 4. Open a pull request
 
 Please make sure the app runs from source before submitting. There are no automated tests yet — validating manually against the dev setup is the current expectation.
-
----
-
-## Documentation
-
-Full usage documentation is available at [sentopic.io/docs](https://sentopic.io/pages/documentation), including:
-
-- [Quick Start Guide](docs/getting-started/quick-start-guide.md)
-- [macOS Installation](docs/installation/macos-installation.md)
-- [Windows Installation](docs/installation/windows-installation.md)
 
 ---
 
